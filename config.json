@@ -1,0 +1,9 @@
+{
+  "API_KEY":"<Your API_KEY>",
+  "CERTIFICATION_API_URL":"<Root URL to Certification API Server>",
+  
+  "METADATA_REPORT_FILE_NAME":"metadata-report.json",
+  "AVAILABILITY_REPORT_FILE_NAME":"data-availability-report.json",
+  "FILE_ENCODING":"utf8",
+  "API_DEBOUNCE_SECONDS": 5
+}
