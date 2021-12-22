@@ -312,9 +312,11 @@ const process = async availablityReport => {
 const processDataAvailabilityReport = async pathToDataAvailabilityReport => {
   try {
     const availablityReport = JSON.parse(await fs.readFile(pathToDataAvailabilityReport, 'utf8'));
-    const startTime = new Date();
+    // TODO: handle this in the CLI util
+    // const startTime = new Date();
     await fs.writeFile('./availability-processed.json', JSON.stringify(await process(availablityReport)));
-    console.log('Time taken: ', new Date() - startTime, 'ms');
+    // TODO: handle this in the CLI util
+    // console.log('Time taken: ', new Date() - startTime, 'ms');
   } catch (err) {
     console.error(err);
   }
