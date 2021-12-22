@@ -6,6 +6,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install modules
-      run: npm install
-    - name: ESLint
+      run: npm install eslint
+    - name: Install and run ESLint
       run: eslint . --ext .js,.json.jsx,.ts,.tsx
