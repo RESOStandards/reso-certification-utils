@@ -82,8 +82,6 @@ const runTests = async jsonConfigPath => {
     //create root directory
     fs.mkdirSync(providerUoi);
 
-    const totalTestCount = configs.length;
-
     configs.forEach(config => {
 
       const 
@@ -126,13 +124,15 @@ const runTests = async jsonConfigPath => {
           if (err) {
             console.error(err);
           } else {
-            console.log(`Copied ${path} to ${RECIPIENT_PATH}`);
+            // TODO: handle this in the CLI util
+            // console.log(`Copied ${path} to ${RECIPIENT_PATH}`);
           }
         });
       });
     });
 
-    console.log('Testing complete! Tests passed: ' + totalTestCount);
+    // TODO: handle this in the CLI util
+    // console.log('Testing complete! Tests passed: ' + totalTestCount);
 
   } catch (err) {
     console.error(err);

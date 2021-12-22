@@ -87,14 +87,17 @@ const snooze = ms => new Promise(resolve => setTimeout(resolve, ms));
 const processDataDictionaryResults = async (providerUoi, recipientUoi) => {
   try {
     await snooze(CONFIG.API_DEBOUNCE_SECONDS * 1000); //wait for the dust to settle to avoid thrashing the server
-    console.log('Posting Data Dictionary results...');
+    // TODO: handle this in the CLI util
+    // console.log('Posting Data Dictionary results...');
     const reportId = await postDataDictionaryResultsToApi(providerUoi, recipientUoi);
-    console.log('Results posted, reportId: ' + reportId);
+    // TODO: handle this in the CLI util
+    // console.log('Results posted, reportId: ' + reportId);
 
     await snooze(CONFIG.API_DEBOUNCE_SECONDS * 1000); //wait for the dust to settle to avoid thrashing the server
 
     if (reportId) {
-      console.log('Posting data availability results for reportId');
+      // TODO: handle this in the CLI util
+      // console.log('Posting data availability results for reportId');
       return await postDataAvailabilityResultsToApi(reportId, providerUoi, recipientUoi);
     }
   } catch (err) {
