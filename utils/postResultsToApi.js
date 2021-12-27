@@ -23,7 +23,7 @@ const getDataDictionaryOptions = (providerUoi, recipientUoi, data) => {
       'Connection': 'keep-alive'
     },
     data
-  }; 
+  };
 };
 
 const getDataAvailabilityOptions = (metadataReportId, data) => {

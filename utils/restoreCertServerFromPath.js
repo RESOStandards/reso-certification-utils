@@ -31,5 +31,5 @@ const restore = async path => {
 };
 
 module.exports = {
-  restore  
+  restore
 };
