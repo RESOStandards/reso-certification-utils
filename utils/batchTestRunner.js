@@ -14,7 +14,7 @@ const buildRecipientPath = (providerUoi, recipientUoi) => {
   return `${providerUoi}/${recipientUoi}`;
 };
 
-const createResoscriptBearerTokenConfig = ({uri, token}) => '<?xml version="1.0" encoding="utf-8" ?>' +
+const createResoscriptBearerTokenConfig = ({ uri, token }) => '<?xml version="1.0" encoding="utf-8" ?>' +
   '<OutputScript>' +
   '  <ClientSettings>' +
   `    <WebAPIURI>${uri}</WebAPIURI>` +
@@ -31,23 +31,23 @@ const createResoscriptClientCredentialsConfig = ({ uri, clientCredentials }) => 
   `    <ClientIdentification>${clientCredentials.clientId}</ClientIdentification>` +
   `    <ClientSecret>${clientCredentials.clientSecret}</ClientSecret>` +
   `    <TokenURI>${clientCredentials.tokenUri}</TokenURI>` +
-  `    ${clientCredentials.scope ? '<ClientScope>' + clientCredentials.scope  + '</ClientScope>': ''}` +
+  `    ${clientCredentials.scope ? '<ClientScope>' + clientCredentials.scope  + '</ClientScope>' : ''}` +
   '  </ClientSettings>' +
   '</OutputScript>';
 
-const isClientCredentalsConfig = ( config = { clientCredentials: {} } ) => config.clientCredentials 
-  && config.clientCredentials.clientId 
+const isClientCredentalsConfig = ( config = { clientCredentials: {} } ) => config.clientCredentials
+  && config.clientCredentials.clientId
   && config.clientCredentials.clientSecret
   && config.clientCredentials.tokenUri;
 
 const isBearerTokenConfig = ( config = { token: '' } ) => !!config.token;
 
-const buildResoscript = (config={}) => {
+const buildResoscript = (config = {}) => {
   if (isClientCredentalsConfig(config)) {
     return createResoscriptClientCredentialsConfig(config);
   } else if (isBearerTokenConfig(config)) {
     return createResoscriptBearerTokenConfig(config);
-  } 
+  }
 
   return null;
 };
@@ -84,7 +84,7 @@ const runTests = async jsonConfigPath => {
 
     configs.forEach(config => {
 
-      const 
+      const
         RECIPIENT_PATH = buildRecipientPath(providerUoi, config.recipientUoi),
         RESOSCRIPT_CONFIG = buildResoscript(config),
         CONFIG_PATH = `${COMMANDER_PATH}/${RECIPIENT_PATH}/config.xml`;

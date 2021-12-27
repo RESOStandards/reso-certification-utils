@@ -22,11 +22,11 @@ const getBinsTemplate = () => {
  * @returns totals template with all bins initialized to 0.
  */
 const getTotalsTemplate = () => {
-  return { 
-    total: getBinsTemplate(), 
-    reso: getBinsTemplate(), 
-    idx: getBinsTemplate(), 
-    local: getBinsTemplate() 
+  return {
+    total: getBinsTemplate(),
+    reso: getBinsTemplate(),
+    idx: getBinsTemplate(),
+    local: getBinsTemplate()
   };
 };
 
@@ -90,7 +90,7 @@ const createLookupValueCache = (lookupValues = []) => {
 
 /**
  * Determines whether a given field is an IDX field.
- * TODO: The performance could be improved here in that there's a filter being done on each payloads array. 
+ * TODO: The performance could be improved here in that there's a filter being done on each payloads array.
  *       There's potential speedup if each payload were turned into a nested property rather than an array.
  * @param {String} resourceName the name of the resource for the field.
  * @param {String} fieldName the name of the field.
@@ -98,7 +98,7 @@ const createLookupValueCache = (lookupValues = []) => {
  * @returns true if the given field is an IDX field, false otherwise.
  */
 const isIdxField = (resourceName, fieldName, standardFieldCache = {}) => resourceName && fieldName
-  && isResoField(resourceName, fieldName, standardFieldCache) 
+  && isResoField(resourceName, fieldName, standardFieldCache)
   && !!standardFieldCache[resourceName][fieldName].payloads.filter(x => x === 'IDX').length > 0;
 
 /**
@@ -153,7 +153,7 @@ const computeBins = (availability, bins) => {
 };
 
 /**
- * Translates existing numeric bins into booleans. 
+ * Translates existing numeric bins into booleans.
  * @param {Object} bins existing bins object.
  * @returns the resulting bins object with values transformed to booleans.
  */
@@ -169,7 +169,7 @@ const computeBooleanBins = bins => {
  * @param {Number} resourceSampleCount the count of the number of sampled records for a given resource.
  * @returns a bins object with the decimal availabilities computed.
  */
-const computeAvailabilityFromDiscreteBins = (discreteBins=getBinsTemplate(), resourceSampleCount=0) => {
+const computeAvailabilityFromDiscreteBins = (discreteBins = getBinsTemplate(), resourceSampleCount = 0) => {
   if (!resourceSampleCount) return discreteBins;
 
   const availabilities = {};
@@ -179,10 +179,10 @@ const computeAvailabilityFromDiscreteBins = (discreteBins=getBinsTemplate(), res
 
 
 /**
- * Processes a RESO Data Availability Report and creates aggregates and rollups. 
+ * Processes a RESO Data Availability Report and creates aggregates and rollups.
  * TODO: individual totals calculations could be tidied up a bit.
  * @param {Object} availablityReport the RESO availability report JSON to process.
- * @returns a JSON availability report with the appropriate rollups and aggregates. 
+ * @returns a JSON availability report with the appropriate rollups and aggregates.
  */
 const process = async availablityReport => {
   //iterate over each field and lookup and compute their availabilities
@@ -244,7 +244,7 @@ const process = async availablityReport => {
           transformed.availability.lookups.total = computeBins(availability, transformed.availability.lookups.total);
           resourcesBinary[field.resourceName].lookups.total = computeBins(availability, resourcesBinary[field.resourceName].lookups.total);
 
-          if (isResoField(lookupValue.resourceName, lookupValue.fieldName, standardFieldCache) && 
+          if (isResoField(lookupValue.resourceName, lookupValue.fieldName, standardFieldCache) &&
                 findResoLookup(lookupValue.resourceName, lookupValue.fieldName, lookupValue.lookupValue, standardFieldCache)) {
             
             transformed.availability.lookups.reso = computeBins(availability, transformed.availability.lookups.reso);

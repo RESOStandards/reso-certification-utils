@@ -43,6 +43,24 @@
             }
           }, {
             "enforceForRenamedProperties": false
-          }], "no-console": ["error", { "allow": ["warn", "error"] }]
+          }],
+        "prefer-const": "error",
+        "brace-style" : ["error", "1tbs", { "allowSingleLine": true }],
+        "no-console": "off",
+        "comma-spacing": ["error", { "before": false, "after": true }],
+        "semi-spacing": ["error", {"before": false, "after": true}],
+        "block-spacing": "error",
+        "eol-last": "error",
+        "arrow-spacing": "error",
+        "no-tabs": "error",
+        "no-trailing-spaces": ["error", { "skipBlankLines": true, "ignoreComments": true }],
+        "no-whitespace-before-property": "error",
+        "object-curly-spacing": ["error", "always"],
+        "rest-spread-spacing": ["error", "never"],
+        "space-infix-ops": "error",
+        "space-unary-ops": ["error", {"words": true, "nonwords": false}],
+        "switch-colon-spacing": ["error", {"after": true, "before": false}],
+        "template-curly-spacing": ["error", "never"],
+        "template-tag-spacing": ["error", "always"]
     }
 }
