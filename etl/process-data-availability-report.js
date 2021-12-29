@@ -1,6 +1,6 @@
-const fs = require('fs').promises;
-const { standardMeta } = require('../certification-references/dd-1.7/standardMeta.js');
-const { lookupMap } = require('../certification-references/dd-1.7/lookupMap.js');
+const { promises: fs } = require('fs');
+const { standardMeta } = require('../certification-references/dd-1.7/standard-metadata.js');
+const { lookupMap } = require('../certification-references/dd-1.7/lookup-map.js');
 
 /**
  * Defines the bins template for stats.
@@ -83,7 +83,9 @@ const createLookupValueCache = (lookupValues = []) => {
       resourceFieldLookupCache[lookupValue.resourceName][lookupValue.fieldName] = {};
     }
 
-    resourceFieldLookupCache[lookupValue.resourceName][lookupValue.fieldName][lookupValue.lookupValue] = lookupValue;
+    resourceFieldLookupCache[lookupValue.resourceName][lookupValue.fieldName][
+      lookupValue.lookupValue
+    ] = lookupValue;
   });
   return resourceFieldLookupCache;
 };
@@ -97,9 +99,11 @@ const createLookupValueCache = (lookupValues = []) => {
  * @param {Object} standardFieldCache a field cache created by createStandardFieldCache().
  * @returns true if the given field is an IDX field, false otherwise.
  */
-const isIdxField = (resourceName, fieldName, standardFieldCache = {}) => resourceName && fieldName
-  && isResoField(resourceName, fieldName, standardFieldCache)
-  && !!standardFieldCache[resourceName][fieldName].payloads.filter(x => x === 'IDX').length > 0;
+const isIdxField = (resourceName, fieldName, standardFieldCache = {}) =>
+  resourceName &&
+  fieldName &&
+  isResoField(resourceName, fieldName, standardFieldCache) &&
+  !!standardFieldCache[resourceName][fieldName].payloads.filter(x => x === 'IDX').length > 0;
 
 /**
  * Determines whether a given field is a RESO field.
@@ -108,9 +112,11 @@ const isIdxField = (resourceName, fieldName, standardFieldCache = {}) => resourc
  * @param {Object} standardFieldCache a field cache created by createStandardFieldCache().
  * @returns true if the given field is a RESO field, false otherwise.
  */
-const isResoField = (resourceName, fieldName, standardFieldCache = {}) => resourceName && fieldName
-  && standardFieldCache[resourceName] && !!standardFieldCache[resourceName][fieldName];
-
+const isResoField = (resourceName, fieldName, standardFieldCache = {}) =>
+  resourceName &&
+  fieldName &&
+  standardFieldCache[resourceName] &&
+  !!standardFieldCache[resourceName][fieldName];
 
 /**
  * Determines if a given lookup is a RESO lookup.
@@ -121,12 +127,21 @@ const isResoField = (resourceName, fieldName, standardFieldCache = {}) => resour
  * @returns the RESO lookup, if found, otherwise null.
  */
 const findResoLookup = (resourceName, fieldName, lookupValue, standardFieldCache = {}) => {
-  if (resourceName && fieldName && standardFieldCache[resourceName] && standardFieldCache[resourceName][fieldName]) {
+  if (
+    resourceName &&
+    fieldName &&
+    standardFieldCache[resourceName] &&
+    standardFieldCache[resourceName][fieldName]
+  ) {
     const field = standardFieldCache[resourceName][fieldName];
 
     if (field && field.simpleDataType.includes('String List') && field.type.includes('.')) {
       const lookupName = field.type.substring(field.type.lastIndexOf('.') + 1, field.type.length);
-      const lookup = lookupMap[lookupName] && lookupMap[lookupName].find(x => x.lookupValue === lookupValue || x.lookupDisplayName === lookupValue);
+      const lookup =
+        lookupMap[lookupName] &&
+        lookupMap[lookupName].find(
+          x => x.lookupValue === lookupValue || x.lookupDisplayName === lookupValue
+        );
       //TODO: turn the lookup map into its own inverted hash by lookup values and display names
       return lookup ? { lookupName, lookup } : null;
     }
@@ -159,7 +174,7 @@ const computeBins = (availability, bins) => {
  */
 const computeBooleanBins = bins => {
   const booleanBins = {};
-  Object.entries(bins).forEach( ([bin, value]) => booleanBins[bin] = !!value);
+  Object.entries(bins).forEach(([bin, value]) => (booleanBins[bin] = !!value));
   return booleanBins;
 };
 
@@ -169,14 +184,18 @@ const computeBooleanBins = bins => {
  * @param {Number} resourceSampleCount the count of the number of sampled records for a given resource.
  * @returns a bins object with the decimal availabilities computed.
  */
-const computeAvailabilityFromDiscreteBins = (discreteBins = getBinsTemplate(), resourceSampleCount = 0) => {
+const computeAvailabilityFromDiscreteBins = (
+  discreteBins = getBinsTemplate(),
+  resourceSampleCount = 0
+) => {
   if (!resourceSampleCount) return discreteBins;
 
   const availabilities = {};
-  Object.entries(discreteBins).forEach(([binName, value]) => availabilities[binName] = 1.0 * value / resourceSampleCount);
+  Object.entries(discreteBins).forEach(
+    ([binName, value]) => (availabilities[binName] = (1.0 * value) / resourceSampleCount)
+  );
   return availabilities;
 };
-
 
 /**
  * Processes a RESO Data Availability Report and creates aggregates and rollups.
@@ -192,81 +211,155 @@ const process = async availablityReport => {
   const standardFieldCache = createStandardFieldCache(standardMeta.fields);
 
   const resourceCounts = {};
-  resources.forEach(resource => resourceCounts[resource.resourceName] = resource.numRecordsFetched);
+  resources.forEach(
+    resource => (resourceCounts[resource.resourceName] = resource.numRecordsFetched)
+  );
 
-  const processedFields = [], processedLookupValues = [], lookupValueCache = createLookupValueCache(lookupValues);
-  
+  const processedFields = [],
+    processedLookupValues = [],
+    lookupValueCache = createLookupValueCache(lookupValues);
+
   //binary resource availability cache
   const resourcesBinary = {};
 
   //process fields
   fields.forEach(field => {
-    const availability = resourceCounts[field.resourceName] !== 0 ? 1.0 * field.frequency / resourceCounts[field.resourceName] : 0;
+    const availability =
+      resourceCounts[field.resourceName] !== 0
+        ? (1.0 * field.frequency) / resourceCounts[field.resourceName]
+        : 0;
     const fieldBins = computeBins(availability, getBinsTemplate());
 
     //update field availability
-    transformed.availability.fields.total = computeBins(availability, transformed.availability.fields.total);
+    transformed.availability.fields.total = computeBins(
+      availability,
+      transformed.availability.fields.total
+    );
 
     //add totals template for this resource name if it doesn't already exist
     if (!resourcesBinary[field.resourceName]) {
-      resourcesBinary[field.resourceName] = { fields: getTotalsTemplate(), lookups: getTotalsTemplate() };
+      resourcesBinary[field.resourceName] = {
+        fields: getTotalsTemplate(),
+        lookups: getTotalsTemplate()
+      };
     }
     //update binary resource bins
-    resourcesBinary[field.resourceName].fields.total = computeBins(availability, resourcesBinary[field.resourceName].fields.total);
+    resourcesBinary[field.resourceName].fields.total = computeBins(
+      availability,
+      resourcesBinary[field.resourceName].fields.total
+    );
 
     if (isResoField(field.resourceName, field.fieldName, standardFieldCache)) {
       //update RESO totals
-      transformed.availability.fields.reso = computeBins(availability, transformed.availability.fields.reso);
-      resourcesBinary[field.resourceName].fields.reso = computeBins(availability, resourcesBinary[field.resourceName].fields.reso);
+      transformed.availability.fields.reso = computeBins(
+        availability,
+        transformed.availability.fields.reso
+      );
+      resourcesBinary[field.resourceName].fields.reso = computeBins(
+        availability,
+        resourcesBinary[field.resourceName].fields.reso
+      );
 
       if (isIdxField(field.resourceName, field.fieldName, standardFieldCache)) {
         //update IDX totals
-        transformed.availability.fields.idx = computeBins(availability, transformed.availability.fields.idx);
-        resourcesBinary[field.resourceName].fields.idx = computeBins(availability, resourcesBinary[field.resourceName].fields.idx);
+        transformed.availability.fields.idx = computeBins(
+          availability,
+          transformed.availability.fields.idx
+        );
+        resourcesBinary[field.resourceName].fields.idx = computeBins(
+          availability,
+          resourcesBinary[field.resourceName].fields.idx
+        );
       }
     } else {
       //otherwise, update local totals
-      transformed.availability.fields.local = computeBins(availability, transformed.availability.fields.local);
-      resourcesBinary[field.resourceName].fields.local = computeBins(availability, resourcesBinary[field.resourceName].fields.local);
+      transformed.availability.fields.local = computeBins(
+        availability,
+        transformed.availability.fields.local
+      );
+      resourcesBinary[field.resourceName].fields.local = computeBins(
+        availability,
+        resourcesBinary[field.resourceName].fields.local
+      );
     }
 
     //only process if there are lookups for this field
-    const lookupsForField = lookupValueCache[field.resourceName] && lookupValueCache[field.resourceName][field.fieldName];
-    
+    const lookupsForField =
+      lookupValueCache[field.resourceName] && lookupValueCache[field.resourceName][field.fieldName];
+
     if (lookupsForField) {
       Object.values(lookupsForField).forEach(lookupValue => {
         if (lookupValue.lookupValue !== 'null' && lookupValue.lookupValue !== 'NULL_VALUE') {
-          const lookupAvailability = !!lookupValue.frequency && !!resourceCounts[field.resourceName]
-            ? 1.0 * lookupValue.frequency / resourceCounts[field.resourceName] : 0;
-          
+          const lookupAvailability =
+            !!lookupValue.frequency && !!resourceCounts[field.resourceName]
+              ? (1.0 * lookupValue.frequency) / resourceCounts[field.resourceName]
+              : 0;
+
           const lookupBins = computeBins(lookupAvailability, getBinsTemplate());
 
-          transformed.availability.lookups.total = computeBins(availability, transformed.availability.lookups.total);
-          resourcesBinary[field.resourceName].lookups.total = computeBins(availability, resourcesBinary[field.resourceName].lookups.total);
+          transformed.availability.lookups.total = computeBins(
+            availability,
+            transformed.availability.lookups.total
+          );
+          resourcesBinary[field.resourceName].lookups.total = computeBins(
+            availability,
+            resourcesBinary[field.resourceName].lookups.total
+          );
 
-          if (isResoField(lookupValue.resourceName, lookupValue.fieldName, standardFieldCache) &&
-                findResoLookup(lookupValue.resourceName, lookupValue.fieldName, lookupValue.lookupValue, standardFieldCache)) {
-            
-            transformed.availability.lookups.reso = computeBins(availability, transformed.availability.lookups.reso);
-            resourcesBinary[field.resourceName].lookups.reso = computeBins(availability, resourcesBinary[field.resourceName].lookups.reso);
+          if (
+            isResoField(lookupValue.resourceName, lookupValue.fieldName, standardFieldCache) &&
+            findResoLookup(
+              lookupValue.resourceName,
+              lookupValue.fieldName,
+              lookupValue.lookupValue,
+              standardFieldCache
+            )
+          ) {
+            transformed.availability.lookups.reso = computeBins(
+              availability,
+              transformed.availability.lookups.reso
+            );
+            resourcesBinary[field.resourceName].lookups.reso = computeBins(
+              availability,
+              resourcesBinary[field.resourceName].lookups.reso
+            );
             if (isIdxField(lookupValue.resourceName, lookupValue.fieldName, standardFieldCache)) {
-              transformed.availability.lookups.idx = computeBins(availability, transformed.availability.lookups.idx);
-              resourcesBinary[field.resourceName].lookups.idx = computeBins(availability, resourcesBinary[field.resourceName].lookups.idx);
+              transformed.availability.lookups.idx = computeBins(
+                availability,
+                transformed.availability.lookups.idx
+              );
+              resourcesBinary[field.resourceName].lookups.idx = computeBins(
+                availability,
+                resourcesBinary[field.resourceName].lookups.idx
+              );
             }
-          
           } else {
-            transformed.availability.lookups.local = computeBins(availability, transformed.availability.lookups.local);
-            resourcesBinary[field.resourceName].lookups.local = computeBins(availability, resourcesBinary[field.resourceName].lookups.local);
+            transformed.availability.lookups.local = computeBins(
+              availability,
+              transformed.availability.lookups.local
+            );
+            resourcesBinary[field.resourceName].lookups.local = computeBins(
+              availability,
+              resourcesBinary[field.resourceName].lookups.local
+            );
           }
 
-          processedLookupValues.push({ ...lookupValue, lookupAvailability, ...computeBooleanBins(lookupBins) });
+          processedLookupValues.push({
+            ...lookupValue,
+            lookupAvailability,
+            ...computeBooleanBins(lookupBins)
+          });
         }
       });
     }
 
     //should always be OK, but just in case
     if (field) {
-      processedFields.push({ ...field, availability, ...computeBooleanBins(fieldBins) });
+      processedFields.push({
+        ...field,
+        availability,
+        ...computeBooleanBins(fieldBins)
+      });
     }
   });
 
@@ -278,26 +371,28 @@ const process = async availablityReport => {
 
   //compute resource availability rollups from the discrete bins
   const resourceAvailability = {};
-  transformed.availability.resources = Object.entries(resourcesBinary).forEach(([resourceName, value]) => {
-    if (!resourceAvailability[resourceName]) resourceAvailability[resourceName] = {};
+  transformed.availability.resources = Object.entries(resourcesBinary).forEach(
+    ([resourceName, value]) => {
+      if (!resourceAvailability[resourceName]) resourceAvailability[resourceName] = {};
 
-    const { fields = getTotalsTemplate(), lookups = getTotalsTemplate() } = value;
-    const resourceCount = resourceCounts[resourceName] || 0;
+      const { fields = getTotalsTemplate(), lookups = getTotalsTemplate() } = value;
+      const resourceCount = resourceCounts[resourceName] || 0;
 
-    resourceAvailability[resourceName].fields = {
-      total: computeAvailabilityFromDiscreteBins(fields.total, resourceCount),
-      reso: computeAvailabilityFromDiscreteBins(fields.reso, resourceCount),
-      idx: computeAvailabilityFromDiscreteBins(fields.idx, resourceCount),
-      local: computeAvailabilityFromDiscreteBins(fields.local, resourceCount)
-    };
+      resourceAvailability[resourceName].fields = {
+        total: computeAvailabilityFromDiscreteBins(fields.total, resourceCount),
+        reso: computeAvailabilityFromDiscreteBins(fields.reso, resourceCount),
+        idx: computeAvailabilityFromDiscreteBins(fields.idx, resourceCount),
+        local: computeAvailabilityFromDiscreteBins(fields.local, resourceCount)
+      };
 
-    resourceAvailability[resourceName].lookups = {
-      total: computeAvailabilityFromDiscreteBins(lookups.total, resourceCount),
-      reso: computeAvailabilityFromDiscreteBins(lookups.reso, resourceCount),
-      idx: computeAvailabilityFromDiscreteBins(lookups.idx, resourceCount),
-      local: computeAvailabilityFromDiscreteBins(lookups.local, resourceCount)
-    };
-  });
+      resourceAvailability[resourceName].lookups = {
+        total: computeAvailabilityFromDiscreteBins(lookups.total, resourceCount),
+        reso: computeAvailabilityFromDiscreteBins(lookups.reso, resourceCount),
+        idx: computeAvailabilityFromDiscreteBins(lookups.idx, resourceCount),
+        local: computeAvailabilityFromDiscreteBins(lookups.local, resourceCount)
+      };
+    }
+  );
 
   transformed.availability.resources = resourceAvailability;
 
@@ -314,7 +409,10 @@ const processDataAvailabilityReport = async pathToDataAvailabilityReport => {
     const availablityReport = JSON.parse(await fs.readFile(pathToDataAvailabilityReport, 'utf8'));
     // TODO: handle this in the CLI util
     // const startTime = new Date();
-    await fs.writeFile('./availability-processed.json', JSON.stringify(await process(availablityReport)));
+    await fs.writeFile(
+      './availability-processed.json',
+      JSON.stringify(await process(availablityReport))
+    );
     // TODO: handle this in the CLI util
     // console.log('Time taken: ', new Date() - startTime, 'ms');
   } catch (err) {

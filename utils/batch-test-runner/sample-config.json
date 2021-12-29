@@ -1,0 +1,25 @@
+{
+  "description": "Use this template file for either Bearker Tokens or Client Credentials, or both, when using runTests. Fill in TODO items accordingly",
+  "providerUoi": "TODO: PROVIDER UOI",
+  "configs": [
+    {
+      "description": "Bearer token template.",
+      "serviceRootUri": "TODO: WEB API SERVICE ROOT URI",
+      "recipientUoi": "TODO: RECIPIENT UOI",
+      "token": "TODO: BEARER TOKEN",
+      "providerUsi": "TODO: UNIQUE SYSTEM IDENTIFIER for the given Provider"
+    },
+    {
+      "description": "Client Credentials template.",
+      "serviceRootUri": "TODO: WEB API SERVICE ROOT URI",
+      "recipientUoi": "TODO: RECIPIENT UOI",
+      "providerUsi": "TODO: UNIQUE SYSTEM IDENTIFIER for the given Provider",
+      "clientCredentials": {
+        "clientId": "TODO: CLIENT ID",
+        "clientSecret": "TODO: CLIENT SECRET",
+        "tokenUri": "TODO: TOKEN URI",
+        "scopes": []
+      }
+    }
+  ]
+}
