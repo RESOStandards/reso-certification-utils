@@ -1,16 +1,17 @@
 # RESO Certification Utils
 NodeJS package with reference artifacts and ETL processes for Certification.
 
-**Coming Soon**: Interactive CLI for relevant operations.
+## [Batch Test Runner](./utils/batch-test-runner/README.md)
+Runs a batch of tests using a provided configuration file. 
 
-This package contains the following:
-* Code to restore a given Certification backend server with a set of files
-* ETL code for RESO Certification reports
-* Batch test runner for the RESO Commander
-* And much, much more...
+## [Restore Certification Server](./utils/restore-cert-server/README.md)
+Restores a RESO Certification API Server using a set of existing results in a given directory structure.
 
+<br >
 
-# TODO
+---
+
+## TODO
 - [ ] Add tests for availability reports
 - [ ] Add remaining Certification API ETL processes
 - [ ] Integration with RESO Certification API
@@ -18,4 +19,6 @@ This package contains the following:
 - [ ] Integration with RESO Certification Lambda functions
 - [ ] Add CLI options
 
+---
 
+Questions? Contact [RESO Development](mailto:dev@reso.org).
