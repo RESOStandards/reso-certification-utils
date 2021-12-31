@@ -1,6 +1,3 @@
-//TODO
-//const { processDataDictionaryResults } = require("./postResultsToApi");
-
 /**
  * Determines whether the given path is an S3 path
  * @param {String} path the path to test

@@ -1,7 +1,10 @@
-/**
- * common.js - Contains programmatically derived constants related to testing.
- */
+const fs = require('fs');
+const path = require('path');
+const fse = require('fs-extra');
 
+/**
+ * common.js - Contains programmatically derived constants related to Certification.
+ */
 
 const CURRENT_DATA_DICTIONARY_VERSION = '1.7',
   PREVIOUS_DATA_DICTIONARY_VERSION = null,
@@ -10,13 +13,13 @@ const CURRENT_DATA_DICTIONARY_VERSION = '1.7',
   COMMANDER_LOG_FILE_NAME = 'commander.log',
   METADATA_REPORT_JSON = 'metadata-report.json',
   DATA_AVAILABILITY_REPORT_JSON = 'data-availability-report.json',
-  IDX_DIFFERENCE_REPORT_JSON = 'idx-difference-report.json';
-
+  IDX_DIFFERENCE_REPORT_JSON = 'idx-difference-report.json',
+  EMPTY_STRING = '';
 
 /**
  * Each key refers to what the given item is called when saved the filesystem.
  */
-const endorsementKeys = {
+const endorsements = {
   DATA_DICTIONARY: 'data-dictionary',
   DATA_DICTIONARY_WITH_IDX: 'data-dictionary-idx',
   WEB_API_CORE: 'web-api-server.core'
@@ -26,68 +29,79 @@ const endorsementKeys = {
  * Defines the currently supported versions for each endorsement.
  */
 const availableVersions = {
-  [`${endorsementKeys.DATA_DICTIONARY}`]: {
+  [`${endorsements.DATA_DICTIONARY}`]: {
     currentVersion: CURRENT_DATA_DICTIONARY_VERSION,
     previousVersion: PREVIOUS_DATA_DICTIONARY_VERSION
   },
-  [`${endorsementKeys.DATA_DICTIONARY_WITH_IDX}`]: {
+  [`${endorsements.DATA_DICTIONARY_WITH_IDX}`]: {
     currentVersion: CURRENT_DATA_DICTIONARY_VERSION,
     previousVersion: PREVIOUS_DATA_DICTIONARY_VERSION
   },
-  [`${endorsementKeys.WEB_API_CORE}`]: {
+  [`${endorsements.WEB_API_CORE}`]: {
     currentVersion: CURRENT_WEB_API_CORE_VERSION,
     previousVersion: PREVIOUS_WEB_API_CORE_VERSION
   }
 };
 
+const getCurrentVersion = endorsementName =>
+  endorsementName &&
+  availableVersions[endorsementName] &&
+  availableVersions[endorsementName].currentVersion;
+
+const getPreviousVersion = endorsementName =>
+  endorsementName &&
+  availableVersions[endorsementName] &&
+  availableVersions[endorsementName].previousVersion;
+
 /**
- * Determines whether the given endorsementKey is valid.
+ * Determines whether the given endorsementName is valid.
  *
- * @param {String} endorsementKey the key to get the config for. @see {endorsementKeys}
- * @returns true if the endorsementKey is valid, false otherwise.
+ * @param {String} endorsementName the key to get the config for. @see {endorsements}
+ * @returns true if the endorsementName is valid, false otherwise.
  * @throws error if parameters aren't valid
  */
-const isValidEndorsementKey = endorsementKey =>
-  endorsementKey && !!availableVersions[endorsementKey];
+const isValidEndorsement = endorsementName =>
+  endorsementName && !!availableVersions[endorsementName];
 
 /**
  * Determines whether the version is valid for the given endorsement.
  *
- * @param {String} endorsementKey the key to get the config for. @see {endorsementKeys}
+ * @param {String} endorsementName the key to get the config for. @see {endorsements}
  * @param {String} version the version for the given key. @see {availableVersions}
  * @returns true if the version is valid, false otherwise.
  * @throws error if parameters aren't valid
  */
-const isValidVersion = (endorsementKey, version) =>
-  endorsementKey &&
+const isValidVersion = (endorsementName, version) =>
+  endorsementName &&
   version &&
-  availableVersions[endorsementKey] &&
-  availableVersions[endorsementKey].currentVersion === version;
+  availableVersions[endorsementName] &&
+  availableVersions[endorsementName].currentVersion === version;
 
 /**
  * Gets the appropriate config for a given endorsement
  *
- * @param {String} endorsementKey the key to get the config for. @see {endorsementKeys}
+ * @param {String} endorsementName the key to get the config for. @see {endorsements}
  * @param {String} version the version for the given key. @see {availableVersions}
  * @returns a config consisting of constants relevant for the given endorsement.
  */
-const getEndorsementConfig = (endorsementKey, version) => {
-  if (!isValidEndorsementKey(endorsementKey)) {
-    throw new Error(`Invalid endorsement! endorsmentKey: ${endorsementKey}`);
+const getEndorsementMetadata = (endorsementName, version) => {
+  if (!isValidEndorsement(endorsementName)) {
+    throw new Error(`Invalid endorsement! endorsmentKey: ${endorsementName}`);
   }
 
-  if (!isValidVersion(endorsementKey, version)) {
+  if (!isValidVersion(endorsementName, version)) {
     throw new Error(
-      `Invalid endorsement version! endorsmentKey: ${endorsementKey}, version: ${version}`
+      `Invalid endorsement version! endorsmentKey: ${endorsementName}, version: ${version}`
     );
   }
 
   const ddVersion = version || CURRENT_DATA_DICTIONARY_VERSION,
     webApiVersion = version || CURRENT_WEB_API_CORE_VERSION;
 
-  if (endorsementKey === endorsementKeys.DATA_DICTIONARY) {
+  if (endorsementName === endorsements.DATA_DICTIONARY) {
     return {
-      directoryName: `${endorsementKeys.DATA_DICTIONARY}-${ddVersion}`,
+      directoryName: `${endorsements.DATA_DICTIONARY}`,
+      version: `${ddVersion}`,
       /* TODO: add versions to JSON results file names in the Commander */
       jsonResultsFiles: [METADATA_REPORT_JSON, DATA_AVAILABILITY_REPORT_JSON],
       htmlReportFiles: [
@@ -98,9 +112,10 @@ const getEndorsementConfig = (endorsementKey, version) => {
     };
   }
 
-  if (endorsementKey === endorsementKeys.DATA_DICTIONARY_WITH_IDX) {
+  if (endorsementName === endorsements.DATA_DICTIONARY_WITH_IDX) {
     return {
-      directoryName: `${endorsementKeys.DATA_DICTIONARY_WITH_IDX}-${ddVersion}`,
+      directoryName: `${endorsements.DATA_DICTIONARY_WITH_IDX}`,
+      version: `${version}`,
       /* TODO: add versions to JSON results file names in the Commander */
       jsonResultsFiles: [
         METADATA_REPORT_JSON,
@@ -116,22 +131,179 @@ const getEndorsementConfig = (endorsementKey, version) => {
     };
   }
 
-  if (endorsementKey === endorsementKeys.WEB_API_CORE) {
+  if (endorsementName === endorsements.WEB_API_CORE) {
     return {
-      directoryName: `${endorsementKeys.WEB_API_CORE}.${webApiVersion}`,
-      jsonResultsFiles: [`web-api-server.core.${webApiVersion}.json`],
-      htmlReportFiles: [`web-api-server.core.${webApiVersion}.html`],
+      directoryName: `${endorsements.WEB_API_CORE}.${webApiVersion}`,
+      jsonResultsFiles: [`${endorsements.WEB_API_CORE}.${webApiVersion}.json`],
+      htmlReportFiles: [`${endorsements.WEB_API_CORE}.${webApiVersion}.html`],
       logFileName: COMMANDER_LOG_FILE_NAME
     };
   }
 
-  throw new Error(`Invalid endorsementKey: ${endorsementKey ? endorsementKey : '<null>'}!`);
+  throw new Error(`Invalid endorsementName: ${endorsementName ? endorsementName : '<null>'}!`);
 };
 
+/**
+ * Returns the condensed version of the ISO 8601 format, e.g. 20211228T211042673Z
+ * which is safe for directory naming.
+ *
+ * @param {Date} timestamp to convert, defaults to now.
+ * @returns ISO 8601 timestamp without separators
+ * @see https://en.wikipedia.org/wiki/ISO_8601
+ */
+const getFileSafeIso8601Timestamp = (timestamp = new Date()) =>
+  timestamp.toISOString().replaceAll(/-|:|\./gi, EMPTY_STRING);
+
+/**
+ * Creates a path to the recipient's results using the following structure:
+ *
+ * - providerUoi1
+ *   - data-dictionary
+ *     - 1.7
+ *       - usi1
+ *        - recipientUoi1
+ *          - current
+ *            * <metadata report>
+ *            * <data availability report>
+ *          - archived
+ *            - timestamp0001
+ *              * <metadata report>
+ *              * <data availability report>
+ *            + timestamp0002
+ *            + ...
+ *            + timestamp000N
+ *         + recipientUoi2
+ *       + usi2
+ *    + 2.0
+ *  - web-api-server.core
+ *    + 2.0.0
+ *  - data-dictionary-idx
+ *    - 1.7
+ * + providerUoi2
+ *  ...
+ * + providerUoiN
+ *
+ * @param {String} providerUoi the provider UOI
+ * @param {String} providerUsi the provider USI
+ * @param {String} recipientUoi the recpient UOI
+ * @param {String} endorsementName the name of the given endorsement. @see {endorsements}
+ * @param {String} version the version for the given endorsement
+ * @returns Unix path for recipient
+ */
+const buildRecipientEndorsementPath = ({
+  providerUoi,
+  providerUsi,
+  recipientUoi,
+  endorsementName,
+  version,
+  currentOrArchived = 'current'
+}) => {
+  if (!providerUoi) throw Error('providerUoi is required!');
+  if (!providerUsi) throw Error('providerUsi is required!');
+  if (!recipientUoi) throw Error('recipientUoi is required!');
+  if (!endorsementName) throw Error('endorsementName is required!');
+  if (!version) throw Error('version is required!');
+
+  if (!isValidEndorsement(endorsementName))
+    throw new Error(`Invalid endorsementName: ${endorsementName}`);
+  if (!isValidVersion(endorsementName, version)) throw new Error(`Invalid version: ${version}`);
+
+  return path.join(
+    providerUoi,
+    endorsementName,
+    version,
+    providerUsi,
+    recipientUoi,
+    currentOrArchived
+  );
+};
+
+/**
+ * Copies results from the current endorsement path for the given item to its archive directory,
+ * which has the format recpientPath/archived/archived-at-timestamp
+ *
+ * @param {String} endorsementName
+ * @param {String} version
+ * @param {String} providerUoi
+ * @param {String} providerUsi
+ * @param {String} recipientUoi
+ */
+const archiveEndorsement = ({
+  providerUoi,
+  providerUsi,
+  recipientUoi,
+  endorsementName,
+  version
+}) => {
+  const currentRecipientPath = buildRecipientEndorsementPath({
+    providerUoi,
+    providerUsi,
+    recipientUoi,
+    endorsementName,
+    version
+  });
+
+  if (fs.existsSync(currentRecipientPath)) {
+    try {
+      fse.moveSync(
+        currentRecipientPath,
+        path.join(
+          buildRecipientEndorsementPath({
+            providerUoi,
+            providerUsi,
+            recipientUoi,
+            endorsementName,
+            version,
+            currentOrArchived: 'archived'
+          }),
+          getFileSafeIso8601Timestamp()
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      throw new Error('Could not move directory! Exiting!');
+    }
+  }
+};
+
+const createResoscriptBearerTokenConfig = ({ serviceRootUri, token }) =>
+  '<?xml version="1.0" encoding="utf-8" ?>' +
+  '<OutputScript>' +
+  '  <ClientSettings>' +
+  `    <WebAPIURI>${serviceRootUri}</WebAPIURI>` +
+  '    <AuthenticationType>authorization_code</AuthenticationType>' +
+  `    <BearerToken>${token}</BearerToken>` +
+  '  </ClientSettings>' +
+  '</OutputScript>';
+
+const createResoscriptClientCredentialsConfig = ({ serviceRootUri, clientCredentials }) =>
+  '<?xml version="1.0" encoding="utf-8" ?>' +
+  '<OutputScript>' +
+  '  <ClientSettings>' +
+  `    <WebAPIURI>${serviceRootUri}</WebAPIURI>` +
+  '    <AuthenticationType>client_credentials</AuthenticationType>' +
+  `    <ClientIdentification>${clientCredentials.clientId}</ClientIdentification>` +
+  `    <ClientSecret>${clientCredentials.clientSecret}</ClientSecret>` +
+  `    <TokenURI>${clientCredentials.tokenUri}</TokenURI>` +
+  `    ${
+    clientCredentials.scope
+      ? '<ClientScope>' + clientCredentials.scope + '</ClientScope>'
+      : EMPTY_STRING
+  }` +
+  '  </ClientSettings>' +
+  '</OutputScript>';
+
 module.exports = {
-  endorsementKeys,
+  endorsements,
   availableVersions,
-  isValidEndorsementKey,
+  isValidEndorsement,
   isValidVersion,
-  getEndorsementConfig
+  getEndorsementMetadata,
+  createResoscriptBearerTokenConfig,
+  createResoscriptClientCredentialsConfig,
+  getFileSafeIso8601Timestamp,
+  buildRecipientEndorsementPath,
+  archiveEndorsement,
+  getCurrentVersion,
+  getPreviousVersion
 };
