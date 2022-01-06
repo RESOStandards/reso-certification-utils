@@ -31,6 +31,19 @@ const getTotalsTemplate = () => {
 };
 
 /**
+ * Defines the set of bins used for availability totals.
+ * @returns totals template with all bins initialized to 0.
+ */
+const getAvailabilityTotalsTemplate = () => {
+  return {
+    total: 0,
+    reso: 0,
+    idx: 0,
+    local: 0
+  };
+};
+
+/**
  * Defines the availability template for stats. This is the structure of the processed results.
  * @returns availability template with all totals and bins initialized to 0.
  */
@@ -41,8 +54,8 @@ const getAvailabilityTemplate = () => {
     lookupValues: [],
     resources: [],
     availability: {
-      fields: getTotalsTemplate(),
-      lookups: getTotalsTemplate(),
+      fields: getAvailabilityTotalsTemplate(),
+      lookups: getAvailabilityTotalsTemplate(),
       resources: {},
       resourcesBinary: {}
     }
@@ -379,17 +392,17 @@ const process = async availablityReport => {
       const resourceCount = resourceCounts[resourceName] || 0;
 
       resourceAvailability[resourceName].fields = {
-        total: computeAvailabilityFromDiscreteBins(fields.total, resourceCount),
-        reso: computeAvailabilityFromDiscreteBins(fields.reso, resourceCount),
-        idx: computeAvailabilityFromDiscreteBins(fields.idx, resourceCount),
-        local: computeAvailabilityFromDiscreteBins(fields.local, resourceCount)
+        total: computeAvailabilityFromDiscreteBins(fields.total, resourceCount).gt0,
+        reso: computeAvailabilityFromDiscreteBins(fields.reso, resourceCount).gt0,
+        idx: computeAvailabilityFromDiscreteBins(fields.idx, resourceCount).gt0,
+        local: computeAvailabilityFromDiscreteBins(fields.local, resourceCount).gt0
       };
 
       resourceAvailability[resourceName].lookups = {
-        total: computeAvailabilityFromDiscreteBins(lookups.total, resourceCount),
-        reso: computeAvailabilityFromDiscreteBins(lookups.reso, resourceCount),
-        idx: computeAvailabilityFromDiscreteBins(lookups.idx, resourceCount),
-        local: computeAvailabilityFromDiscreteBins(lookups.local, resourceCount)
+        total: computeAvailabilityFromDiscreteBins(lookups.total, resourceCount).gt0,
+        reso: computeAvailabilityFromDiscreteBins(lookups.reso, resourceCount).gt0,
+        idx: computeAvailabilityFromDiscreteBins(lookups.idx, resourceCount).gt0,
+        local: computeAvailabilityFromDiscreteBins(lookups.local, resourceCount).gt0
       };
     }
   );
