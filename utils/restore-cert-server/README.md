@@ -8,16 +8,12 @@ The following directory structure is assumed:
     - 1.7
       - usi1
         - recipientUoi1
-          - current
+          - timestamp0001
             * <metadata report>
             * <data availability report>
-          - archived
-            - timestamp0001
-              * <metadata report>
-              * <data availability report>
-            + timestamp0002
-            + ...
-            + timestamp000N
+          + timestamp0002
+          + ...
+          + timestamp000N
         + recipientUoi2
       + usi2
     + 2.0
@@ -28,8 +24,7 @@ The following directory structure is assumed:
  + providerUoi2
   ...
  + providerUoiN
- ```
- ---
+ ``` ---
  <br />
 
 ## Restore All Web API Core Endorsements from a Local or S3 Path
