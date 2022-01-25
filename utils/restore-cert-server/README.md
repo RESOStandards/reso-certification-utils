@@ -3,28 +3,21 @@ Restores a RESO Certification Server via its API using a local or S3 path.
 
 The following directory structure is assumed:
 ```
-- providerUoi1
-  - data-dictionary
-    - 1.7
-      - usi1
-        - recipientUoi1
-          - timestamp0001
-            * <metadata report>
-            * <data availability report>
-          + timestamp0002
-          + ...
-          + timestamp000N
-        + recipientUoi2
-      + usi2
-    + 2.0
-  - web-api-server.core
-    + 2.0.0
-  - data-dictionary-idx
-    - 1.7S
- + providerUoi2
-  ...
- + providerUoiN
- ``` ---
+- data_dictionary-1.7
+  - providerUoi-providerUsi
+      - recipientUoi1
+        - current
+          * <metadata report>
+          * <data availability report>
+        + archived
+          + timestamp0001
+          ...
+      + recipientUoi2
++ data_dictionary-2.0
++ web_api_server_core-2.0.0
++ data_dictionary_IDX_payload-1.7
+``` 
+---
  <br />
 
 ## Restore All Web API Core Endorsements from a Local or S3 Path
