@@ -20,18 +20,18 @@ The following directory structure is assumed:
 ---
  <br />
 
-## Restore All Web API Core Endorsements from a Local or S3 Path
+## Restore All Web API Core Endorsements from a Local Path
 Restores all Web API Core Endorsements with those in an existing directory matching the standard structure above. In the initial release, the focus is on restoring from the local path with S3 support coming later.
 
 Example:
     
 ```
-restore --webApiCore --overwrite --<localPath|s3Path> <local or s3 root path>
+restore --webApiCore --overwrite --localPath /path/to/web_api_core_results
 ```
 Where: 
 * `webApiCore` is endorsement type.
 * `overwrite` (optional) specifies whether to replace existing results on the server with new ones.
-* `localPath` is the path to the results. If empty or does not contain results, the program should have no side effects. `s3Path` will be used later on but is not supported currently.
+* `localPath` is the path to the results. If empty or does not contain results, the program should have no side effects. 
 
 Each directory will already have Web API Core results in this case, so just restore after checking results from the API, unless the optional `overwrite` flag is present, in which case the existing results will be replaced instead.
 
@@ -39,19 +39,19 @@ If `overwrite` is used, the user will be shown an  `Are you sure? (y/N)` confirm
 
 <br >
 
-## Restore All Data Dictionary Endorsements from a Local or S3 Path
+## Restore All Data Dictionary Endorsements from a Local Path
 Restores all Data Dictionary and Data Dictionary + IDX Endorsements with those in an existing directory matching the standard structure above. 
 
 
 Example:
     
 ```
-restore --dd --overwrite --<localPath|s3Path> <local or s3 root path>
+restore --dd --overwrite --localPath /path/to/data_dictionary_results
 ```
 Where: 
 * `dd` is endorsement type.
 * `overwrite` (optional) specifies whether to replace existing results on the server with new ones.
-* `localPath` is the path to the results. If empty or does not contain results, the program should have no side effects. `s3Path` will be used later on but is not supported currently.
+* `localPath` is the path to the results. If empty or does not contain results, the program should have no side effects. 
 
 There can be many versions for a set of Data Dictionary results in a given directory. For example, 1.7 and 2.0.  
 
@@ -63,20 +63,22 @@ If `overwrite` is used, the user will be shown an  `Are you sure? (y/N)` confirm
 
 <br >
 
-## Restore All Web API Core Endorsements from a New Web API Core Result
+## Clone All Web API Core Endorsements from a New Web API Core Result to Set of Recipients
 Another case is when a given set of recipients needs to be restored from a single Web API Core result. 
 
 For M Recipients, the current requirement is that their Provider only needs to be tested on Web API Core once for all of their Recipients. This means we will need to be able to take a single Web API Core results file and create the standard directory structure, if it doesn't exist already, then restore from it.
 
 ```
-restore --webApiCore --providerUoi <providerUoi> --providerUsi <providerUsi> --overwrite --pathToRecipientCSV --pathToWebApiCoreReport <path> --<localPath|s3Path>
+copyWebApiResults --providerUoi `providerUoi` --providerUsi `providerUsi` [--version <current=2.0.0|version>] --pathToTargetRecipientUoiJson `/path/to/target/recipientUoi.json` --pathToWebApiCoreSourceReport --localPath /path/to/web_api_core_results --overwrite
 ```
 Where:
 * `providerUoi` is an M, P, T, or C UOI record validated against the current UOI data.
 * `providerUsi` is a USI for the given provider also validated against current UOI data.
 * `overwrite` (optional) specifies whether to replace existing results on the server with new ones.
-* `pathToRecipientCSV` is a list of recipient UOIs to be restored for this provider UOI and USI. They should be validated against the UOI M, P, T, or C records to make sure each item exists and skip and then print a message with all items that were skipped. 
-* `pathToWebApiCoreReport` specifies the path where the Web API Core results JSON file can be found. Both the version and timestamp of the report are in that file's header.
-* `localPath` is the root of the folder that should contain the updated results. If that folder is empty, then running this command would create one folder per Web API Core result. If it already has results, it would copy the current directory to the old directory first and copy the new results to the `/current` directory for each recipient. This can be a local or S3 path, but for now will just be local.
+* `pathToTargetRecipientUoiJson` is a JSON string array of recipient UOIs to be restored for this provider UOI and USI. They should be validated against the UOI M, P, T, or C records to make sure each item exists and skip and then print a message with all items that were skipped. 
+* `pathToWebApiCoreSourceReport` specifies the path where the Web API Core source results JSON file can be found. Both the version and timestamp of the report are in that file's header.
+* `localPath` is the root of the folder that should contain the updated results. If that folder is empty, then running this command would create one folder per Web API Core result. If it already has results, it would copy the current directory to the old directory first and copy the new results to the `/current` directory for each recipient. 
+* `version` is not supported at the moment and is assumed to be the current latest version of the Web API Core Endorsement. Additional endorsements such as Add/Edit and Expand will need to be added later. 
+
 
 Once the local directories are updated with the results, the restore all command outlined in the first item can be run to sync the results.
