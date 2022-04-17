@@ -266,7 +266,7 @@ const archiveEndorsement = ({
   }
 };
 
-const createResoscriptBearerTokenConfig = ({ serviceRootUri, token }) =>
+const createResoScriptBearerTokenConfig = ({ serviceRootUri, token }) =>
   '<?xml version="1.0" encoding="utf-8" ?>' +
   '<OutputScript>' +
   '  <ClientSettings>' +
@@ -276,7 +276,7 @@ const createResoscriptBearerTokenConfig = ({ serviceRootUri, token }) =>
   '  </ClientSettings>' +
   '</OutputScript>';
 
-const createResoscriptClientCredentialsConfig = ({ serviceRootUri, clientCredentials }) =>
+const createResoScriptClientCredentialsConfig = ({ serviceRootUri, clientCredentials }) =>
   '<?xml version="1.0" encoding="utf-8" ?>' +
   '<OutputScript>' +
   '  <ClientSettings>' +
@@ -299,11 +299,13 @@ module.exports = {
   isValidEndorsement,
   isValidVersion,
   getEndorsementMetadata,
-  createResoscriptBearerTokenConfig,
-  createResoscriptClientCredentialsConfig,
+  createResoScriptBearerTokenConfig,
+  createResoScriptClientCredentialsConfig,
   getFileSafeIso8601Timestamp,
   buildRecipientEndorsementPath,
   archiveEndorsement,
   getCurrentVersion,
-  getPreviousVersion
+  getPreviousVersion,
+  CURRENT_DATA_DICTIONARY_VERSION,
+  CURRENT_WEB_API_CORE_VERSION
 };

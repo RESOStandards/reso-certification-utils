@@ -6,10 +6,12 @@ const {
   buildRecipientEndorsementPath,
   isValidEndorsement,
   isValidVersion,
-  createResoscriptBearerTokenConfig,
-  createResoscriptClientCredentialsConfig,
+  createResoScriptBearerTokenConfig,
+  createResoScriptClientCredentialsConfig,
   EMPTY_STRING,
-  archiveEndorsement
+  archiveEndorsement,
+  endorsements,
+  CURRENT_DATA_DICTIONARY_VERSION
 } = require('../../common');
 
 const { execSync } = require('child_process');
@@ -21,15 +23,15 @@ const COMMANDER_PATH = WEB_API_COMMANDER_PATH || '.';
 const CERTIFICATION_RESULTS_PATH = path.join(COMMANDER_PATH, 'build', 'certification');
 
 const buildTestingConfig = (config = {}) => {
-  if (isClientCredentalsConfig(config)) {
-    return createResoscriptClientCredentialsConfig(config);
+  if (isClientCredentialsConfig(config)) {
+    return createResoScriptClientCredentialsConfig(config);
   } else if (isBearerTokenConfig(config)) {
-    return createResoscriptBearerTokenConfig(config);
+    return createResoScriptBearerTokenConfig(config);
   }
   return null;
 };
 
-const isClientCredentalsConfig = (config = { clientCredentials: {} }) =>
+const isClientCredentialsConfig = (config = { clientCredentials: {} }) =>
   config.clientCredentials &&
   config.clientCredentials.clientId &&
   config.clientCredentials.clientSecret &&
@@ -46,8 +48,15 @@ const isBearerTokenConfig = (config = { token: EMPTY_STRING }) => !!config.token
  * @param {String} RECIPIENT_CONFIG_PATH the path to the json config file.
  * @see {sample-config.json} for more information
  */
-const runTests = async (RECIPIENT_CONFIG_PATH, endorsementName, version) => {
+const runTests = async (RECIPIENT_CONFIG_PATH, args) => {
   if (!RECIPIENT_CONFIG_PATH) throw Error('Missing RECIPIENT_CONFIG_PATH.');
+
+  const { endorsementName, version, runAvailability } = {
+    endorsementName: endorsements.DATA_DICTIONARY,
+    version: CURRENT_DATA_DICTIONARY_VERSION,
+    runAvailability: true,
+    ...args
+  };
 
   if (!isValidEndorsement(endorsementName)) {
     console.error(`Endorsement key is not valid! endorsementName: ${endorsementName}`);
@@ -75,7 +84,7 @@ const runTests = async (RECIPIENT_CONFIG_PATH, endorsementName, version) => {
 
   configs.forEach(config => {
     try {
-      const { providerUsi, recipientUoi } = config;
+      const { providerUsi, recipientUoi, originatingSystemName, originatingSystemId } = config;
       if (!providerUsi) throw new Error(`providerUsi is missing from the given config: ${config}!`);
       if (!recipientUoi)
         throw new Error(`recipientUoi is missing from the given config: ${config}!`);
@@ -126,19 +135,28 @@ const runTests = async (RECIPIENT_CONFIG_PATH, endorsementName, version) => {
           process.exitCode = 1;
         }
 
-        //run data availability tests
-        const dataAvailabilityResult = execSync(
-          `sh ${path.join(
-            COMMANDER_PATH,
-            `gradlew testDataAvailability_1_7 -DpathToRESOScript='${RECIPIENT_CONFIG_PATH}'`
-          )}`,
-          { stdio: ['inherit', 'inherit', 'pipe'], cwd: COMMANDER_PATH }
-        );
+        if (runAvailability) {
+          const optionalArgs = originatingSystemId
+            ? `-DOriginatingSystemID=${originatingSystemId}`
+            : originatingSystemName
+              ? `-DOriginatingSystemName=${originatingSystemName}`
+              : '';
 
-        if (dataAvailabilityResult && dataAvailabilityResult.stderr) {
-          console.error('Data Dictionary testing failed for recipientUoi: ' + recipientUoi);
-          console.error(Error(dataAvailabilityResult.stderr));
-          process.exitCode = 1;
+          //run data availability tests
+          const dataAvailabilityResult = execSync(
+            `sh ${path.join(
+              COMMANDER_PATH,
+              `gradlew testDataAvailability_1_7 -DpathToRESOScript='${RECIPIENT_CONFIG_PATH}' ` +
+                optionalArgs
+            )}`,
+            { stdio: ['inherit', 'inherit', 'pipe'], cwd: COMMANDER_PATH }
+          );
+
+          if (dataAvailabilityResult && dataAvailabilityResult.stderr) {
+            console.error('Data Dictionary testing failed for recipientUoi: ' + recipientUoi);
+            console.error(Error(dataAvailabilityResult.stderr));
+            process.exitCode = 1;
+          }
         }
       } catch (err) {
         console.error(err);
