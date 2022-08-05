@@ -4,15 +4,14 @@ Restores a RESO Certification Server via its API using a local or S3 path.
 The following directory structure is assumed:
 ```
 - data_dictionary-1.7
-  - providerUoi-providerUsi
-      - recipientUoi1
-        - current
-          * <metadata report>
-          * <data availability report>
-        + archived
-          + timestamp0001
-          ...
-      + recipientUoi2
+  - providerUoi-providerUsi-recipientUoi1
+    - current
+      * <metadata report>
+      * <data availability report>
+    + archived
+      + timestamp0001
+      ...
+  + providerUoi-providerUsi-recipientUoi2
 + data_dictionary-2.0
 + web_api_server_core-2.0.0
 + data_dictionary_IDX_payload-1.7
