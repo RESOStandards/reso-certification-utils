@@ -1,3 +1,5 @@
+'use strict';
+
 const AWS = require('aws-sdk');
 
 const { AWS_REGION } = process.env;
