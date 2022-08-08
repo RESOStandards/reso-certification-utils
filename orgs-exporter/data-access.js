@@ -1,5 +1,7 @@
 const https = require('https');
 
+const { sleep } = require('./utils');
+
 const REQUEST_TIMEOUT_MS = (process.env.REQUEST_TIMEOUT_S || 30) * 1000;
 const { API_KEY, SERVER_URL, ENDORSEMENTS_PATH, UOI_GOOGLE_SHEET_URL } = process.env;
 
@@ -133,6 +135,9 @@ const fetchEndorsements = async () => {
         })
       );
     });
+    
+    //sleep so we don't hammer the server
+    await sleep(2000);
   } while (lastStatusCode >= 200 && lastStatusCode < 300);
 
   return results;
