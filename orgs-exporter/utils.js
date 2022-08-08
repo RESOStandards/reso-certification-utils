@@ -16,7 +16,7 @@ const writeDataToS3 = async ({ bucketName, fileName, serializedData } = {}) => {
   console.log('result is: ' + JSON.stringify(result));
 };
 
-const sleep = async (ms=500) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = async (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));
 
 module.exports = {
   writeDataToS3,

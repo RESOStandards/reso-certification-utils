@@ -135,7 +135,7 @@ const fetchEndorsements = async () => {
         })
       );
     });
-    
+
     //sleep so we don't hammer the server
     await sleep(2000);
   } while (lastStatusCode >= 200 && lastStatusCode < 300);
