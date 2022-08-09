@@ -1,7 +1,10 @@
 const fs = require('fs');
 const fse = require('fs-extra');
 const path = require('path');
-const { WEB_API_COMMANDER_PATH } = require('../../config.json');
+
+require('dotenv').config();
+const { WEB_API_COMMANDER_PATH } = process.env;
+
 const {
   buildRecipientEndorsementPath,
   isValidEndorsement,
