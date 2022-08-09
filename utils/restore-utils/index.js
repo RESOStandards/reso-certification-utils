@@ -5,7 +5,7 @@ const { join } = require('path');
 const { getOrgsMap, getOrgSystemsMap } = require('../../data-access/cert-api-client');
 
 const CERTIFICATION_RESULTS_DIRECTORY = 'current',
-  FILE_ENCODING = 'utf8',
+  // FILE_ENCODING = 'utf8',
   PATH_DATA_SEPARATOR = '-';
 
 const CERTIFICATION_FILES = {
@@ -14,6 +14,11 @@ const CERTIFICATION_FILES = {
   LOOKUP_RESOURCE_FIELD_METADATA: 'lookup-resource-field-metadata.json',
   LOOKUP_RESOURCE_LOOKUP_METADATA: 'lookup-resource-lookup-metadata.json'
 };
+
+const areRequiredFilesPresent = (fileNames = []) =>
+  fileNames.filter(fileName =>
+    [CERTIFICATION_FILES.METADATA_REPORT, CERTIFICATION_FILES.DATA_AVAILABILITY_REPORT].find(f => fileName === f)
+  ).length === 2;
 
 const readDirectory = async (path = '') => {
   try {
@@ -75,9 +80,10 @@ const restore = async (options = {}) => {
 
   const STATS = {
     processed: [],
-    skippedProviders: [],
-    skippedRecipients: [],
-    missingResults: []
+    skippedProviderUoiAndUsiPaths: [],
+    skippedRecipientPaths: [],
+    missingResultsPaths: [],
+    missingResultsFilePaths: []
   };
 
   const { pathToResults, url } = options;
@@ -117,7 +123,7 @@ const restore = async (options = {}) => {
         console.warn(
           chalk.yellowBright.bold(`WARNING: Could not find providerUoi '${providerUoi}'! Skipping...`)
         );
-        STATS.skippedProviders.push(providerUoi);
+        STATS.skippedProviderUoiAndUsiPaths.push(providerUoiAndUsiPath);
         break;
       }
 
@@ -129,19 +135,18 @@ const restore = async (options = {}) => {
             `WARNING: Could not find systems for providerUoi '${providerUoi}'! Skipping...`
           )
         );
-        STATS.skippedProviders.push(providerUoi);
+        STATS.skippedProviderUoiAndUsiPaths.push(providerUoiAndUsiPath);
       } else {
         if (!systems.find(system => system === providerUsi)) {
           console.log(
             `ERROR: Could not find system ${providerUsi} for providerUoi '${providerUoi}'! Skipping...`
           );
-          STATS.skippedProviders.push(providerUoi);
+          STATS.skippedProviderUoiAndUsiPaths.push(providerUoi);
           break;
         }
 
         //read subdirectories
         const pathToRecipientResults = join(pathToResults, providerUoiAndUsiPath);
-
         const recipientUoiPaths = await readDirectory(pathToRecipientResults);
 
         if (!recipientUoiPaths?.length) {
@@ -158,7 +163,7 @@ const restore = async (options = {}) => {
             console.log(
               chalk.yellowBright.bold(`WARNING: '${recipientUoi}' is not a valid UOI! Skipping...`)
             );
-            STATS.skippedRecipients.push(recipientUoi);
+            STATS.skippedRecipientPaths.push(join(pathToResults, providerUoiAndUsiPath, recipientUoi));
           } else {
             const currentResultsPath = join(
               pathToResults,
@@ -178,12 +183,16 @@ const restore = async (options = {}) => {
 
             if (!results?.length) {
               console.error(chalk.yellowBright.bold('WARNING: no results found to restore! Skipping...\n'));
-              STATS.skippedRecipients.push(recipientUoi);
-              STATS.missingResults.push(currentResultsPath);
+              STATS.missingResultsPaths.push(currentResultsPath);
             } else {
               console.log('Found results!');
-              results.forEach(result => console.log(`\t${result}`));
-              STATS.processed.push(currentResultsPath);
+              console.log('Checking for required files...');
+              if (areRequiredFilesPresent(results)) {
+                STATS.processed.push(currentResultsPath);
+              } else {
+                console.log(chalk.redBright.bold(`\tERROR: could not find required files in ${currentResultsPath}`));
+                STATS.missingResultsFilePaths.push(currentResultsPath);
+              }
             }
           }
         }
@@ -195,19 +204,33 @@ const restore = async (options = {}) => {
   }
 
   const timeTaken = Math.round((new Date() - START_TIME) / 1000);
+  const totalItems =
+    STATS.processed.length +
+    STATS.skippedProviderUoiAndUsiPaths.length +
+    STATS.skippedRecipientPaths.length +
+    STATS.missingResultsFilePaths.length +
+    STATS.missingResultsPaths.length;
 
   console.log(chalk.magentaBright.bold('------------------------------------------------------------'));
-  console.log(chalk.bold(`Processing complete!\nProcessed: ${STATS.processed.length}\nTime Taken: ~${timeTaken}s`));
+  console.log(
+    chalk.bold(`Processing complete!\nItems Processed: ${STATS.processed.length} of ${totalItems}`)
+  );
+  console.log(chalk.bold(`Time Taken: ~${timeTaken}s`));
   console.log(chalk.magentaBright.bold('------------------------------------------------------------'));
-  
-  console.log(chalk.bold(`Providers Skipped: ${STATS.skippedProviders.length}`));
-  STATS.skippedProviders.forEach(provider => console.log(chalk.bold(`\t * ${provider}`)));
 
-  console.log(chalk.bold(`\nRecipients Skipped: ${STATS.skippedRecipients.length}`));
-  STATS.skippedRecipients.forEach(recipient => console.log(chalk.bold(`\t * ${recipient}`)));
+  console.log(chalk.bold(`Provider and System Paths Skipped: ${STATS.skippedProviderUoiAndUsiPaths.length}`));
+  STATS.skippedProviderUoiAndUsiPaths.forEach(providerPath =>
+    console.log(chalk.bold(`\t * ${providerPath}`))
+  );
 
-  console.log(chalk.bold(`\nMissing Results: ${STATS.missingResults.length}`));
-  STATS.missingResults.forEach(resultsPath => console.log(chalk.bold(`\t * ${resultsPath}`)));
+  console.log(chalk.bold(`\nRecipient Paths Skipped: ${STATS.skippedRecipientPaths.length}`));
+  STATS.skippedRecipientPaths.forEach(recipientPath => console.log(chalk.bold(`\t * ${recipientPath}`)));
+
+  console.log(chalk.bold(`\nMissing Results Paths: ${STATS.missingResultsPaths.length}`));
+  STATS.missingResultsPaths.forEach(resultsPath => console.log(chalk.bold(`\t * ${resultsPath}`)));
+
+  console.log(chalk.bold(`\nMissing Results Files: ${STATS.missingResultsFilePaths.length}`));
+  STATS.missingResultsFilePaths.forEach(resultsFilePath => console.log(chalk.bold(`\t * ${resultsFilePath}`)));
 
   console.log();
 };
