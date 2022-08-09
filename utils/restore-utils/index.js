@@ -1,7 +1,7 @@
 //const conf = new (require('conf'))();
 const chalk = require('chalk');
 const { promises: fs } = require('fs');
-// const { join } = require('path');
+const { join } = require('path');
 const { getOrgsMap, getOrgSystemsMap } = require('../../data-access/cert-api-client');
 
 const CERTIFICATION_RESULTS_DIRECTORY = 'current',
@@ -17,13 +17,9 @@ const CERTIFICATION_FILES = {
 
 const readDirectory = async (path = '') => {
   try {
-    const items = await fs.readdir(path);
-    items.map(item => console.log(`\t${item}`));
-    return items;
+    return await fs.readdir(path);
   } catch (err) {
-    console.error(
-      chalk.red.bold(`Error trying to read from the given path! Path: ${path}, Error: ${err}`)
-    );
+    return [];
   }
 };
 
@@ -41,70 +37,179 @@ const isS3Path = (path = '') => path.trim().toLowerCase().startsWith('s3://');
  */
 const isLocalPath = (path = '') => !isS3Path(path);
 
+const fetchOrgData = async () => {
+  //fetch org data
+  console.log(chalk.cyanBright.bold('\nFetching org data...'));
+  const orgMap = (await getOrgsMap()) || {};
+  if (!Object.keys(orgMap)?.length) throw new Error('ERROR: could not fetch orgs!');
+  console.log(chalk.cyanBright.bold('Done!'));
+  return orgMap;
+};
+
+const fetchSystemData = async () => {
+  //fetch system data
+  console.log(chalk.cyanBright.bold('\nFetching system data...'));
+  const orgSystemMap = (await getOrgSystemsMap()) || {};
+  if (!Object.keys(orgSystemMap)?.length) throw new Error('ERROR: could not fetch systems!');
+  console.log(chalk.cyanBright.bold('Done!'));
+  return orgSystemMap;
+};
+
+const isValidUrl = url => {
+  try {
+    new URL(url);
+    return true;
+  } catch (err) {
+    console.error(chalk.redBright.bold(`ERROR: Cannot parse given url: ${url}`));
+    return false;
+  }
+};
+
 /**
  * Restores a RESO Certification Server from either a local or S3 path.
  * @param {String} path
  * @throws error if path is not a valid S3 or local path
  */
 const restore = async (options = {}) => {
+  const START_TIME = new Date();
+
+  const STATS = {
+    processed: [],
+    skippedProviders: [],
+    skippedRecipients: [],
+    missingResults: []
+  };
+
   const { pathToResults, url } = options;
 
-  console.log(chalk.greenBright.bold('\nRestore process starting...'));
-
-  console.log(chalk.cyanBright.bold('\nFetching org data...'));
-  const orgMap = await getOrgsMap() || {};
-  if (!Object.keys(orgMap)?.length) throw new Error('ERROR: could not fetch orgs!');
-  console.log(chalk.cyanBright.bold('Done!'));
-
-  console.log(chalk.cyanBright.bold('\nFetching system data...'));
-  const orgSystemMap = await getOrgSystemsMap() || {};
-  if (!Object.keys(orgSystemMap)?.length) throw new Error('ERROR: could not fetch systems!');
-  console.log(chalk.cyanBright.bold('Done!'));
-
-  console.log(chalk.blueBright.bold(`\nCertification API URL: ${url}`));
-
   if (isS3Path(pathToResults)) {
+    console.log(
+      chalk.yellowBright.bold(`S3 path provided but not supported at this time!\nPath: ${pathToResults}`)
+    );
+    return;
+  }
 
-    console.log(chalk.blueBright.bold(`S3 path provided! Path: ${pathToResults.toString()}`));
+  if (!isValidUrl(url)) return;
 
-  } else if (isLocalPath(pathToResults)) {
-  
-    console.log(chalk.blueBright.bold(`Local path ${pathToResults} contains the following items:`));
-    const items = await readDirectory(pathToResults);
-    
+  console.log(chalk.bold(`\nCertification API URL: ${url}`));
+  console.log(chalk.bold(`Path to results: ${pathToResults}`));
 
-    items.forEach((item = '') => {
-      const [providerUoi, providerUsi, ] = item.split(PATH_DATA_SEPARATOR);
-      console.log(chalk.cyanBright.bold(`\nProcessing item: ${item}...`));
+  if (isLocalPath(pathToResults)) {
+    const orgMap = await fetchOrgData();
+    const orgSystemMap = await fetchSystemData();
 
+    console.log(chalk.greenBright.bold('\nRestore process starting...\n'));
+
+    const providerUoiAndUsiPaths = await readDirectory(pathToResults);
+
+    if (!providerUoiAndUsiPaths?.length) {
+      console.error(
+        chalk.redBright.bold(`ERROR: Could not find provider UOI and USI paths in '${pathToResults}'`)
+      );
+      return;
+    }
+
+    for await (const providerUoiAndUsiPath of providerUoiAndUsiPaths) {
+      const [providerUoi, providerUsi] = providerUoiAndUsiPath.split(PATH_DATA_SEPARATOR);
+
+      //is provider UOI valid?
       if (!orgMap[providerUoi]) {
-        console.warn(chalk.yellowBright.bold(`\tWARNING: could not find providerUoi '${providerUoi}'! Skipping...`));
-        return;
-      } else {
-        console.log(`\tFound providerUoi '${providerUoi}'!`);
+        console.warn(
+          chalk.yellowBright.bold(`WARNING: Could not find providerUoi '${providerUoi}'! Skipping...`)
+        );
+        STATS.skippedProviders.push(providerUoi);
+        break;
       }
 
+      //is provider USI valid?
       const systems = orgSystemMap[providerUoi] || [];
       if (!systems?.length) {
-        console.warn(chalk.yellowBright.bold(`\tWARNING: could not find systems for providerUoi '${providerUoi}'! Skipping...`));
-        return;
+        console.warn(
+          chalk.yellowBright.bold(
+            `WARNING: Could not find systems for providerUoi '${providerUoi}'! Skipping...`
+          )
+        );
+        STATS.skippedProviders.push(providerUoi);
       } else {
-        if (systems.find(system => system === providerUsi)) {
-          console.log(`\tFound system ${providerUsi} for providerUoi '${providerUoi}'!`);
-        } else {
-          console.log(`\tCould not find system ${providerUsi} for providerUoi '${providerUoi}'! Skipping...`);
-          return;
+        if (!systems.find(system => system === providerUsi)) {
+          console.log(
+            `ERROR: Could not find system ${providerUsi} for providerUoi '${providerUoi}'! Skipping...`
+          );
+          STATS.skippedProviders.push(providerUoi);
+          break;
+        }
+
+        //read subdirectories
+        const pathToRecipientResults = join(pathToResults, providerUoiAndUsiPath);
+
+        const recipientUoiPaths = await readDirectory(pathToRecipientResults);
+
+        if (!recipientUoiPaths?.length) {
+          console.log(
+            chalk.yellowBright.bold(
+              `WARNING: Could not find recipient paths for ${providerUoiAndUsiPath}! Skipping...`
+            )
+          );
+          break;
+        }
+
+        for await (const recipientUoi of recipientUoiPaths) {
+          if (!orgMap[recipientUoi]) {
+            console.log(
+              chalk.yellowBright.bold(`WARNING: '${recipientUoi}' is not a valid UOI! Skipping...`)
+            );
+            STATS.skippedRecipients.push(recipientUoi);
+          } else {
+            const currentResultsPath = join(
+              pathToResults,
+              providerUoiAndUsiPath,
+              recipientUoi,
+              CERTIFICATION_RESULTS_DIRECTORY
+            );
+
+            console.log(
+              chalk.cyanBright.bold(
+                `Processing results for providerUoi: '${providerUoi}', providerUsi: '${providerUsi}', recipientUoi: '${recipientUoi}'...`
+              )
+            );
+
+            console.log(`Path: ${currentResultsPath}`);
+            const results = await readDirectory(currentResultsPath);
+
+            if (!results?.length) {
+              console.error(chalk.yellowBright.bold('WARNING: no results found to restore! Skipping...\n'));
+              STATS.skippedRecipients.push(recipientUoi);
+              STATS.missingResults.push(currentResultsPath);
+            } else {
+              console.log('Found results!');
+              results.forEach(result => console.log(`\t${result}`));
+              STATS.processed.push(currentResultsPath);
+            }
+          }
         }
       }
-    });
-
-    console.log(chalk.greenBright.bold('\nRestore process complete!\n'));
-
+    }
+    console.log();
   } else {
-    console.error(
-      chalk.red.bold(`Invalid path: ${pathToResults}! \nMust be valid S3 or local path`)
-    );
+    console.error(chalk.red.bold(`Invalid path: ${pathToResults}! \nMust be valid S3 or local path`));
   }
+
+  const timeTaken = Math.round((new Date() - START_TIME) / 1000);
+
+  console.log(chalk.magentaBright.bold('------------------------------------------------------------'));
+  console.log(chalk.bold(`Processing complete!\nProcessed: ${STATS.processed.length}\nTime Taken: ~${timeTaken}s`));
+  console.log(chalk.magentaBright.bold('------------------------------------------------------------'));
+  
+  console.log(chalk.bold(`Providers Skipped: ${STATS.skippedProviders.length}`));
+  STATS.skippedProviders.forEach(provider => console.log(chalk.bold(`\t * ${provider}`)));
+
+  console.log(chalk.bold(`\nRecipients Skipped: ${STATS.skippedRecipients.length}`));
+  STATS.skippedRecipients.forEach(recipient => console.log(chalk.bold(`\t * ${recipient}`)));
+
+  console.log(chalk.bold(`\nMissing Results: ${STATS.missingResults.length}`));
+  STATS.missingResults.forEach(resultsPath => console.log(chalk.bold(`\t * ${resultsPath}`)));
+
+  console.log();
 };
 
 module.exports = {
