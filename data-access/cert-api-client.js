@@ -1,7 +1,6 @@
 const axios = require('axios');
 require('dotenv').config();
-const { CERTIFICATION_API_URL, CERTIFICATION_API_KEY, ORGS_DATA_URL, SYSTEMS_DATA_URL } =
-  process.env;
+const { CERTIFICATION_API_URL, CERTIFICATION_API_KEY, ORGS_DATA_URL, SYSTEMS_DATA_URL } = process.env;
 
 const API_DEBOUNCE_SECONDS = 1;
 
@@ -68,8 +67,7 @@ const postDataDictionaryResultsToApi = async ({
       getDataDictionaryOptions({ providerUoi, providerUsi, recipientUoi, results })
     );
 
-    if (!response.id)
-      throw new Error('Did not receive the required id parameter from the response!');
+    if (!response.id) throw new Error('Did not receive the required id parameter from the response!');
 
     return response.id;
   } catch (err) {
@@ -84,8 +82,7 @@ const postDataAvailabilityResultsToApi = async ({ metadataReportId, results = {}
   try {
     const response = await axios.post(getDataAvailabilityOptions(metadataReportId, results));
 
-    if (!response || !response.success)
-      throw new Error('Api did not report a successful response! ');
+    if (!response || !response.success) throw new Error('Api did not report a successful response! ');
 
     return response.id;
   } catch (err) {
@@ -137,18 +134,39 @@ const getOrgsMap = async () => {
   }, {});
 };
 
+const findDataDictionaryReport = async ({ serverUrl, providerUoi, providerUsi, recipientUoi } = {}) => {
+  const config = {
+    headers: {
+      Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
+    }
+  };
+
+  const { data = [] } = await axios.get(
+    `${serverUrl}/api/v1/certification_reports/summary/${recipientUoi}`,
+    config
+  );
+
+  return data.find(item =>
+    item?.type === 'data_dictionary' &&
+    item?.providerUoi === providerUoi &&
+    //provider USI isn't in the data set at the moment, only filter if it's present
+    (item?.providerUsi
+      ? item.providerUsi === providerUsi
+      : true)
+  );
+};
+
 const getOrgSystemsMap = async () => {
-  return (await axios.get(SYSTEMS_DATA_URL))?.data?.values
-    .slice(1)
-    .reduce((acc, [providerUoi, , usi]) => {
-      if (!acc[providerUoi]) acc[providerUoi] = [];
-      acc[providerUoi].push(usi);
-      return acc;
-    }, {});
+  return (await axios.get(SYSTEMS_DATA_URL))?.data?.values.slice(1).reduce((acc, [providerUoi, , usi]) => {
+    if (!acc[providerUoi]) acc[providerUoi] = [];
+    acc[providerUoi].push(usi);
+    return acc;
+  }, {});
 };
 
 module.exports = {
   processDataDictionaryResults,
   getOrgsMap,
-  getOrgSystemsMap
+  getOrgSystemsMap,
+  findDataDictionaryReport
 };

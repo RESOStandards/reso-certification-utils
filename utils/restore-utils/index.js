@@ -2,7 +2,7 @@
 const chalk = require('chalk');
 const { promises: fs } = require('fs');
 const { join } = require('path');
-const { getOrgsMap, getOrgSystemsMap } = require('../../data-access/cert-api-client');
+const { getOrgsMap, getOrgSystemsMap, findDataDictionaryReport } = require('../../data-access/cert-api-client');
 
 const CERTIFICATION_RESULTS_DIRECTORY = 'current',
   // FILE_ENCODING = 'utf8',
@@ -184,6 +184,16 @@ const restore = async (options = {}) => {
               if (areRequiredFilesPresent(results)) {
                 STATS.processed.push(currentResultsPath);
                 console.log(chalk.green.bold('Found results!'));
+
+                //search for existing results
+                const { id: reportId = null } = await findDataDictionaryReport({ serverUrl: url, providerUoi, providerUsi, recipientUoi }) || {};
+
+                if (reportId) {
+                  console.log(chalk.bold('Found report! Report ID: ' + JSON.stringify(reportId)));
+                } else {
+                  console.log('No report found!');
+                }
+                
               } else {
                 console.log(
                   chalk.redBright.bold(`ERROR: Could not find required files in ${currentResultsPath}`)
@@ -219,7 +229,7 @@ const restore = async (options = {}) => {
   console.log(chalk.bold(`\nRecipient UOI Paths Skipped: ${STATS.skippedRecipientPaths.length}`));
   STATS.skippedRecipientPaths.forEach(recipientPath => console.log(chalk.bold(`\t * ${recipientPath}`)));
 
-  console.log(chalk.bold(`\nMissing Results Paths: ${STATS.missingResultsPaths.length}`));
+  console.log(chalk.bold(`\nMissing Results: ${STATS.missingResultsPaths.length}`));
   STATS.missingResultsPaths.forEach(resultsPath => console.log(chalk.bold(`\t * ${resultsPath}`)));
 
   console.log(chalk.bold(`\nMissing Results Files: ${STATS.missingResultsFilePaths.length}`));
