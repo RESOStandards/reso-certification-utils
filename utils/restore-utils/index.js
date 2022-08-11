@@ -6,7 +6,8 @@ const {
   getOrgsMap,
   getOrgSystemsMap,
   findDataDictionaryReport,
-  sleep
+  sleep,
+  processDataDictionaryResults
 } = require('../../data-access/cert-api-client');
 
 const CERTIFICATION_RESULTS_DIRECTORY = 'current',
@@ -34,6 +35,14 @@ const readDirectory = async (path = '') => {
     return await fs.readdir(path);
   } catch (err) {
     return [];
+  }
+};
+
+const readFile = async filePath => {
+  try {
+    return await fs.readFile(filePath);
+  } catch (err) {
+    console.error(`Could not read file from path '${filePath}'! Error: ${err}`);
   }
 };
 
@@ -89,13 +98,14 @@ const restore = async (options = {}) => {
 
   const STATS = {
     processed: [],
-    replacedReports: [],
     skippedProviderUoiPaths: [],
     skippedUsiPaths: [],
     skippedRecipientPaths: [],
     missingResultsPaths: [],
     missingResultsFilePaths: []
   };
+
+  const replacedReports = [];
 
   const { pathToResults, url, overwrite = false } = options;
 
@@ -215,6 +225,15 @@ const restore = async (options = {}) => {
 
                   const { id: reportId = null, status = null } = report;
 
+                  const metadataReportJson =
+                    JSON.parse(
+                      await readFile(join(currentResultsPath, CERTIFICATION_FILES.METADATA_REPORT))
+                    ) || {};
+                  const dataAvailabilityReportJson =
+                    JSON.parse(
+                      await readFile(join(currentResultsPath, CERTIFICATION_FILES.DATA_AVAILABILITY_REPORT))
+                    ) || {};
+
                   if (reportId && status) {
                     console.log(chalk.bold(`Found report with id: ${reportId}`));
 
@@ -228,12 +247,36 @@ const restore = async (options = {}) => {
                           )
                         );
                       } else {
-                        console.log(chalk.yellowBright.bold('TODO: Overwriting report!'));
-                        STATS.replacedReports.push(reportId);
+                        console.log(chalk.yellowBright.bold('Overwriting existing report...'));
+                        const result = await processDataDictionaryResults({
+                          url,
+                          providerUoi,
+                          providerUsi,
+                          recipientUoi,
+                          metadataReport: metadataReportJson,
+                          dataAvailabilityReport: dataAvailabilityReportJson,
+                          overwrite: true,
+                          reportIdToDelete: reportId
+                        });
+
+                        if (result) {
+                          replacedReports.push(reportId);
+                        }
+
+                        console.log(chalk.bold(`Result: ${result ? 'Succeeded!' : 'Failed!'}`));
                       }
                     }
                   } else {
-                    console.log('No report found!');
+                    console.log('No existing report found! Ingesting results...');
+                    const result = await processDataDictionaryResults({
+                      url,
+                      providerUoi,
+                      providerUsi,
+                      recipientUoi,
+                      metadataReport: metadataReportJson,
+                      dataAvailabilityReport: dataAvailabilityReportJson
+                    });
+                    console.log(chalk.bold(`Done! Result: ${result}`));
                   }
                 } catch (err) {
                   console.log(chalk.bgRed.bold(err));
@@ -266,8 +309,8 @@ const restore = async (options = {}) => {
   console.log(chalk.magentaBright.bold('------------------------------------------------------------'));
 
   if (overwrite) {
-    console.log(chalk.bold(`\nReports replaced: ${STATS.replacedReports.length}`));
-    STATS.replacedReports.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
+    console.log(chalk.bold(`\nReports replaced: ${replacedReports.length}`));
+    replacedReports.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
   }
 
   console.log(chalk.bold(`\nProvider UOI Paths Skipped: ${STATS.skippedProviderUoiPaths.length}`));
