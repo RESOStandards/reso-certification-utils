@@ -89,6 +89,7 @@ const restore = async (options = {}) => {
 
   const STATS = {
     processed: [],
+    replacedReports: [],
     skippedProviderUoiPaths: [],
     skippedUsiPaths: [],
     skippedRecipientPaths: [],
@@ -100,7 +101,11 @@ const restore = async (options = {}) => {
 
   if (overwrite) {
     console.log(chalk.bgYellowBright.bold('WARNING: -o or --overwrite option passed!'));
-    console.log(chalk.bold(`Waiting ${OVERWRITE_DELAY_S} seconds before proceeding...use <ctrl+c> to exit if this was unintended!`));
+    console.log(
+      chalk.bold(
+        `Waiting ${OVERWRITE_DELAY_S} seconds before proceeding...use <ctrl+c> to exit if this was unintended!`
+      )
+    );
     await sleep(OVERWRITE_DELAY_S * 1000);
   }
 
@@ -217,9 +222,14 @@ const restore = async (options = {}) => {
                       console.log(chalk.bgRedBright.bold(`Cannot restore reports with status '${status}'`));
                     } else {
                       if (!overwrite) {
-                        console.log(chalk.bgYellowBright.bold('Found existing passed report! Use --overwrite or -o to replace it'));
+                        console.log(
+                          chalk.bgYellowBright.bold(
+                            'Found existing passed report! Use --overwrite or -o to replace it'
+                          )
+                        );
                       } else {
                         console.log(chalk.yellowBright.bold('TODO: Overwriting report!'));
+                        STATS.replacedReports.push(reportId);
                       }
                     }
                   } else {
@@ -255,24 +265,27 @@ const restore = async (options = {}) => {
   console.log(chalk.bold(`Time Taken: ~${timeTaken}s`));
   console.log(chalk.magentaBright.bold('------------------------------------------------------------'));
 
-  console.log(chalk.bold(`Provider UOI Paths Skipped: ${STATS.skippedProviderUoiPaths.length}`));
-  STATS.skippedProviderUoiPaths.forEach(providerPath => console.log(chalk.bold(`\t * ${providerPath}`)));
+  if (overwrite) {
+    console.log(chalk.bold(`\nReports replaced: ${STATS.replacedReports.length}`));
+    STATS.replacedReports.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
+  }
 
-  console.log(chalk.bold(`Provider USI Paths Skipped: ${STATS.skippedUsiPaths.length}`));
-  STATS.skippedUsiPaths.forEach(usiPath => console.log(chalk.bold(`\t * ${usiPath}`)));
+  console.log(chalk.bold(`\nProvider UOI Paths Skipped: ${STATS.skippedProviderUoiPaths.length}`));
+  STATS.skippedProviderUoiPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
+
+  console.log(chalk.bold(`\nProvider USI Paths Skipped: ${STATS.skippedUsiPaths.length}`));
+  STATS.skippedUsiPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
 
   console.log(chalk.bold(`\nRecipient UOI Paths Skipped: ${STATS.skippedRecipientPaths.length}`));
-  STATS.skippedRecipientPaths.forEach(recipientPath => console.log(chalk.bold(`\t * ${recipientPath}`)));
+  STATS.skippedRecipientPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
 
   console.log(chalk.bold(`\nMissing Results: ${STATS.missingResultsPaths.length}`));
-  STATS.missingResultsPaths.forEach(resultsPath => console.log(chalk.bold(`\t * ${resultsPath}`)));
+  STATS.missingResultsPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
 
   console.log(chalk.bold(`\nMissing Results Files: ${STATS.missingResultsFilePaths.length}`));
-  STATS.missingResultsFilePaths.forEach(resultsFilePath =>
-    console.log(chalk.bold(`\t * ${resultsFilePath}`))
-  );
+  STATS.missingResultsFilePaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
 
-  console.log();
+  console.log(chalk.bold('\nRestore complete! Exiting...\n'));
 };
 
 module.exports = {
