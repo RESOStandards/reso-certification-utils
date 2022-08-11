@@ -30,14 +30,14 @@ const getDataDictionaryOptions = ({ providerUoi, providerUsi, recipientUoi, resu
   };
 };
 
-const getDataAvailabilityOptions = ({ metadataReportId, results }) => {
-  if (!metadataReportId) throw new Error('metadataReportId is required!');
+const getDataAvailabilityOptions = ({ reportId, results }) => {
+  if (!reportId) throw new Error('reportId is required!');
   if (!Object.keys(results).length) throw new Error('data is required!');
 
   return {
     method: 'post',
     baseURL: CERTIFICATION_API_URL,
-    url: `/api/v1/payload/data_availability/${metadataReportId}`,
+    url: `/api/v1/payload/data_availability/${reportId}`,
     headers: {
       Authorization: `ApiKey ${CERTIFICATION_API_KEY}`,
       'Content-Type': 'application/json',
@@ -75,12 +75,12 @@ const postDataDictionaryResultsToApi = async ({
   }
 };
 
-const postDataAvailabilityResultsToApi = async ({ metadataReportId, results = {} } = {}) => {
-  if (!metadataReportId) throw new Error('providerUoi is required!');
-  if (!Object.keys(results).length) throw new Error('Data availability results were empty!');
+const postDataAvailabilityResultsToApi = async ({ reportId, dataAvailabilityReport = {} } = {}) => {
+  if (!reportId) throw new Error('reportId is required!');
+  if (!Object.keys(dataAvailabilityReport).length) throw new Error('Data availability results were empty!');
 
   try {
-    const response = await axios.post(getDataAvailabilityOptions(metadataReportId, results));
+    const response = await axios.post(getDataAvailabilityOptions(reportId, dataAvailabilityReport));
 
     if (!response || !response.success) throw new Error('Api did not report a successful response! ');
 
@@ -90,23 +90,23 @@ const postDataAvailabilityResultsToApi = async ({ metadataReportId, results = {}
   }
 };
 
-const snooze = ms => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = async ms => new Promise(resolve => setTimeout(resolve, ms));
 
-const processDataDictionaryResults = async (providerUoi, recipientUoi) => {
+const processDataDictionaryResults = async ({ providerUoi, recipientUoi, metadataReport = {}, dataAvailabilityReport = {} }) => {
   try {
-    await snooze(API_DEBOUNCE_SECONDS * 1000); //wait for the dust to settle to avoid thrashing the server
+    await sleep(API_DEBOUNCE_SECONDS * 1000); //wait for the dust to settle to avoid thrashing the server
     // TODO: handle this in the CLI util
     // console.log('Posting Data Dictionary results...');
-    const reportId = await postDataDictionaryResultsToApi(providerUoi, recipientUoi);
+    const reportId = await postDataDictionaryResultsToApi({ providerUoi, recipientUoi, metadataReport });
     // TODO: handle this in the CLI util
     // console.log('Results posted, reportId: ' + reportId);
 
-    await snooze(API_DEBOUNCE_SECONDS * 1000); //wait for the dust to settle to avoid thrashing the server
+    await sleep(API_DEBOUNCE_SECONDS * 1000); //wait for the dust to settle to avoid thrashing the server
 
     if (reportId) {
       // TODO: handle this in the CLI util
       // console.log('Posting data availability results for reportId');
-      return await postDataAvailabilityResultsToApi(reportId, providerUoi, recipientUoi);
+      return await postDataAvailabilityResultsToApi({ reportId, dataAvailabilityReport });
     }
   } catch (err) {
     throw new Error('Could not process data dictionary results! \nError:' + err);
@@ -135,25 +135,26 @@ const getOrgsMap = async () => {
 };
 
 const findDataDictionaryReport = async ({ serverUrl, providerUoi, providerUsi, recipientUoi } = {}) => {
-  const config = {
-    headers: {
-      Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
-    }
-  };
+  const url = `${serverUrl}/api/v1/certification_reports/summary/${recipientUoi}`,
+    config = {
+      headers: {
+        Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
+      }
+    };
 
-  const { data = [] } = await axios.get(
-    `${serverUrl}/api/v1/certification_reports/summary/${recipientUoi}`,
-    config
-  );
+  try {
+    const { data = [] } = await axios.get(url, config);
 
-  return data.find(item =>
-    item?.type === 'data_dictionary' &&
-    item?.providerUoi === providerUoi &&
-    //provider USI isn't in the data set at the moment, only filter if it's present
-    (item?.providerUsi
-      ? item.providerUsi === providerUsi
-      : true)
-  );
+    return data.find(
+      item =>
+        item?.type === 'data_dictionary' &&
+        item?.providerUoi === providerUoi &&
+        //provider USI isn't in the data set at the moment, only filter if it's present
+        (item?.providerUsi ? item.providerUsi === providerUsi : true)
+    );
+  } catch (err) {
+    throw new Error(`Could not connect to ${url}`);
+  }
 };
 
 const getOrgSystemsMap = async () => {
@@ -168,5 +169,6 @@ module.exports = {
   processDataDictionaryResults,
   getOrgsMap,
   getOrgSystemsMap,
-  findDataDictionaryReport
+  findDataDictionaryReport,
+  sleep
 };

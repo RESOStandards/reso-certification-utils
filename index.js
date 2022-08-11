@@ -11,13 +11,8 @@ program
   .command('restore')
   .option('-p, --pathToResults <string>', 'path to test results')
   .option('-u, --url <string>', 'URL of Certification API')
+  .option('-o, --overwrite', 'Flag to overwrite existing passed files')
   .description('Restores local or S3 results to a RESO Certification API instance')
   .action(restore);
-
-
-
-//TODO: add CLI handlers for these
-// const { processDataDictionaryResults } = require('./restore-utils/postResultsToApi.js');
-// const { processDataAvailabilityReport } = require('./etl/processDataAvailabilityReport.js');
 
 program.parse();

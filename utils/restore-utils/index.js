@@ -2,11 +2,18 @@
 const chalk = require('chalk');
 const { promises: fs } = require('fs');
 const { join } = require('path');
-const { getOrgsMap, getOrgSystemsMap, findDataDictionaryReport } = require('../../data-access/cert-api-client');
+const {
+  getOrgsMap,
+  getOrgSystemsMap,
+  findDataDictionaryReport,
+  sleep
+} = require('../../data-access/cert-api-client');
 
 const CERTIFICATION_RESULTS_DIRECTORY = 'current',
   // FILE_ENCODING = 'utf8',
-  PATH_DATA_SEPARATOR = '-';
+  PATH_DATA_SEPARATOR = '-',
+  PASSED_STATUS = 'passed',
+  OVERWRITE_DELAY_S = 10;
 
 const CERTIFICATION_FILES = {
   METADATA_REPORT: 'metadata-report.json',
@@ -48,7 +55,7 @@ const fetchOrgData = async () => {
   //fetch org data
   console.log(chalk.cyanBright.bold('\nFetching org data...'));
   const orgMap = (await getOrgsMap()) || {};
-  if (!Object.keys(orgMap)?.length) throw new Error('ERROR: could not fetch orgs!');
+  if (!Object.keys(orgMap)?.length) throw new Error('Error: could not fetch orgs!');
   console.log(chalk.cyanBright.bold('Done!'));
   return orgMap;
 };
@@ -57,7 +64,7 @@ const fetchSystemData = async () => {
   //fetch system data
   console.log(chalk.cyanBright.bold('\nFetching system data...'));
   const orgSystemMap = (await getOrgSystemsMap()) || {};
-  if (!Object.keys(orgSystemMap)?.length) throw new Error('ERROR: could not fetch systems!');
+  if (!Object.keys(orgSystemMap)?.length) throw new Error('Error: could not fetch systems!');
   console.log(chalk.cyanBright.bold('Done!'));
   return orgSystemMap;
 };
@@ -67,7 +74,7 @@ const isValidUrl = url => {
     new URL(url);
     return true;
   } catch (err) {
-    console.error(chalk.redBright.bold(`ERROR: Cannot parse given url: ${url}`));
+    console.log(chalk.redBright.bold(`Error: Cannot parse given url: ${url}`));
     return false;
   }
 };
@@ -75,7 +82,7 @@ const isValidUrl = url => {
 /**
  * Restores a RESO Certification Server from either a local or S3 path.
  * @param {String} path
- * @throws error if path is not a valid S3 or local path
+ * @throws Error if path is not a valid S3 or local path
  */
 const restore = async (options = {}) => {
   const START_TIME = new Date();
@@ -89,7 +96,13 @@ const restore = async (options = {}) => {
     missingResultsFilePaths: []
   };
 
-  const { pathToResults, url } = options;
+  const { pathToResults, url, overwrite = false } = options;
+
+  if (overwrite) {
+    console.log(chalk.bgYellowBright.bold('WARNING: -o or --overwrite option passed!'));
+    console.log(chalk.bold(`Waiting ${OVERWRITE_DELAY_S} seconds before proceeding...use <ctrl+c> to exit if this was unintended!`));
+    await sleep(OVERWRITE_DELAY_S * 1000);
+  }
 
   if (isS3Path(pathToResults)) {
     console.log(
@@ -112,8 +125,8 @@ const restore = async (options = {}) => {
     const providerUoiAndUsiPaths = await readDirectory(pathToResults);
 
     if (!providerUoiAndUsiPaths?.length) {
-      console.error(
-        chalk.redBright.bold(`ERROR: Could not find provider UOI and USI paths in '${pathToResults}'`)
+      console.log(
+        chalk.redBright.bold(`Error: Could not find provider UOI and USI paths in '${pathToResults}'`)
       );
       return;
     }
@@ -123,7 +136,7 @@ const restore = async (options = {}) => {
 
       //is provider UOI valid?
       if (!orgMap[providerUoi]) {
-        console.warn(chalk.redBright.bold(`ERROR: Could not find providerUoi '${providerUoi}'! Skipping...`));
+        console.warn(chalk.redBright.bold(`Error: Could not find providerUoi '${providerUoi}'! Skipping...`));
         STATS.skippedProviderUoiPaths.push(providerUoi);
         break;
       }
@@ -132,13 +145,13 @@ const restore = async (options = {}) => {
       const systems = orgSystemMap[providerUoi] || [];
       if (!systems?.length) {
         console.warn(
-          chalk.redBright.bold(`ERROR: Could not find systems for providerUoi '${providerUoi}'! Skipping...`)
+          chalk.redBright.bold(`Error: Could not find systems for providerUoi '${providerUoi}'! Skipping...`)
         );
         STATS.skippedProviderUoiPaths.push(providerUoi);
       } else {
         if (!systems.find(system => system === providerUsi)) {
           console.log(
-            `ERROR: Could not find system ${providerUsi} for providerUoi '${providerUoi}'! Skipping...`
+            `Error: Could not find system ${providerUsi} for providerUoi '${providerUoi}'! Skipping...`
           );
           STATS.skippedUsiPaths.push(providerUsi);
           break;
@@ -151,7 +164,7 @@ const restore = async (options = {}) => {
         if (!recipientUoiPaths?.length) {
           console.log(
             chalk.redBright.bold(
-              `ERROR: Could not find recipient paths for ${providerUoiAndUsiPath}! Skipping...`
+              `Error: Could not find recipient paths for ${providerUoiAndUsiPath}! Skipping...`
             )
           );
           break;
@@ -165,7 +178,7 @@ const restore = async (options = {}) => {
           );
 
           if (!orgMap[recipientUoi]) {
-            console.log(chalk.redBright.bold(`ERROR: '${recipientUoi}' is not a valid UOI! Skipping...`));
+            console.log(chalk.redBright.bold(`Error: '${recipientUoi}' is not a valid UOI! Skipping...`));
             STATS.skippedRecipientPaths.push(join(pathToResults, providerUoiAndUsiPath, recipientUoi));
           } else {
             const currentResultsPath = join(
@@ -178,25 +191,47 @@ const restore = async (options = {}) => {
             const results = await readDirectory(currentResultsPath);
 
             if (!results?.length) {
-              console.error(chalk.redBright.bold('ERROR: No results found to restore! Skipping...\n'));
+              console.log(chalk.redBright.bold('Error: No results found to restore! Skipping...\n'));
               STATS.missingResultsPaths.push(currentResultsPath);
             } else {
               if (areRequiredFilesPresent(results)) {
                 STATS.processed.push(currentResultsPath);
                 console.log(chalk.green.bold('Found results!'));
 
-                //search for existing results
-                const { id: reportId = null } = await findDataDictionaryReport({ serverUrl: url, providerUoi, providerUsi, recipientUoi }) || {};
+                try {
+                  //search for existing results
+                  const report =
+                    (await findDataDictionaryReport({
+                      serverUrl: url,
+                      providerUoi,
+                      providerUsi,
+                      recipientUoi
+                    })) || {};
 
-                if (reportId) {
-                  console.log(chalk.bold('Found report! Report ID: ' + JSON.stringify(reportId)));
-                } else {
-                  console.log('No report found!');
+                  const { id: reportId = null, status = null } = report;
+
+                  if (reportId && status) {
+                    console.log(chalk.bold(`Found report with id: ${reportId}`));
+
+                    if (status !== PASSED_STATUS) {
+                      console.log(chalk.bgRedBright.bold(`Cannot restore reports with status '${status}'`));
+                    } else {
+                      if (!overwrite) {
+                        console.log(chalk.bgYellowBright.bold('Found existing passed report! Use --overwrite or -o to replace it'));
+                      } else {
+                        console.log(chalk.yellowBright.bold('TODO: Overwriting report!'));
+                      }
+                    }
+                  } else {
+                    console.log('No report found!');
+                  }
+                } catch (err) {
+                  console.log(chalk.bgRed.bold(err));
+                  return false;
                 }
-                
               } else {
                 console.log(
-                  chalk.redBright.bold(`ERROR: Could not find required files in ${currentResultsPath}`)
+                  chalk.redBright.bold(`Error: Could not find required files in ${currentResultsPath}`)
                 );
                 STATS.missingResultsFilePaths.push(currentResultsPath);
               }
@@ -207,7 +242,7 @@ const restore = async (options = {}) => {
     }
     console.log();
   } else {
-    console.error(chalk.red.bold(`Invalid path: ${pathToResults}! \nMust be valid S3 or local path`));
+    console.log(chalk.bgRedBright.bold(`Invalid path: ${pathToResults}! \nMust be valid S3 or local path`));
   }
 
   const timeTaken = Math.round((new Date() - START_TIME) / 1000);
