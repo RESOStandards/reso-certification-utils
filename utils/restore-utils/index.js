@@ -1,7 +1,7 @@
 //const conf = new (require('conf'))();
 const chalk = require('chalk');
 const { promises: fs } = require('fs');
-const { join } = require('path');
+const { resolve, join } = require('path');
 const {
   getOrgsMap,
   getOrgSystemsMap,
@@ -9,6 +9,8 @@ const {
   sleep,
   processDataDictionaryResults
 } = require('../../data-access/cert-api-client');
+
+const { processLookupResourceMetadataFiles } = require('reso-certification-etl');
 
 const CERTIFICATION_RESULTS_DIRECTORY = 'current',
   // FILE_ENCODING = 'utf8',
@@ -19,8 +21,8 @@ const CERTIFICATION_RESULTS_DIRECTORY = 'current',
 const CERTIFICATION_FILES = {
   METADATA_REPORT: 'metadata-report.json',
   DATA_AVAILABILITY_REPORT: 'data-availability-report.json',
-  LOOKUP_RESOURCE_FIELD_METADATA: 'lookup-resource-field-metadata.json',
-  LOOKUP_RESOURCE_LOOKUP_METADATA: 'lookup-resource-lookup-metadata.json'
+  LOOKUP_RESOURCE_LOOKUP_METADATA: 'lookup-resource-lookup-metadata.json',
+  PROCESSED_METADATA_REPORT: 'metadata-report.processed.json'
 };
 
 const areRequiredFilesPresent = (fileNames = []) =>
@@ -211,7 +213,7 @@ const restore = async (options = {}) => {
             } else {
               if (areRequiredFilesPresent(results)) {
                 STATS.processed.push(currentResultsPath);
-                console.log(chalk.green.bold('Found results!'));
+                console.log(chalk.green.bold('Found required results files!'));
 
                 try {
                   //search for existing results
@@ -225,10 +227,43 @@ const restore = async (options = {}) => {
 
                   const { id: reportId = null, status = null } = report;
 
+                  const hasLookupResourceMetadata = !!results.find(
+                    result => result === CERTIFICATION_FILES.LOOKUP_RESOURCE_LOOKUP_METADATA
+                  );
+
+                  //if the server is using the Lookup Resource then preprocess results and use the output instead
+                  if (hasLookupResourceMetadata) {
+                    const pathToMetadataReportJson = resolve(join(
+                        currentResultsPath,
+                        CERTIFICATION_FILES.METADATA_REPORT
+                      )),
+                      pathToLookupResourceData = resolve(join(
+                        currentResultsPath,
+                        CERTIFICATION_FILES.LOOKUP_RESOURCE_LOOKUP_METADATA
+                      )),
+                      pathToOutputFile = resolve(join(
+                        currentResultsPath,
+                        CERTIFICATION_FILES.PROCESSED_METADATA_REPORT
+                      ));
+                    await processLookupResourceMetadataFiles(
+                      pathToMetadataReportJson,
+                      pathToLookupResourceData,
+                      pathToOutputFile
+                    );
+                  }
+
                   const metadataReportJson =
                     JSON.parse(
-                      await readFile(join(currentResultsPath, CERTIFICATION_FILES.METADATA_REPORT))
+                      await readFile(
+                        join(
+                          currentResultsPath,
+                          hasLookupResourceMetadata
+                            ? CERTIFICATION_FILES.PROCESSED_METADATA_REPORT
+                            : CERTIFICATION_FILES.METADATA_REPORT
+                        )
+                      )
                     ) || {};
+
                   const dataAvailabilityReportJson =
                     JSON.parse(
                       await readFile(join(currentResultsPath, CERTIFICATION_FILES.DATA_AVAILABILITY_REPORT))
