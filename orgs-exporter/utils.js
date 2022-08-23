@@ -17,9 +17,8 @@ const writeDataToS3 = async ({
     Body: serializedData,
     ContentType: contentType
   };
-  const result = await s3.putObject(params).promise();
 
-  console.log('result is: ' + JSON.stringify(result));
+  await s3.putObject(params).promise();
 };
 
 const sleep = async (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));

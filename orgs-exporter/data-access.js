@@ -11,9 +11,7 @@ const DATA_DICTIONARY_DISPLAY_NAME = 'Data Dictionary',
   LEGACY_WEB_API_DISPLAY_NAME = 'Web API',
   LEGACY_SEARCH_STRING = 'legacy',
   MLS_ORGANIZATION_TYPE = 'MLS',
-  TECHNOLOGY_COMPANY_ORGANIZATION_TYPE = 'Technology Company';
-
-const ORGANIZATION_COLUMN = 'OrganizationStatus',
+  ORGANIZATION_COLUMN = 'OrganizationStatus',
   ACTIVE_STATUS_FLAG = '1',
   CURRENT_DATA_DICTIONARY_VERSIONS = ['1.7'],
   CURRENT_WEB_API_CORE_VERSIONS = ['2.0.0'],
@@ -22,14 +20,36 @@ const ORGANIZATION_COLUMN = 'OrganizationStatus',
   CERTIFIED_CURRENT_DISPLAY_NAME = 'Certified Current',
   PASSED_CURRENT_DISPLAY_NAME = 'Passed Current',
   CERTIFIED_LEGACY_DISPLAY_NAME = 'Certified Legacy',
-  UNCERTIFIED_DISPLAY_NAME = 'Uncertified';
+  UNCERTIFIED_DISPLAY_NAME = 'Uncertified',
+  CERTIFICATION_SUMMARY_BASE_URL = 'https://certification.reso.org/summary';
+
+const CERTIFIABLE_ORG_TYPES = [
+  'MLS',
+  'Technology Company',
+  'Commercial',
+  'Brokerage',
+  'Pooled Platform'
+];
+
+const ENDORSEMENTS = {
+  DATA_DICTIONARY: 'data_dictionary',
+  DATA_DICTIONARY_IDX_PAYLOAD: 'data_dictionary_with_IDX_payload',
+  WEB_API_CORE: 'web_api_server_core'
+};
+
+const STATUSES = {
+  PASSED: 'passed',
+  REVOKED: 'revoked',
+  CERTIFIED: 'certified',
+  NOTIFIED: 'recipient_notified'
+};
 
 const buildEndorsementsFilterOptions = (from = 0) => {
   return {
     options: {
       from,
       endorsementFilter: [],
-      statusFilter: ['passed', 'revoked', 'certified', 'recipient_notified'],
+      statusFilter: [STATUSES.PASSED, STATUSES.REVOKED, STATUSES.CERTIFIED, STATUSES.NOTIFIED],
       showMyResults: false,
       providerUoi: null,
       searchKey: '',
@@ -42,15 +62,16 @@ const isOrganizationActive = record =>
   record[ORGANIZATION_COLUMN] && record[ORGANIZATION_COLUMN] === ACTIVE_STATUS_FLAG;
 
 const getEndorsementDisplayName = status => {
-  if (status === 'passed' || status === 'recipient_notified') return 'Passed';
-  if (status === 'certified') return 'Certified';
+  if (status === STATUSES.PASSED || status === STATUSES.NOTIFIED) return 'Passed';
+  if (status === STATUSES.CERTIFIED) return 'Certified';
   return status;
 };
 
 const getEndorsementTypeDisplayName = type => {
-  if (type === 'web_api_server_core') return WEB_API_CORE_DISPLAY_NAME;
-  if (type === 'data_dictionary') return DATA_DICTIONARY_DISPLAY_NAME;
-  if (type === 'data_dictionary_with_IDX_payload') return DATA_DICTIONARY_IDX_PAYLOAD_DISPLAY_NAME;
+  if (type === ENDORSEMENTS.WEB_API_CORE) return WEB_API_CORE_DISPLAY_NAME;
+  if (type === ENDORSEMENTS.DATA_DICTIONARY) return DATA_DICTIONARY_DISPLAY_NAME;
+  if (type === ENDORSEMENTS.DATA_DICTIONARY_IDX_PAYLOAD)
+    return DATA_DICTIONARY_IDX_PAYLOAD_DISPLAY_NAME;
   return `${type}`;
 };
 
@@ -60,7 +81,6 @@ const covertGoogleSheetJsonToOrgsJson = ({ values = [] } = {}) => {
   const ORGS_COLUMNS = [
     'OrganizationUniqueId',
     'OrganizationType',
-    'AssnToMls',
     'OrganizationName',
     'OrganizationAddress1',
     'OrganizationCity',
@@ -79,8 +99,7 @@ const covertGoogleSheetJsonToOrgsJson = ({ values = [] } = {}) => {
     'OrganizationWebApiVersion'
   ];
 
-  const keys = values[0] || [],
-    data = values.slice(1, values.length) || [];
+  const [keys = [], ...data] = values;
 
   return data.reduce((results, items = []) => {
     const transformed = items.reduce((acc, item, index) => {
@@ -91,6 +110,21 @@ const covertGoogleSheetJsonToOrgsJson = ({ values = [] } = {}) => {
     if (isOrganizationActive(transformed)) {
       results.push(
         ORGS_COLUMNS.reduce((acc, columnName) => {
+          if (columnName === 'OrganizationLatitude') {
+            const lat = parseFloat(transformed[columnName]);
+            transformed[columnName] = isNaN(lat) ? null : lat;
+          }
+
+          if (columnName === 'OrganizationLongitude') {
+            const lng = parseFloat(transformed[columnName]);
+            transformed[columnName] = isNaN(lng) ? null : lng;
+          }
+
+          if (columnName === 'OrganizationMemberCount') {
+            const count = parseInt(transformed[columnName]?.replace(',', ''), 10) || null;
+            transformed[columnName] = count;
+          }
+
           acc[columnName] = transformed[columnName] || null;
           return acc;
         }, {})
@@ -121,10 +155,10 @@ const fetchEndorsements = async () => {
     lastIndex = lastUoiIndex;
     lastStatusCode = statusCode;
 
-    Object.entries(reportsByOrgs).map(([uoi, endorsements]) => {
+    Object.entries(reportsByOrgs).map(([uoi, endorsements = []]) => {
       if (!results[uoi]) results[uoi] = [];
       results[uoi].push(
-        endorsements.map(({ type, version, status, providerUoi, statusUpdatedAt }) => {
+        ...endorsements.map(({ type, version, status, providerUoi, statusUpdatedAt }) => {
           return {
             Endorsement: getEndorsementTypeDisplayName(type),
             Version: version,
@@ -136,7 +170,7 @@ const fetchEndorsements = async () => {
       );
     });
 
-    //sleep so we don't hammer the server
+    //sleep 1s so we don't hammer the server if it's busy
     await sleep(1000);
   } while (lastStatusCode >= 200 && lastStatusCode < 300);
 
@@ -174,9 +208,15 @@ const fetchOrgsAndEndorsements = async () => {
     const result = {
       OrganizationUniqueId,
       OrganizationType,
-      CertificationStatus: certificationStatus,
       ...rest
     };
+
+    if (CERTIFIABLE_ORG_TYPES.includes(OrganizationType)) {
+      result.CertificationStatus = certificationStatus;
+      result.CertificationSummaryUrl = `${CERTIFICATION_SUMMARY_BASE_URL}/${OrganizationUniqueId}`;
+    } else {
+      return result;
+    }
 
     if (orgEndorsements?.length) {
       result[MAPPED_ENDORSEMENTS_FIELD_NAME] = endorsements[OrganizationUniqueId];
@@ -186,14 +226,16 @@ const fetchOrgsAndEndorsements = async () => {
       if (OrganizationDdVersion) {
         legacy.push({
           Endorsement: DATA_DICTIONARY_DISPLAY_NAME,
-          Version: OrganizationDdVersion
+          Version: OrganizationDdVersion,
+          Status: CERTIFIED_LEGACY_DISPLAY_NAME
         });
       }
 
       if (OrganizationWebApiVersion) {
         legacy.push({
           Endorsement: LEGACY_WEB_API_DISPLAY_NAME,
-          Version: OrganizationWebApiVersion
+          Version: OrganizationWebApiVersion,
+          Status: CERTIFIED_LEGACY_DISPLAY_NAME
         });
       }
 
@@ -211,9 +253,7 @@ const computeRecipientEndorsementStatus = (
   organizationWebApiStatus = ''
 ) => {
   const isMlsRecipient =
-      organizationType?.toLowerCase() === MLS_ORGANIZATION_TYPE.trim().toLowerCase(),
-    isTechnologyCompanyRecipient =
-      organizationType?.toLowerCase() === TECHNOLOGY_COMPANY_ORGANIZATION_TYPE.trim().toLowerCase();
+    organizationType?.toLowerCase() === MLS_ORGANIZATION_TYPE.trim().toLowerCase();
 
   if (!endorsements?.length) {
     if (
@@ -223,9 +263,8 @@ const computeRecipientEndorsementStatus = (
     ) {
       return CERTIFIED_LEGACY_DISPLAY_NAME;
     } else if (
-      !isTechnologyCompanyRecipient &&
-      (organizationDdStatus?.toLowerCase().includes(LEGACY_SEARCH_STRING) ||
-        organizationWebApiStatus?.toLowerCase().includes(LEGACY_SEARCH_STRING))
+      organizationDdStatus?.toLowerCase().includes(LEGACY_SEARCH_STRING) ||
+      organizationWebApiStatus?.toLowerCase().includes(LEGACY_SEARCH_STRING)
     ) {
       return CERTIFIED_LEGACY_DISPLAY_NAME;
     } else {
@@ -233,50 +272,86 @@ const computeRecipientEndorsementStatus = (
     }
   }
 
-  const isCertified = Object.entries(
-    endorsements.reduce((acc, { Endorsement, Version, Status, ProviderUoi }) => {
-      if (!ProviderUoi) return acc;
-
+  const isCertified = Object.values(
+    endorsements.reduce((acc, { ProviderUoi, Endorsement, Status, Version }) => {
       if (!acc[ProviderUoi])
         acc[ProviderUoi] = {
-          hasCurrentWebApiVersion: false,
-          hasCurrentDataDictionaryVersion: false
+          hasWebApi: false,
+          hasDD: false
         };
 
-      if (Endorsement === WEB_API_CORE_DISPLAY_NAME) {
-        acc[ProviderUoi].hasCurrentWebApiVersion =
-          Status === CERTIFIED_STATUS &&
-          CURRENT_WEB_API_CORE_VERSIONS.find(version => version === Version);
+      if (!acc[ProviderUoi].hasWebApi) {
+        acc[ProviderUoi].hasWebApi =
+          Endorsement === WEB_API_CORE_DISPLAY_NAME &&
+          CURRENT_WEB_API_CORE_VERSIONS.includes(Version) &&
+          Status === CERTIFIED_STATUS;
       }
 
-      if (Endorsement === DATA_DICTIONARY_DISPLAY_NAME) {
-        acc[ProviderUoi].hasCurrentWebApiVersion =
-          Status === CERTIFIED_STATUS &&
-          CURRENT_DATA_DICTIONARY_VERSIONS.find(version => version === Version);
-      }
-
-      if (
-        isMlsRecipient &&
-        acc[ProviderUoi].hasCurrentDataDictionaryVersion &&
-        acc[ProviderUoi].hasCurrentWebApiVersion
-      ) {
-        acc[ProviderUoi].isCertified = true;
-      } else if (
-        acc[ProviderUoi].hasCurrentDataDictionaryVersion ||
-        acc[ProviderUoi].hasCurrentWebApiVersion
-      ) {
-        acc[ProviderUoi].isCertified = true;
+      if (!acc[ProviderUoi].hasDD) {
+        acc[ProviderUoi].hasDD =
+          Endorsement === DATA_DICTIONARY_DISPLAY_NAME &&
+          CURRENT_DATA_DICTIONARY_VERSIONS.includes(Version) &&
+          Status === CERTIFIED_STATUS;
       }
 
       return acc;
     }, {})
-  ).reduce((acc, [, result]) => {
-    acc = result?.isCertified || acc;
+  ).reduce((acc, { hasWebApi, hasDD }) => {
+    //{ T00000044: { hasWebApi: true, hasDD: true } }
+    if (!acc) {
+      acc = isMlsRecipient ? hasWebApi && hasDD : hasWebApi || hasDD;
+    }
     return acc;
   }, false);
 
   return isCertified ? CERTIFIED_CURRENT_DISPLAY_NAME : PASSED_CURRENT_DISPLAY_NAME;
 };
+
+const buildTotalsTemplate = () => {
+  return {
+    [`${CERTIFIED_CURRENT_DISPLAY_NAME}`]: 0,
+    [`${PASSED_CURRENT_DISPLAY_NAME}`]: 0,
+    [`${CERTIFIED_LEGACY_DISPLAY_NAME}`]: 0,
+    [`${UNCERTIFIED_DISPLAY_NAME}`]: 0
+  };
+};
+
+const computeEndorsementStats = async (orgAndEndorsementsData = []) =>
+  orgAndEndorsementsData.reduce((stats, item) => {
+    const { CertificationStatus, OrganizationType } = item;
+
+    if (!CertificationStatus) return stats;
+
+    if (!stats?.All) {
+      stats.All = buildTotalsTemplate();
+    }
+
+    if (!stats[OrganizationType]) {
+      stats[OrganizationType] = buildTotalsTemplate();
+    }
+
+    if (CertificationStatus === CERTIFIED_CURRENT_DISPLAY_NAME) {
+      stats.All[CERTIFIED_CURRENT_DISPLAY_NAME]++;
+      stats[OrganizationType][CERTIFIED_CURRENT_DISPLAY_NAME]++;
+    }
+
+    if (CertificationStatus === PASSED_CURRENT_DISPLAY_NAME) {
+      stats.All[PASSED_CURRENT_DISPLAY_NAME]++;
+      stats[OrganizationType][PASSED_CURRENT_DISPLAY_NAME]++;
+    }
+
+    if (CertificationStatus === CERTIFIED_LEGACY_DISPLAY_NAME) {
+      stats.All[CERTIFIED_LEGACY_DISPLAY_NAME]++;
+      stats[OrganizationType][CERTIFIED_LEGACY_DISPLAY_NAME]++;
+    }
+
+    if (CertificationStatus === UNCERTIFIED_DISPLAY_NAME) {
+      stats.All[UNCERTIFIED_DISPLAY_NAME]++;
+      stats[OrganizationType][UNCERTIFIED_DISPLAY_NAME]++;
+    }
+
+    return stats;
+  }, {});
 
 const post = async (url, body = {}) => {
   const options = {
@@ -340,5 +415,6 @@ const get = async url => {
 };
 
 module.exports = {
-  fetchOrgsAndEndorsements
+  fetchOrgsAndEndorsements,
+  computeEndorsementStats
 };
