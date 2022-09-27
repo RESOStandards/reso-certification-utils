@@ -1,111 +1,191 @@
-const { Axios } = require('axios');
-const fs = require('fs');
-const CONFIG = require('../config.json');
+const axios = require('axios');
+require('dotenv').config();
+const { CERTIFICATION_API_KEY, ORGS_DATA_URL, SYSTEMS_DATA_URL } = process.env;
 
-const getDataDictionaryOptions = (providerUoi, recipientUoi, data) => {
+const API_DEBOUNCE_SECONDS = 0.1;
+
+const postDataDictionaryResultsToApi = async ({
+  url,
+  providerUoi,
+  providerUsi,
+  recipientUoi,
+  metadataReport = {}
+} = {}) => {
+  if (!url) throw new Error('url is required!');
   if (!providerUoi) throw new Error('providerUoi is required!');
+  if (!providerUsi) throw new Error('providerUsi is required!');
   if (!recipientUoi) throw new Error('recipientUoi is required!');
-  if (!data) throw new Error('data is required!');
-
-  return {
-    'method': 'post',
-    'baseURL': CONFIG.CERTIFICATION_API_URL,
-    'url': `/api/v1/certification_reports/data_dictionary/${providerUoi}`,
-    'headers': {
-      'Authorization': `ApiKey ${CONFIG.API_KEY}`,
-      'recipientUoi': recipientUoi,
-      'Content-Type': 'application/json',
-      'User-Agent': 'CommanderBatchProcess/0.1',
-      'Accept': '*/*',
-      'Cache-Control': 'no-cache',
-      'Host': 'certification.reso.org',
-      'Accept-Encoding': 'gzip, deflate',
-      'Connection': 'keep-alive'
-    },
-    data
-  };
-};
-
-const getDataAvailabilityOptions = (metadataReportId, data) => {
-  if (!metadataReportId) throw new Error('metadataReportId is required!');
-  if (!data) throw new Error('data is required!');
-
-  return {
-    'method': 'post',
-    'baseURL': CONFIG.CERTIFICATION_API_URL,
-    'url': `/api/v1/payload/data_availability/${metadataReportId}`,
-    'headers': {
-      'Authorization': `ApiKey ${CONFIG.API_KEY}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'CommanderBatchProcess/0.1',
-      'Accept': '*/*',
-      'Cache-Control': 'no-cache',
-      'Host': 'certification.reso.org',
-      'Accept-Encoding': 'gzip, deflate',
-      'Connection': 'keep-alive'
-    },
-    data
-  };
-};
-
-const buildDataDictionaryResultsPath = (providerUoi, recipientUoi) => `${providerUoi}/${recipientUoi}/${CONFIG.METADATA_REPORT_FILE_NAME}`;
-const buildDataAvailabilityResultsPath = (providerUoi, recipientUoi) => `${providerUoi}/${recipientUoi}/${CONFIG.AVAILABILITY_REPORT_FILE_NAME}`;
-
-const postDataDictionaryResultsToApi = async (providerUoi, recipientUoi) => {
-  if (!providerUoi) throw new Error('providerUoi is required!');
-  if (!recipientUoi) throw new Error('recipientUoi is required!');
+  if (!Object.keys(metadataReport)?.length) throw new Error('metadataReport is empty!');
 
   try {
-    const data = await fs.readFileAsync(buildDataDictionaryResultsPath(providerUoi, recipientUoi), CONFIG.FILE_ENCODING);
+    const { id: reportId = null } =
+      (
+        await axios.post(
+          `${url}/api/v1/certification_reports/data_dictionary/${providerUoi}`,
+          metadataReport,
+          {
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
+            headers: {
+              Authorization: `ApiKey ${CERTIFICATION_API_KEY}`,
+              recipientUoi,
+              'Content-Type': 'application/json',
+              usi: providerUsi
+            }
+          }
+        )
+      ).data || {};
 
-    const response = await Axios.post(getDataDictionaryOptions(providerUoi, recipientUoi, data));
+    if (!reportId) throw new Error('Did not receive the required id parameter from the response!');
 
-    if (!response.id) throw new Error('Did not receive the required id parameter from the response!');
-
-    return response.id;
+    return reportId;
   } catch (err) {
-    throw new Error('Could not post data dictionary results to API!' + '\n' + err);
+    throw new Error(`Could not post data dictionary results to API! ${err}`);
   }
 };
 
-const postDataAvailabilityResultsToApi = async (metadataReportId, providerUoi, recipientUoi) => {
+const deleteDataDictionaryResults = async ({ url, reportId } = {}) => {
+  if (!url) throw new Error('url is required!');
+  if (!reportId) throw new Error('reportId is required!');
+
   try {
-    const data = await fs.readFileAsync(buildDataAvailabilityResultsPath(providerUoi, recipientUoi), CONFIG.FILE_ENCODING);
+    const { deletedReport } =
+      (
+        await axios.delete(`${url}/api/v1/certification_reports/${reportId}`, {
+          headers: {
+            Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
+          }
+        })
+      ).data || {};
 
-    const response = await Axios.post(getDataAvailabilityOptions(metadataReportId, data));
+    return deletedReport;
+  } catch (err) {
+    throw new Error(err);
+  }
+};
 
-    if (!response || !response.success) throw new Error('Api did not report a successful response! ');
+const postDataAvailabilityResultsToApi = async ({ url, reportId, dataAvailabilityReport = {} } = {}) => {
+  if (!url) throw new Error('url is required!');
+  if (!reportId) throw new Error('reportId is required!');
+  if (!Object.keys(dataAvailabilityReport)?.length) throw new Error('metadataReport is empty!');
 
-    return response.id;
+  try {
+    const { success = false } =
+      (
+        await axios.post(`${url}/api/v1/payload/data_availability/${reportId}`, dataAvailabilityReport, {
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          headers: {
+            Authorization: `ApiKey ${CERTIFICATION_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        })
+      ).data || {};
+
+    if (!success) throw new Error('Api did not report a successful response! ');
+
+    return success;
   } catch (err) {
     throw new Error('Could not post data availability results to API!' + '\n' + err);
   }
 };
 
-const snooze = ms => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = async ms => new Promise(resolve => setTimeout(resolve, ms));
 
-const processDataDictionaryResults = async (providerUoi, recipientUoi) => {
+const processDataDictionaryResults = async ({
+  url,
+  providerUoi,
+  providerUsi,
+  recipientUoi,
+  metadataReport = {},
+  dataAvailabilityReport = {},
+  reportIdToDelete,
+  overwrite = false
+}) => {
   try {
-    await snooze(CONFIG.API_DEBOUNCE_SECONDS * 1000); //wait for the dust to settle to avoid thrashing the server
-    // TODO: handle this in the CLI util
-    // console.log('Posting Data Dictionary results...');
-    const reportId = await postDataDictionaryResultsToApi(providerUoi, recipientUoi);
-    // TODO: handle this in the CLI util
-    // console.log('Results posted, reportId: ' + reportId);
+    if (overwrite) {
+      if (!reportIdToDelete) throw new Error('reportIdToDelete MUST be present when overwrite is used!');
+      await deleteDataDictionaryResults({ url, reportId: reportIdToDelete });
+    }
 
-    await snooze(CONFIG.API_DEBOUNCE_SECONDS * 1000); //wait for the dust to settle to avoid thrashing the server
+    //wait for the dust to settle to avoid thrashing the server
+    await sleep(API_DEBOUNCE_SECONDS * 1000);
+
+    const reportId = await postDataDictionaryResultsToApi({
+      url,
+      providerUoi,
+      providerUsi,
+      recipientUoi,
+      metadataReport
+    });
 
     if (reportId) {
-      // TODO: handle this in the CLI util
-      // console.log('Posting data availability results for reportId');
-      return await postDataAvailabilityResultsToApi(reportId, providerUoi, recipientUoi);
+      //wait for the dust to settle to avoid thrashing the server
+      await sleep(API_DEBOUNCE_SECONDS * 1000);
+      return await postDataAvailabilityResultsToApi({ url, reportId, dataAvailabilityReport });
+    } else {
+      return null;
     }
   } catch (err) {
-    throw new Error('Could not process data dictionary results! \nError:' + err);
+    throw new Error(`Could not process data dictionary results! ${err}`);
   }
-  return null;
+};
+
+const getOrgsMap = async () => {
+  const { Data: orgs = [] } = (await axios.get(ORGS_DATA_URL)).data;
+
+  if (!orgs?.length) throw new Error('ERROR: could not fetch Org data!');
+
+  return orgs.reduce((acc, { OrganizationUniqueId, OrganizationType }) => {
+    if (
+      !['MLS', 'Technology Company', 'Pooled Platform', 'Commercial', 'Brokerage'].find(
+        type => type?.trim() === OrganizationType
+      )
+    ) {
+      return acc;
+    }
+
+    acc[OrganizationUniqueId] = true;
+
+    return acc;
+  }, {});
+};
+
+const findDataDictionaryReport = async ({ serverUrl, providerUoi, providerUsi, recipientUoi } = {}) => {
+  const url = `${serverUrl}/api/v1/certification_reports/summary/${recipientUoi}`,
+    config = {
+      headers: {
+        Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
+      }
+    };
+
+  try {
+    const { data = [] } = await axios.get(url, config);
+
+    return data.find(
+      item =>
+        item?.type === 'data_dictionary' &&
+        item?.providerUoi === providerUoi &&
+        //provider USI isn't in the data set at the moment, only filter if it's present
+        (item?.providerUsi ? item.providerUsi === providerUsi : true)
+    );
+  } catch (err) {
+    throw new Error(`Could not connect to ${url}`);
+  }
+};
+
+const getOrgSystemsMap = async () => {
+  return (await axios.get(SYSTEMS_DATA_URL))?.data?.values.slice(1).reduce((acc, [providerUoi, , usi]) => {
+    if (!acc[providerUoi]) acc[providerUoi] = [];
+    acc[providerUoi].push(usi);
+    return acc;
+  }, {});
 };
 
 module.exports = {
-  processDataDictionaryResults
+  processDataDictionaryResults,
+  getOrgsMap,
+  getOrgSystemsMap,
+  findDataDictionaryReport,
+  sleep
 };

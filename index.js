@@ -1,24 +1,18 @@
-//TODO: add CLI handlers for these
-// const { processDataDictionaryResults } = require('./restore-utils/postResultsToApi.js');
-// const { processDataAvailabilityReport } = require('./etl/processDataAvailabilityReport.js');
+#! /usr/bin/env node
+const { program } = require('commander');
+const { restore } = require('./utils/restore-utils');
 
+program
+  .name('reso-certification-utils')
+  .description('Command line batch-testing and restore utils')
+  .version('0.0.1');
 
-//parse command line args
-const yargs = require('yargs/yargs');
-const { hideBin } = require('yargs/helpers');
-const { argv } = yargs(hideBin(process.argv));
+program
+  .command('restore')
+  .option('-p, --pathToResults <string>', 'path to test results')
+  .option('-u, --url <string>', 'URL of Certification API')
+  .option('-o, --overwrite', 'Flag to overwrite existing passed files')
+  .description('Restores local or S3 results to a RESO Certification API instance')
+  .action(restore);
 
-// TODO
-!!argv;  //silence eslint until finished
-// const { runTests, processDDResult, dataAvailabilityEtl } = argv;
-// if (runTests)) {
-//   const { configFilePath } = argv;
-//   if (!configFilePath) console.log('configFilePath is required!\nUsage: $ node . --runTests');
-//
-// } else if (processDDResult) {
-//  
-// } else if (dataAvailabilityEtl) {
-//
-// } else {
-//
-// }
+program.parse();

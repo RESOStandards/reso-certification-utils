@@ -7,6 +7,6 @@
   "bracketSameLine": true,
   "endOfLine": "lf",
   "useTabs": false,
-  "printWidth": 100,
+  "printWidth": 110,
   "proseWrap": "preserve"
 }
