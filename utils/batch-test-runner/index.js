@@ -52,16 +52,16 @@ const isBearerTokenConfig = (config = { token: EMPTY_STRING }) => !!config.token
  * Outputs the results of the tests to standard out/error and stops immediately
  * if any errors are found.
  *
- * @param {String} RECIPIENT_CONFIG_PATH the path to the json config file.
+ * @param {String} pathToConfigFile the path to the json config file.
  * @see {sample-config.json} for more information
  */
-const runTests = async (RECIPIENT_CONFIG_PATH, args) => {
-  if (!RECIPIENT_CONFIG_PATH) throw Error('Missing RECIPIENT_CONFIG_PATH.');
+const runTests = ({ pathToConfigFile, runAvailability = false, ...args } = {}) => {
 
-  const { endorsementName, version, runAvailability } = {
+  if (!pathToConfigFile) throw Error('Missing pathToConfigFile.');
+
+  const { endorsementName, version } = {
     endorsementName: endorsements.DATA_DICTIONARY,
     version: CURRENT_DATA_DICTIONARY_VERSION,
-    runAvailability: true,
     ...args
   };
 
@@ -77,9 +77,9 @@ const runTests = async (RECIPIENT_CONFIG_PATH, args) => {
 
   const providerInfo = {};
   try {
-    Object.assign(providerInfo, JSON.parse(fs.readFileSync(RECIPIENT_CONFIG_PATH)));
+    Object.assign(providerInfo, JSON.parse(fs.readFileSync(pathToConfigFile)));
   } catch (err) {
-    throw new Error(`Could not read provider info! RECIPIENT_CONFIG_PATH: ${RECIPIENT_CONFIG_PATH}`);
+    throw new Error(`Could not read provider info! pathToConfigFile: ${pathToConfigFile}`);
   }
 
   const { providerUoi, configs } = providerInfo;
@@ -100,7 +100,7 @@ const runTests = async (RECIPIENT_CONFIG_PATH, args) => {
           version
         })
       ),
-      RECIPIENT_CONFIG_PATH = path.join(RECIPIENT_PATH, 'config.xml');
+      pathToConfigFile = path.join(RECIPIENT_PATH, 'config.xml');
 
     if (!providerUsi) throw new Error(`providerUsi is missing from the given config: ${config}!`);
     if (!recipientUoi) throw new Error(`recipientUoi is missing from the given config: ${config}!`);
@@ -117,17 +117,17 @@ const runTests = async (RECIPIENT_CONFIG_PATH, args) => {
       if (!Object.keys(testingConfig))
         throw new Error(`There was a problem creating a RESOScript config for recipientUoi: ${recipientUoi}`);
 
-      fs.writeFileSync(RECIPIENT_CONFIG_PATH, testingConfig);
+      fs.writeFileSync(pathToConfigFile, testingConfig);
 
       // remove any existing results before running job
-      fs.rm(COMMANDER_CERTIFICATION_RESULTS_PATH, { recursive: true });
+      fs.rmSync(COMMANDER_CERTIFICATION_RESULTS_PATH, { recursive: true });
 
       try {
         //run dd tests
         execSync(
           `sh ${path.join(
             COMMANDER_PATH,
-            `gradlew testDataDictionary_1_7 -DpathToRESOScript='${RECIPIENT_CONFIG_PATH}'`
+            `gradlew testDataDictionary_1_7 -DpathToRESOScript='${pathToConfigFile}'`
           )}`,
           { stdio: ['inherit', 'inherit', 'pipe'], cwd: COMMANDER_PATH }
         );
@@ -144,7 +144,7 @@ const runTests = async (RECIPIENT_CONFIG_PATH, args) => {
             execSync(
               `sh ${path.join(
                 COMMANDER_PATH,
-                `gradlew testDataAvailability_1_7 -DpathToRESOScript='${RECIPIENT_CONFIG_PATH}' ` +
+                `gradlew testDataAvailability_1_7 -DpathToRESOScript='${pathToConfigFile}' ` +
                   optionalArgs
               )}`,
               { stdio: ['inherit', 'inherit', 'pipe'], cwd: COMMANDER_PATH }
