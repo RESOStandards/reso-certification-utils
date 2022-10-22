@@ -30,7 +30,7 @@ const postDataDictionaryResultsToApi = async ({
               Authorization: `ApiKey ${CERTIFICATION_API_KEY}`,
               recipientUoi,
               'Content-Type': 'application/json',
-              usi: providerUsi
+              providerUsi
             }
           }
         )

@@ -171,7 +171,7 @@ const fetchEndorsements = async () => {
     });
 
     //sleep 1s so we don't hammer the server if it's busy
-    await sleep(1000);
+    await sleep();
   } while (lastStatusCode >= 200 && lastStatusCode < 300);
 
   return results;

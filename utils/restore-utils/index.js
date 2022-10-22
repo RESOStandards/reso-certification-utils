@@ -233,18 +233,15 @@ const restore = async (options = {}) => {
 
                   //if the server is using the Lookup Resource then preprocess results and use the output instead
                   if (hasLookupResourceMetadata) {
-                    const pathToMetadataReportJson = resolve(join(
-                        currentResultsPath,
-                        CERTIFICATION_FILES.METADATA_REPORT
-                      )),
-                      pathToLookupResourceData = resolve(join(
-                        currentResultsPath,
-                        CERTIFICATION_FILES.LOOKUP_RESOURCE_LOOKUP_METADATA
-                      )),
-                      pathToOutputFile = resolve(join(
-                        currentResultsPath,
-                        CERTIFICATION_FILES.PROCESSED_METADATA_REPORT
-                      ));
+                    const pathToMetadataReportJson = resolve(
+                        join(currentResultsPath, CERTIFICATION_FILES.METADATA_REPORT)
+                      ),
+                      pathToLookupResourceData = resolve(
+                        join(currentResultsPath, CERTIFICATION_FILES.LOOKUP_RESOURCE_LOOKUP_METADATA)
+                      ),
+                      pathToOutputFile = resolve(
+                        join(currentResultsPath, CERTIFICATION_FILES.PROCESSED_METADATA_REPORT)
+                      );
                     await processLookupResourceMetadataFiles(
                       pathToMetadataReportJson,
                       pathToLookupResourceData,
@@ -311,7 +308,7 @@ const restore = async (options = {}) => {
                       metadataReport: metadataReportJson,
                       dataAvailabilityReport: dataAvailabilityReportJson
                     });
-                    console.log(chalk.bold(`Done! Result: ${result}`));
+                    console.log(chalk.bold(`Done! Result: ${result ? 'Succeeded!' : 'Failed!'}`));
                   }
                 } catch (err) {
                   console.log(chalk.bgRed.bold(err));
