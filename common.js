@@ -86,12 +86,12 @@ const isValidVersion = (endorsementName, version) =>
  */
 const getEndorsementMetadata = (endorsementName, version) => {
   if (!isValidEndorsement(endorsementName)) {
-    throw new Error(`Invalid endorsement! endorsmentKey: ${endorsementName}`);
+    throw new Error(`Invalid endorsement! endorsementKey: ${endorsementName}`);
   }
 
   if (!isValidVersion(endorsementName, version)) {
     throw new Error(
-      `Invalid endorsement version! endorsmentKey: ${endorsementName}, version: ${version}`
+      `Invalid endorsement version! endorsementKey: ${endorsementName}, version: ${version}`
     );
   }
 
@@ -156,36 +156,23 @@ const getFileSafeIso8601Timestamp = (timestamp = new Date()) =>
 
 /**
  * Creates a path to the recipient's results using the following structure:
- *
- * - providerUoi1
- *   - data-dictionary
- *     - 1.7
- *       - usi1
- *        - recipientUoi1
- *          - current
- *            * <metadata report>
- *            * <data availability report>
- *          - archived
- *            - timestamp0001
- *              * <metadata report>
- *              * <data availability report>
- *            + timestamp0002
- *            + ...
- *            + timestamp000N
- *         + recipientUoi2
- *       + usi2
- *    + 2.0
- *  - web-api-server.core
- *    + 2.0.0
- *  - data-dictionary-idx
- *    - 1.7
- * + providerUoi2
- *  ...
- * + providerUoiN
+ * - providerUoi1-usi1
+ *  - recipientUoi1
+ *    - current
+ *      * <metadata report>
+ *      * <data availability report>
+ *    - archived
+ *      - timestamp1
+ *        * <metadata report>
+ *        * <data availability report>
+ *      + timestamp2
+ *      + ...
+ *      + timestampN
+ *  + recipientUoi2
  *
  * @param {String} providerUoi the provider UOI
  * @param {String} providerUsi the provider USI
- * @param {String} recipientUoi the recpient UOI
+ * @param {String} recipientUoi the recipient UOI
  * @param {String} endorsementName the name of the given endorsement. @see {endorsements}
  * @param {String} version the version for the given endorsement
  * @returns Unix path for recipient
@@ -197,7 +184,7 @@ const buildRecipientEndorsementPath = ({
   endorsementName,
   version,
   currentOrArchived = 'current'
-}) => {
+} = {}) => {
   if (!providerUoi) throw Error('providerUoi is required!');
   if (!providerUsi) throw Error('providerUsi is required!');
   if (!recipientUoi) throw Error('recipientUoi is required!');
@@ -209,10 +196,7 @@ const buildRecipientEndorsementPath = ({
   if (!isValidVersion(endorsementName, version)) throw new Error(`Invalid version: ${version}`);
 
   return path.join(
-    providerUoi,
-    endorsementName,
-    version,
-    providerUsi,
+    `${providerUoi}-${providerUsi}`,
     recipientUoi,
     currentOrArchived
   );
@@ -220,7 +204,7 @@ const buildRecipientEndorsementPath = ({
 
 /**
  * Copies results from the current endorsement path for the given item to its archive directory,
- * which has the format recpientPath/archived/archived-at-timestamp
+ * which has the format recipientPath/archived/archived-at-timestamp
  *
  * @param {String} endorsementName
  * @param {String} version
@@ -234,7 +218,7 @@ const archiveEndorsement = ({
   recipientUoi,
   endorsementName,
   version
-}) => {
+} = {}) => {
   const currentRecipientPath = buildRecipientEndorsementPath({
     providerUoi,
     providerUsi,
