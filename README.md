@@ -25,7 +25,7 @@ Runs a batch of tests using a provided configuration file.
 ## Restore Certification Server
 Restores a RESO Certification API Server using a set of existing results in a given directory structure.
 
-[MORE INFO](./utils/restore-cert-server/README.md)
+[MORE INFO](./utils/restore-utils/README.md)
 
 ## Tests
 
