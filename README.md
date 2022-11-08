@@ -1,4 +1,4 @@
-[![Run Code Checks](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml) &nbsp; [![CodeQL](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql-analysis.yml)
+[![Run Code Checks](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml) &nbsp; [![CodeQL](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql.yml)
 
 # RESO Certification Utils
 NodeJS package with reference artifacts and ETL processes for Certification.
@@ -20,12 +20,12 @@ add package `@reso/reso-certification-utils` and yarn install --check-files. Aft
 ## Batch Test Runner
 Runs a batch of tests using a provided configuration file.
 
-[MORE INFO](./utils/batch-test-runner/README.md)
+[**MORE INFO**](./utils/batch-test-runner/README.md)
 
 ## Restore Certification Server
 Restores a RESO Certification API Server using a set of existing results in a given directory structure.
 
-[MORE INFO](./utils/restore-utils/README.md)
+[**MORE INFO**](./utils/restore-utils/README.md)
 
 ## Tests
 
