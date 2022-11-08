@@ -1,4 +1,4 @@
-[![Run Code Checks](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml) &nbsp; [![CodeQL](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql.yml)
+[![Run Code Checks](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml) &nbsp; [![CodeQL](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql.yml)
 
 # RESO Certification Utils
 NodeJS package with reference artifacts and ETL processes for Certification.
