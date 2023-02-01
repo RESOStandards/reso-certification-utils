@@ -132,7 +132,7 @@ const processDataDictionaryResults = async ({
 };
 
 const getOrgsMap = async () => {
-  const { Data: orgs = [] } = (await axios.get(ORGS_DATA_URL)).data;
+  const { Organizations: orgs = [] } = (await axios.get(ORGS_DATA_URL)).data;
 
   if (!orgs?.length) throw new Error('ERROR: could not fetch Org data!');
 
