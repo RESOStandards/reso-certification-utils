@@ -11,6 +11,7 @@ const {
 } = require('../../data-access/cert-api-client');
 
 const { processLookupResourceMetadataFiles } = require('reso-certification-etl');
+const { checkFileExists } = require('../../common');
 
 const CERTIFICATION_RESULTS_DIRECTORY = 'current',
   // FILE_ENCODING = 'utf8',
@@ -95,7 +96,7 @@ const isValidUrl = url => {
  * @param {String} path
  * @throws Error if path is not a valid S3 or local path
  */
-const restore = async (options = {}) => {
+const restoreDD = async (options = {}) => {
   const START_TIME = new Date();
 
   const STATS = {
@@ -242,13 +243,14 @@ const restore = async (options = {}) => {
                       pathToOutputFile = resolve(
                         join(currentResultsPath, CERTIFICATION_FILES.PROCESSED_METADATA_REPORT)
                       );
-                    await processLookupResourceMetadataFiles(
-                      pathToMetadataReportJson,
-                      pathToLookupResourceData,
-                      pathToOutputFile
-                    );
+                    if (!(await checkFileExists(pathToOutputFile))) {
+                      await processLookupResourceMetadataFiles(
+                        pathToMetadataReportJson,
+                        pathToLookupResourceData,
+                        pathToOutputFile
+                      );
+                    }
                   }
-
                   const metadataReportJson =
                     JSON.parse(
                       await readFile(
@@ -260,7 +262,6 @@ const restore = async (options = {}) => {
                         )
                       )
                     ) || {};
-
                   const dataAvailabilityReportJson =
                     JSON.parse(
                       await readFile(join(currentResultsPath, CERTIFICATION_FILES.DATA_AVAILABILITY_REPORT))
@@ -325,7 +326,6 @@ const restore = async (options = {}) => {
         }
       }
     }
-    console.log();
   } else {
     console.log(chalk.bgRedBright.bold(`Invalid path: ${pathToResults}! \nMust be valid S3 or local path`));
   }
@@ -364,5 +364,5 @@ const restore = async (options = {}) => {
 };
 
 module.exports = {
-  restore
+  restoreDD
 };
