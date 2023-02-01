@@ -1,7 +1,8 @@
 #! /usr/bin/env node
 const { program } = require('commander');
-const { restore } = require('./utils/restore-utils');
+const { restoreDD } = require('./utils/restore-utils/data-dictionary');
 const { runTests } = require('./utils/batch-test-runner');
+const { restoreWebApi } = require('./utils/restore-utils/web-api-core');
 
 program
   .name('reso-certification-utils')
@@ -14,12 +15,25 @@ program
   .option('-u, --url <string>', 'URL of Certification API')
   .option('-o, --overwrite', 'Flag to overwrite existing passed files')
   .description('Restores local or S3 results to a RESO Certification API instance')
-  .action(restore);
+  .action(restoreDD);
+
+program
+  .command('syncWebApiResults')
+  .option('-p, --pathToResults <string>', 'Path to test results')
+  .option('-u, --url <string>', 'URL of Certification API')
+  .option('-o, --overwrite', 'Flag to overwrite existing passed files')
+  .option('-r, --recipients <string>', 'Comma-separated list of recipient orgs')
+  .option('-s, --system <string>', 'Unique system identifier')
+  .description('Restores local or S3 Web API results to a RESO Certification API instance')
+  .action(restoreWebApi);
 
 program
   .command('runDDTests')
   .requiredOption('-p, --pathToConfigFile <string>', 'Path to config file')
-  .option('-a, --runAvailability', 'Flag to run data availability tests, otherwise only metadata tests are run')
+  .option(
+    '-a, --runAvailability',
+    'Flag to run data availability tests, otherwise only metadata tests are run'
+  )
   .description('Runs Data Dictionary tests')
   .action(runTests);
 
