@@ -98,7 +98,6 @@ const isValidUrl = url => {
  * @param {string} options.url Cert API base URL.
  * @param {boolean} options.overwrite Overwrite option - when true the program will overwrite the existing reports on the Cert API.
  * @throws Error if path is not a valid S3 or local path
- * @throws Error if path is not a valid S3 or local path
  */
 const restore = async (options = {}) => {
   const START_TIME = new Date();

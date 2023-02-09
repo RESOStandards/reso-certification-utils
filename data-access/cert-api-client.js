@@ -199,7 +199,7 @@ const processWebAPIResults = async ({
 
     return reportId;
   } catch (err) {
-    throw new Error(`Could not process data dictionary results! ${err}`);
+    throw new Error(`Could not process webAPI results! ${err}`);
   }
 };
 
