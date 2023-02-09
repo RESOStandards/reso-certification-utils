@@ -96,7 +96,7 @@ const isValidUrl = url => {
  * @param {String} path
  * @throws Error if path is not a valid S3 or local path
  */
-const restoreDD = async (options = {}) => {
+const restore = async (options = {}) => {
   const START_TIME = new Date();
 
   const STATS = {
@@ -364,5 +364,5 @@ const restoreDD = async (options = {}) => {
 };
 
 module.exports = {
-  restoreDD
+  restore
 };

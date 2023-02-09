@@ -1,8 +1,8 @@
 #! /usr/bin/env node
 const { program } = require('commander');
-const { restoreDD } = require('./utils/restore-utils/data-dictionary');
+const { restore } = require('./utils/restore-utils/data-dictionary');
 const { runTests } = require('./utils/batch-test-runner');
-const { restoreWebApi } = require('./utils/restore-utils/web-api-core');
+const { syncWebApi } = require('./utils/restore-utils/web-api-core');
 
 program
   .name('reso-certification-utils')
@@ -15,7 +15,7 @@ program
   .option('-u, --url <string>', 'URL of Certification API')
   .option('-o, --overwrite', 'Flag to overwrite existing passed files')
   .description('Restores local or S3 results to a RESO Certification API instance')
-  .action(restoreDD);
+  .action(restore);
 
 program
   .command('syncWebApiResults')
@@ -23,9 +23,9 @@ program
   .option('-u, --url <string>', 'URL of Certification API')
   .option('-o, --overwrite', 'Flag to overwrite existing passed files')
   .option('-r, --recipients <string>', 'Comma-separated list of recipient orgs')
-  .option('-s, --system <string>', 'Unique system identifier')
+  .option('-i, --system <string>', 'Unique system identifier')
   .description('Restores local or S3 Web API results to a RESO Certification API instance')
-  .action(restoreWebApi);
+  .action(syncWebApi);
 
 program
   .command('runDDTests')
