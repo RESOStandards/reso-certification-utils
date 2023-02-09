@@ -93,7 +93,11 @@ const isValidUrl = url => {
 
 /**
  * Restores a RESO Certification Server from either a local or S3 path.
- * @param {String} path
+ * @param {Object} options
+ * @param {string} options.pathToResults An absolute local path to the DD results or a valid S3 path.
+ * @param {string} options.url Cert API base URL.
+ * @param {boolean} options.overwrite Overwrite option - when true the program will overwrite the existing reports on the Cert API.
+ * @throws Error if path is not a valid S3 or local path
  * @throws Error if path is not a valid S3 or local path
  */
 const restore = async (options = {}) => {

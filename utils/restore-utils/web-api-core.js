@@ -80,7 +80,6 @@ const isValidUrl = url => {
  * @param {string} options.url Cert API base URL.
  * @param {string} options.recipients Comma seperated string of recipient uoi's.
  * @param {string} options.system System name for the provider.
- * @param {string} options.providerUoi
  * @param {boolean} options.overwrite Overwrite option - when true the program will overwrite the existing reports on the Cert API.
  * @throws Error if path is not a valid S3 or local path
  */
