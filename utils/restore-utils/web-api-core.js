@@ -1,7 +1,6 @@
 //const conf = new (require('conf'))();
 const chalk = require('chalk');
 const { promises: fs } = require('fs');
-const { join } = require('path');
 const { checkFileExists } = require('../../common');
 const {
   getOrgsMap,
@@ -15,14 +14,6 @@ const {
 const OVERWRITE_DELAY_S = 10,
   CERTIFIED_STATUS = 'certified',
   REVOKED_STATUS = 'revoked';
-
-const readDirectory = async (path = '') => {
-  try {
-    return await fs.readdir(path);
-  } catch (err) {
-    return [];
-  }
-};
 
 const readFile = async filePath => {
   try {
@@ -127,8 +118,6 @@ const syncWebApi = async (options = {}) => {
 
     const providerUoi = systemMap[system];
 
-    const providerUoiAndUsiPaths = await readDirectory(pathToResults);
-
     //is provider UOI valid?
     if (!orgMap[providerUoi]) {
       console.warn(chalk.redBright.bold(`Error: Could not find providerUoi '${providerUoi}'! Exiting...`));
@@ -149,30 +138,14 @@ const syncWebApi = async (options = {}) => {
       process.exit(1);
     }
 
-    if (!providerUoiAndUsiPaths?.length || !providerUoiAndUsiPaths?.includes(`${providerUoi}-${system}`)) {
-      console.log(
-        chalk.redBright.bold(`Error: Could not find provider UOI and USI paths in '${pathToResults}'`)
-      );
-      process.exit(1);
-    }
-
-    const fileExists = await checkFileExists(
-      join(pathToResults, `${providerUoi}-${system}`, 'web-api-core-report.json')
-    );
+    const fileExists = await checkFileExists(pathToResults);
 
     if (!fileExists) {
-      console.log(
-        chalk.redBright.bold(
-          `Error: Could not find web-api-core-report.json in '${pathToResults}/${providerUoi}-${system}'`
-        )
-      );
+      console.log(chalk.redBright.bold(`Error: Could not find file in path '${pathToResults}'`));
       process.exit(1);
     }
 
-    const webAPIReport =
-      JSON.parse(
-        await readFile(join(pathToResults, `${providerUoi}-${system}`, 'web-api-core-report.json'))
-      ) || {};
+    const webAPIReport = JSON.parse(await readFile(pathToResults)) || {};
 
     for await (const recipientUoi of recipientsList) {
       try {
