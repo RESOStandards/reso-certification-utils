@@ -49,9 +49,6 @@ reso-certification-utils restore -p <path/to/data-dictionary-results/parent-path
 Where: 
 * `-p` must point to the parent folder where the results directories reside
 * `-u` may be any server URL, but there must be an API key for it in the .env file (see sample.env)
-- `-o` is an optional "overwrite" flag that when passed will delete any existing results for a given org and upload new ones
-
-If the overwrite flag isn't passed, existing records will be preserved and only results that don't exist will be restored. 
 
 **Note**: If the given Data Dictionary results include data from the Lookup Resource, the lookup metadata will be merged with the Data Dictionary metadata when processed.
 
