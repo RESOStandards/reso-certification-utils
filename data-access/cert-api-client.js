@@ -1,3 +1,5 @@
+'use strict';
+
 const axios = require('axios');
 require('dotenv').config();
 const { CERTIFICATION_API_KEY, ORGS_DATA_URL, SYSTEMS_DATA_URL } = process.env;
@@ -44,26 +46,6 @@ const postDataDictionaryResultsToApi = async ({
   }
 };
 
-const deleteDataDictionaryResults = async ({ url, reportId } = {}) => {
-  if (!url) throw new Error('url is required!');
-  if (!reportId) throw new Error('reportId is required!');
-
-  try {
-    const { deletedReport } =
-      (
-        await axios.delete(`${url}/api/v1/certification_reports/${reportId}`, {
-          headers: {
-            Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
-          }
-        })
-      ).data || {};
-
-    return deletedReport;
-  } catch (err) {
-    throw new Error(err);
-  }
-};
-
 const postDataAvailabilityResultsToApi = async ({ url, reportId, dataAvailabilityReport = {} } = {}) => {
   if (!url) throw new Error('url is required!');
   if (!reportId) throw new Error('reportId is required!');
@@ -98,16 +80,9 @@ const processDataDictionaryResults = async ({
   providerUsi,
   recipientUoi,
   metadataReport = {},
-  dataAvailabilityReport = {},
-  reportIdToDelete,
-  overwrite = false
+  dataAvailabilityReport = {}
 }) => {
   try {
-    if (overwrite) {
-      if (!reportIdToDelete) throw new Error('reportIdToDelete MUST be present when overwrite is used!');
-      await deleteDataDictionaryResults({ url, reportId: reportIdToDelete });
-    }
-
     //wait for the dust to settle to avoid thrashing the server
     await sleep(API_DEBOUNCE_SECONDS * 1000);
 

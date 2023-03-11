@@ -12,7 +12,6 @@ program
   .command('restore')
   .option('-p, --pathToResults <string>', 'Path to test results')
   .option('-u, --url <string>', 'URL of Certification API')
-  .option('-o, --overwrite', 'Flag to overwrite existing passed files')
   .description('Restores local or S3 results to a RESO Certification API instance')
   .action(restore);
 
