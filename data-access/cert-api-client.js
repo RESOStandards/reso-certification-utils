@@ -1,3 +1,5 @@
+'use strict';
+
 const axios = require('axios');
 require('dotenv').config();
 const { CERTIFICATION_API_KEY, ORGS_DATA_URL, SYSTEMS_DATA_URL } = process.env;
@@ -138,16 +140,9 @@ const processDataDictionaryResults = async ({
   providerUsi,
   recipientUoi,
   metadataReport = {},
-  dataAvailabilityReport = {},
-  reportIdToDelete,
-  overwrite = false
+  dataAvailabilityReport = {}
 }) => {
   try {
-    if (overwrite) {
-      if (!reportIdToDelete) throw new Error('reportIdToDelete MUST be present when overwrite is used!');
-      await deleteDataDictionaryResults({ url, reportId: reportIdToDelete });
-    }
-
     //wait for the dust to settle to avoid thrashing the server
     await sleep(API_DEBOUNCE_SECONDS * 1000);
 

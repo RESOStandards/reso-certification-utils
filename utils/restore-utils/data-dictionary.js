@@ -1,3 +1,5 @@
+'use strict';
+
 //const conf = new (require('conf'))();
 const chalk = require('chalk');
 const { promises: fs } = require('fs');
@@ -5,8 +7,6 @@ const { resolve, join } = require('path');
 const {
   getOrgsMap,
   getOrgSystemsMap,
-  findDataDictionaryReport,
-  sleep,
   processDataDictionaryResults
 } = require('../../data-access/cert-api-client');
 
@@ -14,10 +14,7 @@ const { processLookupResourceMetadataFiles } = require('reso-certification-etl')
 const { checkFileExists } = require('../../common');
 
 const CERTIFICATION_RESULTS_DIRECTORY = 'current',
-  // FILE_ENCODING = 'utf8',
-  PATH_DATA_SEPARATOR = '-',
-  PASSED_STATUS = 'passed',
-  OVERWRITE_DELAY_S = 10;
+  PATH_DATA_SEPARATOR = '-';
 
 const CERTIFICATION_FILES = {
   METADATA_REPORT: 'metadata-report.json',
@@ -111,19 +108,7 @@ const restore = async (options = {}) => {
     missingResultsFilePaths: []
   };
 
-  const replacedReports = [];
-
-  const { pathToResults, url, overwrite = false } = options;
-
-  if (overwrite) {
-    console.log(chalk.bgYellowBright.bold('WARNING: -o or --overwrite option passed!'));
-    console.log(
-      chalk.bold(
-        `Waiting ${OVERWRITE_DELAY_S} seconds before proceeding...use <ctrl+c> to exit if this was unintended!`
-      )
-    );
-    await sleep(OVERWRITE_DELAY_S * 1000);
-  }
+  const { pathToResults, url } = options;
 
   if (isS3Path(pathToResults)) {
     console.log(
@@ -220,24 +205,18 @@ const restore = async (options = {}) => {
                 console.log(chalk.green.bold('Found required results files!'));
 
                 try {
-                  //search for existing results
-                  const report =
-                    (await findDataDictionaryReport({
-                      serverUrl: url,
-                      providerUoi,
-                      providerUsi,
-                      recipientUoi
-                    })) || {};
-
-                  const { id: reportId = null, status = null } = report;
-
                   const hasLookupResourceMetadata = !!results.find(
                     result => result === CERTIFICATION_FILES.LOOKUP_RESOURCE_LOOKUP_METADATA
                   );
 
-                  //if the server is using the Lookup Resource then preprocess results and use the output instead
-                  if (hasLookupResourceMetadata) {
-                    const pathToMetadataReportJson = resolve(
+                  const hasProcessedMetadataReport = !!results.find(
+                    result => result === CERTIFICATION_FILES.PROCESSED_METADATA_REPORT
+                  );
+
+                  //if the server is using the Lookup Resource then preprocess results if they're not already present
+                  //TODO: add option to rescore results
+                  if (hasLookupResourceMetadata && !hasProcessedMetadataReport) {
+                    const pathToMetadataReport = resolve(
                         join(currentResultsPath, CERTIFICATION_FILES.METADATA_REPORT)
                       ),
                       pathToLookupResourceData = resolve(
@@ -248,13 +227,14 @@ const restore = async (options = {}) => {
                       );
                     if (!(await checkFileExists(pathToOutputFile))) {
                       await processLookupResourceMetadataFiles(
-                        pathToMetadataReportJson,
+                        pathToMetadataReport,
                         pathToLookupResourceData,
                         pathToOutputFile
                       );
                     }
                   }
-                  const metadataReportJson =
+
+                  const metadataReport =
                     JSON.parse(
                       await readFile(
                         join(
@@ -265,55 +245,22 @@ const restore = async (options = {}) => {
                         )
                       )
                     ) || {};
-                  const dataAvailabilityReportJson =
+
+                  const dataAvailabilityReport =
                     JSON.parse(
                       await readFile(join(currentResultsPath, CERTIFICATION_FILES.DATA_AVAILABILITY_REPORT))
                     ) || {};
 
-                  if (reportId && status) {
-                    console.log(chalk.bold(`Found report with id: ${reportId}`));
-
-                    if (status !== PASSED_STATUS) {
-                      console.log(chalk.bgRedBright.bold(`Cannot restore reports with status '${status}'`));
-                    } else {
-                      if (!overwrite) {
-                        console.log(
-                          chalk.bgYellowBright.bold(
-                            'Found existing passed report! Use --overwrite or -o to replace it'
-                          )
-                        );
-                      } else {
-                        console.log(chalk.yellowBright.bold('Overwriting existing report...'));
-                        const result = await processDataDictionaryResults({
-                          url,
-                          providerUoi,
-                          providerUsi,
-                          recipientUoi,
-                          metadataReport: metadataReportJson,
-                          dataAvailabilityReport: dataAvailabilityReportJson,
-                          overwrite: true,
-                          reportIdToDelete: reportId
-                        });
-
-                        if (result) {
-                          replacedReports.push(reportId);
-                        }
-
-                        console.log(chalk.bold(`Result: ${result ? 'Succeeded!' : 'Failed!'}`));
-                      }
-                    }
-                  } else {
-                    console.log('No existing report found! Ingesting results...');
-                    const result = await processDataDictionaryResults({
-                      url,
-                      providerUoi,
-                      providerUsi,
-                      recipientUoi,
-                      metadataReport: metadataReportJson,
-                      dataAvailabilityReport: dataAvailabilityReportJson
-                    });
-                    console.log(chalk.bold(`Done! Result: ${result ? 'Succeeded!' : 'Failed!'}`));
-                  }
+                  console.log('Ingesting results...');
+                  const result = await processDataDictionaryResults({
+                    url,
+                    providerUoi,
+                    providerUsi,
+                    recipientUoi,
+                    metadataReport,
+                    dataAvailabilityReport
+                  });
+                  console.log(chalk.bold(`Done! Result: ${result ? 'Succeeded!' : 'Failed!'}`));
                 } catch (err) {
                   console.log(chalk.bgRed.bold(err));
                   return false;
@@ -337,16 +284,12 @@ const restore = async (options = {}) => {
   const totalItems = Object.values(STATS).reduce((acc, stats) => (acc += stats.length), 0);
 
   console.log(chalk.magentaBright.bold('------------------------------------------------------------'));
-  console.log(
-    chalk.bold(`Processing complete!\nItems Processed: ${STATS.processed.length} of ${totalItems}`)
-  );
-  console.log(chalk.bold(`Time Taken: ~${timeTaken}s`));
+
+  console.log(chalk.bold(`Processing complete! Time Taken: ~${timeTaken}s`));
   console.log(chalk.magentaBright.bold('------------------------------------------------------------'));
 
-  if (overwrite) {
-    console.log(chalk.bold(`\nReports replaced: ${replacedReports.length}`));
-    replacedReports.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
-  }
+  console.log(chalk.bold(`\nItems Processed: ${STATS.processed.length} of ${totalItems}`));
+  STATS.processed.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
 
   console.log(chalk.bold(`\nProvider UOI Paths Skipped: ${STATS.skippedProviderUoiPaths.length}`));
   STATS.skippedProviderUoiPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
