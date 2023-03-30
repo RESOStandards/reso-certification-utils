@@ -151,7 +151,7 @@ const findVariations = async ({
 
   if (!parseFloat(fuzziness) || fuzziness < 0 || fuzziness > 1) {
     console.error(
-      chalk.redBright.bold(`Invalid value! fuzziness must be a decimal number in the range [0, 1]`)
+      chalk.redBright.bold('Invalid value! fuzziness must be a decimal number in the range [0, 1]')
     );
     return;
   }
@@ -420,5 +420,6 @@ const findVariations = async ({
 };
 
 module.exports = {
-  findVariations
+  findVariations,
+  isValidUrl
 };
