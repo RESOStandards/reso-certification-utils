@@ -13,6 +13,7 @@ program
   .command('restore')
   .option('-p, --pathToResults <string>', 'Path to test results')
   .option('-u, --url <string>', 'URL of Certification API')
+  .option('--deleteExistingReport', 'Flag to delete existing report')
   .description('Restores local or S3 results to a RESO Certification API instance')
   .action(restore);
 
@@ -20,9 +21,9 @@ program
   .command('syncWebApiResults')
   .option('-p, --pathToResults <string>', 'Path to test results')
   .option('-u, --url <string>', 'URL of Certification API')
-  .option('-o, --overwrite', 'Flag to overwrite existing passed files')
   .option('-r, --recipients <string>', 'Comma-separated list of recipient orgs')
   .option('-i, --system <string>', 'Unique system identifier')
+  .option('--deleteExistingReport', 'Flag to delete existing report')
   .description('Restores local or S3 Web API results to a RESO Certification API instance')
   .action(syncWebApi);
 

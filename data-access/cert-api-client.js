@@ -86,7 +86,7 @@ const postWebAPIResultsToApi = async ({
   }
 };
 
-const deleteDataDictionaryResults = async ({ url, reportId } = {}) => {
+const deleteExistingDDOrWebAPIReport = async ({ url, reportId } = {}) => {
   if (!url) throw new Error('url is required!');
   if (!reportId) throw new Error('reportId is required!');
 
@@ -166,21 +166,8 @@ const processDataDictionaryResults = async ({
   }
 };
 
-const processWebAPIResults = async ({
-  url,
-  providerUoi,
-  providerUsi,
-  recipientUoi,
-  webAPIReport = {},
-  reportIdToDelete,
-  overwrite = false
-}) => {
+const processWebAPIResults = async ({ url, providerUoi, providerUsi, recipientUoi, webAPIReport = {} }) => {
   try {
-    if (overwrite) {
-      if (!reportIdToDelete) throw new Error('reportIdToDelete MUST be present when overwrite is used!');
-      await deleteDataDictionaryResults({ url, reportId: reportIdToDelete });
-    }
-
     //wait for the dust to settle to avoid thrashing the server
     await sleep(API_DEBOUNCE_SECONDS * 1000);
 
@@ -288,5 +275,6 @@ module.exports = {
   findWebAPIReport,
   postWebAPIResultsToApi,
   processWebAPIResults,
-  getSystemsMap
+  getSystemsMap,
+  deleteExistingDDOrWebAPIReport
 };

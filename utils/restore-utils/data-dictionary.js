@@ -7,14 +7,18 @@ const { resolve, join } = require('path');
 const {
   getOrgsMap,
   getOrgSystemsMap,
-  processDataDictionaryResults
+  processDataDictionaryResults,
+  findDataDictionaryReport,
+  deleteExistingDDOrWebAPIReport,
+  sleep
 } = require('../../data-access/cert-api-client');
 
 const { processLookupResourceMetadataFiles } = require('reso-certification-etl');
 const { checkFileExists } = require('../../common');
 
 const CERTIFICATION_RESULTS_DIRECTORY = 'current',
-  PATH_DATA_SEPARATOR = '-';
+  PATH_DATA_SEPARATOR = '-',
+  OVERWRITE_DELAY_S = 10;
 
 const CERTIFICATION_FILES = {
   METADATA_REPORT: 'metadata-report.json',
@@ -93,7 +97,6 @@ const isValidUrl = url => {
  * @param {Object} options
  * @param {string} options.pathToResults An absolute local path to the DD results or a valid S3 path.
  * @param {string} options.url Cert API base URL.
- * @param {boolean} options.overwrite Overwrite option - when true the program will overwrite the existing reports on the Cert API.
  * @throws Error if path is not a valid S3 or local path
  */
 const restore = async (options = {}) => {
@@ -108,7 +111,21 @@ const restore = async (options = {}) => {
     missingResultsFilePaths: []
   };
 
-  const { pathToResults, url } = options;
+  const { pathToResults, url, deleteExistingReport = false } = options;
+
+  if (deleteExistingReport) {
+    console.log(
+      chalk.bgYellowBright.bold(
+        'WARNING: --deleteExistingReport flag is set! This can delete an already certified report!'
+      )
+    );
+    console.log(
+      chalk.bold(
+        `Waiting ${OVERWRITE_DELAY_S} seconds before proceeding...use <ctrl+c> to exit if this was unintended!`
+      )
+    );
+    await sleep(OVERWRITE_DELAY_S * 1000);
+  }
 
   if (isS3Path(pathToResults)) {
     console.log(
@@ -250,6 +267,25 @@ const restore = async (options = {}) => {
                     JSON.parse(
                       await readFile(join(currentResultsPath, CERTIFICATION_FILES.DATA_AVAILABILITY_REPORT))
                     ) || {};
+
+                  if (deleteExistingReport) {
+                    const report =
+                      (await findDataDictionaryReport({
+                        serverUrl: url,
+                        providerUoi,
+                        providerUsi,
+                        recipientUoi
+                      })) || {};
+
+                    const { id: reportId = null } = report;
+                    if (reportId) {
+                      console.log(chalk.yellowBright.bold('Deleting existing report...'));
+                      await deleteExistingDDOrWebAPIReport({
+                        url,
+                        reportId
+                      });
+                    }
+                  }
 
                   console.log('Ingesting results...');
                   const result = await processDataDictionaryResults({

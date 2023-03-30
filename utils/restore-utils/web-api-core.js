@@ -5,15 +5,14 @@ const { checkFileExists } = require('../../common');
 const {
   getOrgsMap,
   getOrgSystemsMap,
-  sleep,
   findWebAPIReport,
   processWebAPIResults,
-  getSystemsMap
+  getSystemsMap,
+  deleteExistingDDOrWebAPIReport,
+  sleep
 } = require('../../data-access/cert-api-client');
 
-const OVERWRITE_DELAY_S = 10,
-  CERTIFIED_STATUS = 'certified',
-  REVOKED_STATUS = 'revoked';
+const OVERWRITE_DELAY_S = 10;
 
 const readFile = async filePath => {
   try {
@@ -71,18 +70,19 @@ const isValidUrl = url => {
  * @param {string} options.url Cert API base URL.
  * @param {string} options.recipients Comma seperated string of recipient uoi's.
  * @param {string} options.system System name for the provider.
- * @param {boolean} options.overwrite Overwrite option - when true the program will overwrite the existing reports on the Cert API.
  * @throws Error if path is not a valid S3 or local path
  */
 const syncWebApi = async (options = {}) => {
   const START_TIME = new Date();
 
-  const replacedReports = [];
+  const { pathToResults, url, recipients = '', system = '', deleteExistingReport = false } = options;
 
-  const { pathToResults, url, overwrite = false, recipients = '', system = '' } = options;
-
-  if (overwrite) {
-    console.log(chalk.bgYellowBright.bold('WARNING: -o or --overwrite option passed!'));
+  if (deleteExistingReport) {
+    console.log(
+      chalk.bgYellowBright.bold(
+        'WARNING: --deleteExistingReport flag is set! This can delete an already certified report!'
+      )
+    );
     console.log(
       chalk.bold(
         `Waiting ${OVERWRITE_DELAY_S} seconds before proceeding...use <ctrl+c> to exit if this was unintended!`
@@ -149,60 +149,36 @@ const syncWebApi = async (options = {}) => {
 
     for await (const recipientUoi of recipientsList) {
       try {
-        //search for existing results
-        const report =
-          (await findWebAPIReport({
-            serverUrl: url,
-            providerUoi,
-            providerUsi: system,
-            recipientUoi
-          })) || {};
-
-        const { id: reportId = null, status: status = null } = report;
-
-        if (reportId && status) {
-          console.log(chalk.bold(`Found report with id: ${reportId}`));
-          if ([CERTIFIED_STATUS, REVOKED_STATUS].includes(status)) {
-            console.log(chalk.bgRedBright.bold(`Cannot replace reports with status '${status}'`));
-            continue;
-          }
-        }
-
-        if (reportId) {
-          if (overwrite) {
-            console.log(chalk.yellowBright.bold('Overwriting existing report...'));
-            const result = await processWebAPIResults({
-              url,
+        if (deleteExistingReport) {
+          //search for existing results
+          const report =
+            (await findWebAPIReport({
+              serverUrl: url,
               providerUoi,
               providerUsi: system,
-              recipientUoi,
-              webAPIReport: webAPIReport,
-              overwrite: true,
-              reportIdToDelete: reportId
+              recipientUoi
+            })) || {};
+
+          const { id: reportId = null } = report;
+          if (reportId) {
+            console.log(chalk.yellowBright.bold('Deleting existing report...'));
+            await deleteExistingDDOrWebAPIReport({
+              url,
+              reportId
             });
-
-            if (result) {
-              replacedReports.push(reportId);
-            }
-
-            console.log(chalk.bold(`Result: ${result ? 'Succeeded!' : 'Failed!'}`));
-          } else {
-            console.log(
-              chalk.bgYellowBright.bold('Found existing passed report! Use --overwrite or -o to replace it')
-            );
           }
-        } else {
-          console.log('No existing report found! Ingesting results...');
-          const result = await processWebAPIResults({
-            url,
-            providerUoi,
-            providerUsi: system,
-            recipientUoi,
-            webAPIReport: webAPIReport
-          });
-
-          console.log(chalk.bold(`Result: ${result ? 'Succeeded!' : 'Failed!'}`));
         }
+
+        console.log('Ingesting results...');
+        const result = await processWebAPIResults({
+          url,
+          providerUoi,
+          providerUsi: system,
+          recipientUoi,
+          webAPIReport: webAPIReport
+        });
+
+        console.log(chalk.bold(`Result: ${result ? 'Succeeded!' : 'Failed!'}`));
       } catch (err) {
         console.log(chalk.bgRed.bold(err));
       }
@@ -217,11 +193,6 @@ const syncWebApi = async (options = {}) => {
 
   console.log(chalk.bold(`Time Taken: ~${timeTaken}s`));
   console.log(chalk.magentaBright.bold('------------------------------------------------------------'));
-
-  if (overwrite) {
-    console.log(chalk.bold(`\nReports replaced: ${replacedReports.length}`));
-    replacedReports.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
-  }
 
   console.log(chalk.bold('\nRestore complete! Exiting...\n'));
 };
