@@ -2,6 +2,7 @@
 const { program } = require('commander');
 const { restore } = require('./utils/restore-utils');
 const { runTests } = require('./utils/batch-test-runner');
+const { findVariations } = require('./utils/find-variations/index.js');
 
 program
   .name('reso-certification-utils')
@@ -21,5 +22,13 @@ program
   .option('-a, --runAvailability', 'Flag to run data availability tests, otherwise only metadata tests are run')
   .description('Runs Data Dictionary tests')
   .action(runTests);
+
+program
+  .command('findVariations')
+  .requiredOption('-p, --pathToMetadataReportJson <string>', 'Path to metadata-report.json file')
+  .option('-f, --fuzziness <float>', 'Set fuzziness to something besides the default')
+  .option('-v, --verbose <boolean>', 'Set to true to see additional information')
+  .description('Finds possible variations in metadata using a number of methods.')
+  .action(findVariations);
 
 program.parse();
