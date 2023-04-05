@@ -3,6 +3,7 @@
 const chalk = require('chalk');
 const { readFile, writeFile } = require('fs/promises');
 const { distance, closest } = require('fastest-levenshtein');
+const { getReferenceMetadata } = require('reso-certification-etl');
 
 const REFERENCE_METADATA_URL = 'https://services.reso.org/metadata?view=all';
 
@@ -12,10 +13,17 @@ const DEFAULT_FUZZINESS = 1.0 / 3;
 
 const fetchReferenceMetadata = async () => {
   try {
-    return (await fetch(REFERENCE_METADATA_URL)).json();
+    const referenceMetadata = getReferenceMetadata();
+    if (Object.keys(referenceMetadata)?.length) {
+      return referenceMetadata;
+    }
   } catch (err) {
-    console.error('Error fetching reference metadata!', err);
-    return null;
+    try {
+      console.log(chalk.bold(`Loading default metadata from '${REFERENCE_METADATA_URL}'`));
+      return (await fetch(REFERENCE_METADATA_URL)).json();
+    } catch (err2) {
+      return null;
+    }
   }
 };
 
@@ -56,71 +64,79 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
 
   return {
     metadataMap: {
-      ...fields.reduce((acc, { resourceName, fieldName, type, isExpansion = false }) => {
-        if (!acc[resourceName]) {
-          acc[resourceName] = {};
-          STATS.numResources++;
-        }
-
-        const hasLookups = !!lookupMap?.[type],
-          isLookupField = !type?.startsWith('Edm.') && hasLookups,
-          isComplexType = !type?.startsWith('Edm.') && !hasLookups;
-
-        //add field to map
-        acc[resourceName][fieldName] = {
-          isExpansion,
-          isLookupField,
-          isComplexType
-        };
-
-        if (isLookupField && lookupMap[type]) {
-          if (!acc?.[resourceName]?.[fieldName]?.lookupValues) {
-            acc[resourceName][fieldName].lookupValues = {};
+      ...fields.reduce(
+        (acc, { resourceName, fieldName, type, isExpansion = false, isComplexType = false }) => {
+          if (!acc[resourceName]) {
+            acc[resourceName] = {};
+            STATS.numResources++;
           }
 
-          if (!acc?.[resourceName]?.[fieldName]?.legacyODataValues) {
-            acc[resourceName][fieldName].legacyODataValues = {};
+          const isLookupField = !!lookupMap?.[type];
+
+          //org.reso.metadata.models.Property
+
+          //add field to map
+          acc[resourceName][fieldName] = {
+            isExpansion,
+            isLookupField,
+            isComplexType: isComplexType || (!isExpansion && !type?.startsWith('Edm.') && !isLookupField)
+          };
+
+          if (isLookupField && lookupMap?.[type]) {
+            if (!acc?.[resourceName]?.[fieldName]?.lookupValues) {
+              acc[resourceName][fieldName].lookupValues = {};
+            }
+
+            if (!acc?.[resourceName]?.[fieldName]?.legacyODataValues) {
+              acc[resourceName][fieldName].legacyODataValues = {};
+            }
+
+            Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue }) => {
+              const lookupName = parseLookupName(type);
+
+              if (legacyODataValue?.length) {
+                acc[resourceName][fieldName].legacyODataValues[legacyODataValue] = {
+                  lookupName,
+                  lookupValue,
+                  legacyODataValue
+                };
+              }
+
+              if (lookupValue?.length) {
+                acc[resourceName][fieldName].lookupValues[lookupValue] = {
+                  lookupName,
+                  lookupValue,
+                  legacyODataValue
+                };
+              }
+            });
           }
 
-          Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue }) => {
-            const lookupName = parseLookupName(type);
+          if (isExpansion) {
+            STATS.numExpansions++;
+          }
 
-            if (legacyODataValue?.length) {
-              acc[resourceName][fieldName].legacyODataValues[legacyODataValue] = {
-                lookupName,
-                lookupValue,
-                legacyODataValue
-              };
-            }
+          if (isComplexType) {
+            STATS.numComplexTypes++;
+          }
 
-            if (lookupValue?.length) {
-              acc[resourceName][fieldName].lookupValues[lookupValue] = {
-                lookupName,
-                lookupValue,
-                legacyODataValue
-              };
-            }
-          });
-        }
-
-        if (isExpansion) {
-          STATS.numExpansions++;
-        }
-
-        if (isComplexType) {
-          STATS.numComplexTypes++;
-        }
-
-        STATS.numFields++;
-        return acc;
-      }, {})
+          STATS.numFields++;
+          return acc;
+        },
+        {}
+      )
     },
     stats: STATS
   };
 };
 
-const calculateElapsedTime = (startTime = new Date(), useMs = false) =>
-  Math.round((new Date() - startTime) / (useMs ? 1 : 1000));
+const calculateElapsedTimeString = (startTime = new Date(), useMs = false) => {
+  const elapsedTimeMs = new Date() - startTime;
+
+  return elapsedTimeMs < 1000
+    ? `${elapsedTimeMs}ms`
+    : `${Math.round(elapsedTimeMs / (useMs ? 1 : 1000))}${useMs ? 'ms' : 's'}`;
+};
 
 const getMetadataInfo = ({
   numResources = 0,
@@ -186,7 +202,7 @@ const findVariations = async ({
     console.log(chalk.cyanBright.bold('\nFetching reference metadata...'));
     startTime = new Date();
     const referenceMetadata = await fetchReferenceMetadata();
-    console.log(chalk.whiteBright.bold(`Time Taken: ${calculateElapsedTime(startTime)}s\n`));
+    console.log(chalk.whiteBright.bold(`Time Taken: ${calculateElapsedTimeString(startTime)}\n`));
     if (!referenceMetadata) return;
 
     //build a map of reference metadata
@@ -194,7 +210,7 @@ const findVariations = async ({
     startTime = new Date();
     const { metadataMap: referenceMetadataMap = {}, stats: referenceMetadataStats = {} } =
       buildMetadataMap(referenceMetadata);
-    console.log(chalk.whiteBright.bold(`Time taken: ${calculateElapsedTime(startTime, true)}ms`));
+    console.log(chalk.whiteBright.bold(`Time taken: ${calculateElapsedTimeString(startTime, true)}`));
     console.log(chalk.whiteBright.bold('Metadata info:', getMetadataInfo(referenceMetadataStats)));
 
     //Pre-process metadata report into map
@@ -202,7 +218,7 @@ const findVariations = async ({
     startTime = new Date();
     const { metadataMap: metadataReportMap = {}, stats: metadataReportStats = {} } =
       buildMetadataMap(metadataReportJson);
-    console.log(chalk.whiteBright.bold(`Time taken: ${calculateElapsedTime(startTime, true)}ms`));
+    console.log(chalk.whiteBright.bold(`Time taken: ${calculateElapsedTimeString(startTime, true)}`));
     console.log(chalk.whiteBright.bold('Metadata info:', getMetadataInfo(metadataReportStats)));
 
     //run matching process using substrings and edit distance
@@ -259,57 +275,57 @@ const findVariations = async ({
             const { lookupValues = {}, legacyODataValues = {} } =
               metadataReportMap?.[resourceName]?.[fieldName] || {};
 
-            Object.values(lookupValues).forEach(({ lookupValue, legacyODataValue }) => {
-              //lookup value can be null since it's the display name and not every system adds display names in this case
-              if (lookupValue) {
-                if (!referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[lookupValue]) {
-                  const suggestedLookupValue = closest(
-                    lookupValue,
-                    Object.keys(referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues)
-                  );
+            // Object.values(lookupValues).forEach(({ lookupValue, legacyODataValue }) => {
+            //   //lookup value can be null since it's the display name and not every system adds display names in this case
+            //   if (lookupValue) {
+            //     if (!referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[lookupValue]) {
+            //       const suggestedLookupValue = closest(
+            //         lookupValue,
+            //         Object.keys(referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues)
+            //       );
 
-                  if (suggestedLookupValue) {
-                    const d = distance(lookupValue, suggestedLookupValue);
-                    if (d < Math.round(fuzziness * lookupValue?.length)) {
-                      if (
-                        !metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues?.[suggestedLookupValue]
-                      ) {
-                        if (verbose) {
-                          console.log(
-                            chalk.bold('\nLookup Value Variations Found!'),
-                            `\nFound possible match for resource '${resourceName}', field '${fieldName}', and lookup '${lookupValue}'...`
-                          );
+            //       if (suggestedLookupValue) {
+            //         const d = distance(lookupValue, suggestedLookupValue);
+            //         if (d < Math.round(fuzziness * lookupValue?.length)) {
+            //           if (
+            //             !metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues?.[suggestedLookupValue]
+            //           ) {
+            //             if (verbose) {
+            //               console.log(
+            //                 chalk.bold('\nLookup Value Variations Found!'),
+            //                 `\nFound possible match for resource '${resourceName}', field '${fieldName}', lookupValue '${lookupValue}', and legacyODataValue '${legacyODataValue}'...`
+            //               );
 
-                          console.log(chalk.bold('Suggested Lookup Value:'), `'${suggestedLookupValue}'`);
-                        }
+            //               console.log(chalk.bold('Suggested Lookup Value:'), `'${suggestedLookupValue}'`);
+            //             }
 
-                        const suggestedLegacyODataValue =
-                          referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[
-                            suggestedLookupValue
-                          ]?.legacyODataValue;
+            //             const suggestedLegacyODataValue =
+            //               referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[
+            //                 suggestedLookupValue
+            //               ]?.legacyODataValue;
 
-                        const suggestions = {
-                          resourceName,
-                          fieldName,
-                          lookupValue,
-                          legacyODataValue
-                        };
+            //             const suggestions = {
+            //               resourceName,
+            //               fieldName,
+            //               lookupValue,
+            //               legacyODataValue
+            //             };
 
-                        if (lookupValue !== suggestedLookupValue) {
-                          suggestions.suggestedLookupValue = suggestedLookupValue;
-                        }
+            //             if (lookupValue !== suggestedLookupValue) {
+            //               suggestions.suggestedLookupValue = suggestedLookupValue;
+            //             }
 
-                        if (legacyODataValue !== suggestedLegacyODataValue) {
-                          suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
-                        }
+            //             if (legacyODataValue !== suggestedLegacyODataValue) {
+            //               suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
+            //             }
 
-                        POSSIBLE_VARIATIONS.lookupValues.add(suggestions);
-                      }
-                    }
-                  }
-                }
-              }
-            });
+            //             POSSIBLE_VARIATIONS.lookupValues.add(suggestions);
+            //           }
+            //         }
+            //       }
+            //     }
+            //   }
+            // });
 
             Object.values(legacyODataValues).forEach(({ lookupValue, legacyODataValue }) => {
               if (!referenceMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[legacyODataValue]) {
@@ -328,7 +344,7 @@ const findVariations = async ({
                     if (verbose) {
                       console.log(
                         chalk.bold('\nLegacy OData Value variations found!'),
-                        `\nFound possible match for resource '${resourceName}', field '${fieldName}', and lookup '${legacyODataValue}'...`
+                        `\nFound possible match for resource '${resourceName}', field '${fieldName}', lookupValue '${lookupValue}', and legacyODataValue '${legacyODataValue}'...`
                       );
 
                       console.log(
@@ -368,7 +384,7 @@ const findVariations = async ({
     });
 
     console.log(chalk.greenBright.bold('Done!'));
-    console.log(chalk.whiteBright.bold(`Time Taken: ${calculateElapsedTime(startTime, true)}ms`));
+    console.log(chalk.whiteBright.bold(`Time Taken: ${calculateElapsedTimeString(startTime, true)}`));
 
     console.log('\n');
     console.log(chalk.cyanBright.bold(`Saving results to ${VARIATIONS_RESULTS_FILE}...`));
@@ -376,7 +392,7 @@ const findVariations = async ({
     const variations = {
       resources: Array.from(POSSIBLE_VARIATIONS.resources),
       fields: Array.from(POSSIBLE_VARIATIONS.fields),
-      lookups: Array.from(new Set(POSSIBLE_VARIATIONS.lookupValues, POSSIBLE_VARIATIONS.legacyODataValues)),
+      lookups: [...POSSIBLE_VARIATIONS.lookupValues, ...POSSIBLE_VARIATIONS.legacyODataValues],
       expansions: Array.from(POSSIBLE_VARIATIONS.expansions),
       complexTypes: Array.from(POSSIBLE_VARIATIONS.complexTypes)
     };
@@ -412,7 +428,7 @@ const findVariations = async ({
     //TODO: add a checker to connect to human-curated variations
 
     console.log(chalk.greenBright.bold('\nProcessing complete! Exiting...'));
-    console.log(chalk.magentaBright.bold(`Total runtime: ${calculateElapsedTime(TOTAL_START_TIME)}s`));
+    console.log(chalk.magentaBright.bold(`Total runtime: ${calculateElapsedTimeString(TOTAL_START_TIME)}`));
   } catch (err) {
     console.log(chalk.redBright.bold(`\nError in 'findVariations'!\n${err?.message}`));
     console.log(chalk.redBright.bold(`\nStacktrace: \n${err?.stack}`));
