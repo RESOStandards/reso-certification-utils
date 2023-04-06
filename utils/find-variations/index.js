@@ -5,7 +5,7 @@ const { readFile, writeFile } = require('fs/promises');
 const { distance, closest } = require('fastest-levenshtein');
 const { getReferenceMetadata } = require('reso-certification-etl');
 
-const REFERENCE_METADATA_URL = 'https://services.reso.org/metadata?view=all';
+const { REFERENCE_METADATA_URL } = process.env;
 
 const VARIATIONS_RESULTS_FILE = 'data-dictionary-variations.json';
 
@@ -53,11 +53,18 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
       acc[lookupName] = [];
     }
 
-    const lookupValue = annotations?.find(
-      annotation => annotation?.term === 'RESO.OData.Metadata.StandardName'
-    )?.value;
+    const { lookupValue, ddWikiUrl } = annotations?.reduce((acc, { term, value }) => {
+      if (term === 'RESO.OData.Metadata.StandardName') {
+        acc.lookupValue = value;
+      }
 
-    acc[lookupName].push({ lookupValue, legacyODataValue });
+      if (term === 'RESO.DDWikiUrl') {
+        acc.ddWikiUrl = value;
+      }
+      return acc;
+    }, {});
+
+    acc[lookupName].push({ lookupValue, legacyODataValue, ddWikiUrl });
     STATS.numLookups++;
     return acc;
   }, {});
@@ -72,8 +79,6 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
           }
 
           const isLookupField = !!lookupMap?.[type];
-
-          //org.reso.metadata.models.Property
 
           //add field to map
           acc[resourceName][fieldName] = {
@@ -91,14 +96,15 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
               acc[resourceName][fieldName].legacyODataValues = {};
             }
 
-            Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue }) => {
+            Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue, ddWikiUrl }) => {
               const lookupName = parseLookupName(type);
 
               if (legacyODataValue?.length) {
                 acc[resourceName][fieldName].legacyODataValues[legacyODataValue] = {
                   lookupName,
                   lookupValue,
-                  legacyODataValue
+                  legacyODataValue,
+                  ddWikiUrl
                 };
               }
 
@@ -106,7 +112,8 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
                 acc[resourceName][fieldName].lookupValues[lookupValue] = {
                   lookupName,
                   lookupValue,
-                  legacyODataValue
+                  legacyODataValue,
+                  ddWikiUrl
                 };
               }
             });
@@ -242,7 +249,8 @@ const findVariations = async ({
 
           POSSIBLE_VARIATIONS.resources.add({
             resourceName,
-            suggestedResourceName
+            suggestedResourceName,
+            distance: d
           });
         }
       } else {
@@ -266,7 +274,8 @@ const findVariations = async ({
                 POSSIBLE_VARIATIONS.fields.add({
                   resourceName,
                   fieldName,
-                  suggestedFieldName
+                  suggestedFieldName,
+                  distance: d
                 });
               }
             }
@@ -275,60 +284,72 @@ const findVariations = async ({
             const { lookupValues = {}, legacyODataValues = {} } =
               metadataReportMap?.[resourceName]?.[fieldName] || {};
 
-            // Object.values(lookupValues).forEach(({ lookupValue, legacyODataValue }) => {
-            //   //lookup value can be null since it's the display name and not every system adds display names in this case
-            //   if (lookupValue) {
-            //     if (!referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[lookupValue]) {
-            //       const suggestedLookupValue = closest(
-            //         lookupValue,
-            //         Object.keys(referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues)
-            //       );
+            Object.values(lookupValues).forEach(({ lookupValue, legacyODataValue }) => {
+              //lookup value can be null since it's the display name and not every system adds display names in this case
+              if (lookupValue) {
+                if (!referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[lookupValue]) {
+                  const suggestedLookupValue = closest(
+                    lookupValue,
+                    Object.keys(referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues)
+                  );
 
-            //       if (suggestedLookupValue) {
-            //         const d = distance(lookupValue, suggestedLookupValue);
-            //         if (d < Math.round(fuzziness * lookupValue?.length)) {
-            //           if (
-            //             !metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues?.[suggestedLookupValue]
-            //           ) {
-            //             if (verbose) {
-            //               console.log(
-            //                 chalk.bold('\nLookup Value Variations Found!'),
-            //                 `\nFound possible match for resource '${resourceName}', field '${fieldName}', lookupValue '${lookupValue}', and legacyODataValue '${legacyODataValue}'...`
-            //               );
+                  if (suggestedLookupValue) {
+                    const d = distance(lookupValue, suggestedLookupValue);
+                    if (d < Math.round(fuzziness * lookupValue?.length)) {
+                      if (
+                        !metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues?.[suggestedLookupValue]
+                      ) {
+                        const suggestions = {
+                          resourceName,
+                          fieldName,
+                          lookupValue,
+                          legacyODataValue,
+                          distance: d
+                        };
 
-            //               console.log(chalk.bold('Suggested Lookup Value:'), `'${suggestedLookupValue}'`);
-            //             }
+                        const { legacyODataValue: suggestedLegacyODataValue, ddWikiUrl } =
+                          referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[
+                            suggestedLookupValue
+                          ];
 
-            //             const suggestedLegacyODataValue =
-            //               referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[
-            //                 suggestedLookupValue
-            //               ]?.legacyODataValue;
+                        if (lookupValue !== suggestedLookupValue) {
+                          suggestions.matchedOn = 'lookupValue';
+                          suggestions.suggestedLookupValue = suggestedLookupValue;
+                          if (suggestedLegacyODataValue) {
+                            suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
+                            suggestions.ddWikiUrl = ddWikiUrl;
+                          }
+                        }
 
-            //             const suggestions = {
-            //               resourceName,
-            //               fieldName,
-            //               lookupValue,
-            //               legacyODataValue
-            //             };
+                        if (verbose) {
+                          console.log(
+                            chalk.bold('\nLookup Value Variations Found!'),
+                            `\nFound possible match for resource '${resourceName}', field '${fieldName}', lookupValue '${lookupValue}', and legacyODataValue '${legacyODataValue}'...`
+                          );
 
-            //             if (lookupValue !== suggestedLookupValue) {
-            //               suggestions.suggestedLookupValue = suggestedLookupValue;
-            //             }
+                          console.log(
+                            chalk.bold('Suggested Lookup Value:'),
+                            `'${suggestedLookupValue}', with legacyODataValue: '${suggestedLegacyODataValue}'`
+                          );
+                        }
 
-            //             if (legacyODataValue !== suggestedLegacyODataValue) {
-            //               suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
-            //             }
+                        // if (legacyODataValue !== suggestedLegacyODataValue) {
+                        //   suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
+                        // }
 
-            //             POSSIBLE_VARIATIONS.lookupValues.add(suggestions);
-            //           }
-            //         }
-            //       }
-            //     }
-            //   }
-            // });
+                        POSSIBLE_VARIATIONS.lookupValues.add(suggestions);
+                      }
+                    }
+                  }
+                }
+              }
+            });
 
             Object.values(legacyODataValues).forEach(({ lookupValue, legacyODataValue }) => {
-              if (!referenceMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[legacyODataValue]) {
+              if (
+                referenceMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues &&
+                !referenceMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[legacyODataValue]
+              ) {
                 const suggestedLegacyODataValue = closest(
                   legacyODataValue,
                   Object.keys(referenceMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues)
@@ -353,27 +374,35 @@ const findVariations = async ({
                       );
                     }
 
-                    const suggestedLookupValue =
+                    const { lookupValue: suggestedLookupValue, ddWikiUrl } =
                       referenceMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[
                         suggestedLegacyODataValue
-                      ]?.lookupValue;
+                      ];
 
                     const suggestions = {
                       resourceName,
                       fieldName,
                       lookupValue,
-                      legacyODataValue
+                      legacyODataValue,
+                      distance: d
                     };
 
-                    if (lookupValue !== suggestedLookupValue) {
-                      suggestions.suggestedLookupValue = suggestedLookupValue;
-                    }
+                    if (true || lookupValue !== suggestedLookupValue) {
+                      if (legacyODataValue !== suggestedLegacyODataValue) {
+                        suggestions.matchedOn = 'legacyODataValue';
+                        suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
+                      }
 
-                    if (legacyODataValue !== suggestedLegacyODataValue) {
-                      suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
-                    }
+                      if (ddWikiUrl?.length) {
+                        suggestions.ddWikiUrl = ddWikiUrl;
+                      }
 
-                    POSSIBLE_VARIATIONS.legacyODataValues.add(suggestions);
+                      if (lookupValue !== suggestedLookupValue) {
+                        suggestions.suggestedLookupValue = suggestedLookupValue;
+                      }
+
+                      POSSIBLE_VARIATIONS.legacyODataValues.add(suggestions);
+                    }
                   }
                 }
               }
