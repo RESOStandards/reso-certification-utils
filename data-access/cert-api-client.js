@@ -1,10 +1,22 @@
 'use strict';
 
 const axios = require('axios');
+const chalk = require('chalk');
 require('dotenv').config();
 const { CERTIFICATION_API_KEY, ORGS_DATA_URL, SYSTEMS_DATA_URL } = process.env;
 
 const API_DEBOUNCE_SECONDS = 0.1;
+
+const STATUSES = {
+  PASSED: 'passed',
+  CERTIFIED: 'certified',
+  NOTIFIED: 'recipient_notified'
+};
+
+const ENDORSEMENTS = {
+  DATA_DICTIONARY: 'data_dictionary',
+  DATA_AVAILABILITY: 'data_availability'
+};
 
 const postDataDictionaryResultsToApi = async ({
   url,
@@ -107,7 +119,7 @@ const processDataDictionaryResults = async ({
 };
 
 const getOrgsMap = async () => {
-  const { Data: orgs = [] } = (await axios.get(ORGS_DATA_URL)).data;
+  const { Organizations: orgs = [] } = (await axios.get(ORGS_DATA_URL)).data;
 
   if (!orgs?.length) throw new Error('ERROR: could not fetch Org data!');
 
@@ -157,10 +169,160 @@ const getOrgSystemsMap = async () => {
   }, {});
 };
 
+const buildEndorsementsFilterOptions = (from = 0, backup) => {
+  return {
+    options: {
+      from,
+      endorsementFilter: [],
+      statusFilter: backup ? [] : [STATUSES.PASSED, STATUSES.CERTIFIED, STATUSES.NOTIFIED],
+      showMyResults: true,
+      providerUoi: null,
+      searchKey: '',
+      sortBy: 'asc'
+    }
+  };
+};
+
+const fetchDataDictionaryReportIds = async ({ serverUrl = '', endorsementsPath = '', backup = false }) => {
+  let lastIndex = 0,
+    lastStatusCode = 0;
+
+  const reportIds = [];
+
+  do {
+    const { data, status } = await axios.post(
+      serverUrl + endorsementsPath,
+      buildEndorsementsFilterOptions(lastIndex, backup),
+      {
+        headers: {
+          Authorization: `ApiKey ${CERTIFICATION_API_KEY}`,
+          isadmin: true
+        }
+      }
+    );
+
+    const { lastUoiIndex, reportsByOrgs = {} } = data;
+
+    //if there's no data in the response, we've reached the end: terminate
+    if (!Object.keys(reportsByOrgs).length) break;
+
+    lastIndex = lastUoiIndex;
+    lastStatusCode = status;
+
+    Object.values(reportsByOrgs).forEach((endorsements = []) => {
+      endorsements.forEach(({ type, id: reportId }) => {
+        if (type === ENDORSEMENTS.DATA_DICTIONARY) {
+          reportIds.push(reportId);
+        }
+      });
+    });
+
+    //sleep 1s so we don't hammer the server if it's busy
+    await sleep(500);
+  } while (lastStatusCode >= 200 && lastStatusCode < 300);
+
+  return reportIds;
+};
+
+const fetchSingleDDReport = async ({ serverUrl = '', id = '' }) => {
+  const DD_FULL_REPORT_BASE_URL = 'api/v1/certification_reports/full/data_dictionary';
+  try {
+    const { data } = await axios.get(`${serverUrl}/${DD_FULL_REPORT_BASE_URL}/${id}`, {
+      headers: {
+        Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
+      }
+    });
+    return data;
+  } catch (error) {
+    console.log(chalk.redBright.bold(`Could not fetch data dictionary report ${id}`));
+    return null;
+  }
+};
+
+const fetchAllWebApiReports = async ({ serverUrl = '' }) => {
+  const ALL_WEB_API_REPORTS_URL = 'api/v1/certification_reports/web_api/all';
+  try {
+    const { data } = await axios.get(`${serverUrl}/${ALL_WEB_API_REPORTS_URL}`, {
+      headers: {
+        Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
+      }
+    });
+    return data;
+  } catch (error) {
+    console.log(chalk.redBright.bold('Could not fetch web api reports'));
+    return null;
+  }
+};
+
+const buildAvailabilityReportUrl = (serverUrl, reportId) =>
+  `${serverUrl}/api/v1/certification_reports/full/data_availability/${reportId}`;
+
+const fetchDataAvailabilityReport = async ({ serverUrl = '', reportId = '' }) => {
+  if (!reportId) return null;
+
+  try {
+    const { data } = await axios.get(buildAvailabilityReportUrl(serverUrl, reportId), {
+      headers: {
+        Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
+      }
+    });
+    return data;
+  } catch (err) {
+    console.log(chalk.redBright.bold(`Could not fetch data availability report ${reportId}`));
+    return null;
+  }
+};
+
+const postRescoredReport = async ({ serverUrl, rescoredReport, reportId }) => {
+  const RESCORE_BASE_URL = 'api/v1/payload/data_availability';
+  try {
+    await axios.post(
+      `${serverUrl}/${RESCORE_BASE_URL}/${reportId}/rescore`,
+      { ...rescoredReport },
+      {
+        headers: {
+          Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
+        }
+      }
+    );
+    return true;
+  } catch (error) {
+    console.log(error);
+    return false;
+  }
+};
+
+const restoreBackedUpReport = async ({ serverUrl, report }) => {
+  const RESTORE_BASE_URL = 'restore';
+  try {
+    await axios.post(
+      `${serverUrl}/api/v1/${RESTORE_BASE_URL}`,
+      { ...report },
+      {
+        headers: {
+          Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
+      }
+    );
+    return true;
+  } catch (error) {
+    console.log(error);
+    return false;
+  }
+};
+
 module.exports = {
   processDataDictionaryResults,
   getOrgsMap,
   getOrgSystemsMap,
   findDataDictionaryReport,
-  sleep
+  sleep,
+  fetchDataDictionaryReportIds,
+  fetchDataAvailabilityReport,
+  fetchSingleDDReport,
+  postRescoredReport,
+  fetchAllWebApiReports,
+  restoreBackedUpReport
 };

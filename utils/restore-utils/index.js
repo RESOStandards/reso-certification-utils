@@ -7,8 +7,10 @@ const { resolve, join } = require('path');
 const {
   getOrgsMap,
   getOrgSystemsMap,
-  processDataDictionaryResults
+  processDataDictionaryResults,
+  restoreBackedUpReport
 } = require('../../data-access/cert-api-client');
+const { isValidUrl } = require('../../common');
 
 const { processLookupResourceMetadataFiles } = require('reso-certification-etl');
 
@@ -20,6 +22,16 @@ const CERTIFICATION_FILES = {
   DATA_AVAILABILITY_REPORT: 'data-availability-report.json',
   LOOKUP_RESOURCE_LOOKUP_METADATA: 'lookup-resource-lookup-metadata.json',
   PROCESSED_METADATA_REPORT: 'metadata-report.processed.json'
+};
+
+const METADATA_REPORT_JSON = 'metadata-report.json',
+  DATA_AVAILABILITY_REPORT_JSON = 'data-availability-report.json',
+  WEB_API_REPORT_JSON = 'web-api-core-report.json';
+
+const BACKUP_CERTIFICATION_FILES = {
+  [METADATA_REPORT_JSON]: 'Data Dictionary Report',
+  [DATA_AVAILABILITY_REPORT_JSON]: 'Data Availability Report',
+  [WEB_API_REPORT_JSON]: 'Web API Core Report'
 };
 
 const areRequiredFilesPresent = (fileNames = []) =>
@@ -77,16 +89,6 @@ const fetchSystemData = async () => {
   return orgSystemMap;
 };
 
-const isValidUrl = url => {
-  try {
-    new URL(url);
-    return true;
-  } catch (err) {
-    console.log(chalk.redBright.bold(`Error: Cannot parse given url: ${url}`));
-    return false;
-  }
-};
-
 /**
  * Restores a RESO Certification Server from either a local or S3 path.
  * @param {String} path
@@ -104,7 +106,14 @@ const restore = async (options = {}) => {
     missingResultsFilePaths: []
   };
 
-  const { pathToResults, url } = options;
+  const BACKUP_STATS = {
+    [WEB_API_REPORT_JSON]: [],
+    [METADATA_REPORT_JSON]: [],
+    [DATA_AVAILABILITY_REPORT_JSON]: [],
+    failed: []
+  };
+
+  const { pathToResults, url, restoreFromBackup = false } = options;
 
   if (isS3Path(pathToResults)) {
     console.log(
@@ -137,7 +146,7 @@ const restore = async (options = {}) => {
       const [providerUoi, providerUsi] = providerUoiAndUsiPath.split(PATH_DATA_SEPARATOR);
 
       //is provider UOI valid?
-      if (!orgMap[providerUoi]) {
+      if (!orgMap[providerUoi] && !restoreFromBackup) {
         console.warn(chalk.redBright.bold(`Error: Could not find providerUoi '${providerUoi}'! Skipping...`));
         STATS.skippedProviderUoiPaths.push(providerUoi);
         break;
@@ -145,13 +154,13 @@ const restore = async (options = {}) => {
 
       //is provider USI valid?
       const systems = orgSystemMap[providerUoi] || [];
-      if (!systems?.length) {
+      if (!systems?.length && !restoreFromBackup) {
         console.warn(
           chalk.redBright.bold(`Error: Could not find systems for providerUoi '${providerUoi}'! Skipping...`)
         );
         STATS.skippedProviderUoiPaths.push(providerUoi);
       } else {
-        if (!systems.find(system => system === providerUsi)) {
+        if (!systems.find(system => system === providerUsi) && !restoreFromBackup) {
           console.log(
             `Error: Could not find system ${providerUsi} for providerUoi '${providerUoi}'! Skipping...`
           );
@@ -179,7 +188,7 @@ const restore = async (options = {}) => {
             )
           );
 
-          if (!orgMap[recipientUoi]) {
+          if (!orgMap[recipientUoi] && !restoreFromBackup) {
             console.log(chalk.redBright.bold(`Error: '${recipientUoi}' is not a valid UOI! Skipping...`));
             STATS.skippedRecipientPaths.push(join(pathToResults, providerUoiAndUsiPath, recipientUoi));
           } else {
@@ -196,81 +205,108 @@ const restore = async (options = {}) => {
               console.log(chalk.redBright.bold('Error: No results found to restore! Skipping...\n'));
               STATS.missingResultsPaths.push(currentResultsPath);
             } else {
-              if (areRequiredFilesPresent(results)) {
-                STATS.processed.push(currentResultsPath);
-                console.log(chalk.green.bold('Found required results files!'));
+              if (restoreFromBackup) {
+                /**
+                 when restoring from a server backup, we don't need to run extra logic that we do for raw reports
 
-                try {
-                  const hasLookupResourceMetadata = !!results.find(
-                    result => result === CERTIFICATION_FILES.LOOKUP_RESOURCE_LOOKUP_METADATA
-                  );
-
-                  const hasProcessedMetadataReport = !!results.find(
-                    result => result === CERTIFICATION_FILES.PROCESSED_METADATA_REPORT
-                  );
-
-                  //if the server is using the Lookup Resource then preprocess results if they're not already present
-                  //TODO: add option to rescore results
-                  if (hasLookupResourceMetadata && !hasProcessedMetadataReport) {
-                    const pathToMetadataReport = resolve(
-                        join(currentResultsPath, CERTIFICATION_FILES.METADATA_REPORT)
-                      ),
-                      pathToLookupResourceData = resolve(
-                        join(currentResultsPath, CERTIFICATION_FILES.LOOKUP_RESOURCE_LOOKUP_METADATA)
-                      ),
-                      pathToOutputFile = resolve(
-                        join(currentResultsPath, CERTIFICATION_FILES.PROCESSED_METADATA_REPORT)
+                 TODO: Make this work with S3 paths
+                 **/
+                for (const result of results) {
+                  let id, pathToMetadataReport;
+                  try {
+                    if (BACKUP_CERTIFICATION_FILES[result]) {
+                      pathToMetadataReport = resolve(join(currentResultsPath, result));
+                      const metadataReport = JSON.parse(await readFile(pathToMetadataReport, 'utf8'));
+                      // eslint-disable-next-line prefer-destructuring
+                      id = metadataReport.id;
+                      console.log(
+                        chalk.green.bold(`Restoring ${BACKUP_CERTIFICATION_FILES[result]} - ID: ${id}...`)
                       );
-                    await processLookupResourceMetadataFiles(
-                      pathToMetadataReport,
-                      pathToLookupResourceData,
-                      pathToOutputFile
-                    );
+                      const success = await restoreBackedUpReport({ serverUrl: url, report: metadataReport });
+                      if (success) BACKUP_STATS[result].push(id);
+                      else BACKUP_STATS.failed.push(id);
+                    }
+                  } catch (error) {
+                    console.log(chalk.redBright.bold(`Error: ${error.message}`));
+                    BACKUP_STATS.failed.push(id || pathToMetadataReport);
                   }
-
-                  const metadataReport =
-                    JSON.parse(
-                      await readFile(
-                        join(
-                          currentResultsPath,
-                          hasLookupResourceMetadata
-                            ? CERTIFICATION_FILES.PROCESSED_METADATA_REPORT
-                            : CERTIFICATION_FILES.METADATA_REPORT
-                        )
-                      )
-                    ) || {};
-
-                  const dataAvailabilityReport =
-                    JSON.parse(
-                      await readFile(join(currentResultsPath, CERTIFICATION_FILES.DATA_AVAILABILITY_REPORT))
-                    ) || {};
-
-                  console.log('Ingesting results...');
-                  const result = await processDataDictionaryResults({
-                    url,
-                    providerUoi,
-                    providerUsi,
-                    recipientUoi,
-                    metadataReport,
-                    dataAvailabilityReport
-                  });
-                  console.log(chalk.bold(`Done! Result: ${result ? 'Succeeded!' : 'Failed!'}`));
-                } catch (err) {
-                  console.log(chalk.bgRed.bold(err));
-                  return false;
                 }
               } else {
-                console.log(
-                  chalk.redBright.bold(`Error: Could not find required files in ${currentResultsPath}`)
-                );
-                STATS.missingResultsFilePaths.push(currentResultsPath);
+                if (areRequiredFilesPresent(results)) {
+                  STATS.processed.push(currentResultsPath);
+                  console.log(chalk.green.bold('Found required results files!'));
+
+                  try {
+                    const hasLookupResourceMetadata = !!results.find(
+                      result => result === CERTIFICATION_FILES.LOOKUP_RESOURCE_LOOKUP_METADATA
+                    );
+
+                    const hasProcessedMetadataReport = !!results.find(
+                      result => result === CERTIFICATION_FILES.PROCESSED_METADATA_REPORT
+                    );
+
+                    //if the server is using the Lookup Resource then preprocess results if they're not already present
+                    //TODO: add option to rescore results
+                    if (hasLookupResourceMetadata && !hasProcessedMetadataReport) {
+                      const pathToMetadataReport = resolve(
+                          join(currentResultsPath, CERTIFICATION_FILES.METADATA_REPORT)
+                        ),
+                        pathToLookupResourceData = resolve(
+                          join(currentResultsPath, CERTIFICATION_FILES.LOOKUP_RESOURCE_LOOKUP_METADATA)
+                        ),
+                        pathToOutputFile = resolve(
+                          join(currentResultsPath, CERTIFICATION_FILES.PROCESSED_METADATA_REPORT)
+                        );
+                      await processLookupResourceMetadataFiles(
+                        pathToMetadataReport,
+                        pathToLookupResourceData,
+                        pathToOutputFile
+                      );
+                    }
+
+                    const metadataReport =
+                      JSON.parse(
+                        await readFile(
+                          join(
+                            currentResultsPath,
+                            hasLookupResourceMetadata
+                              ? CERTIFICATION_FILES.PROCESSED_METADATA_REPORT
+                              : CERTIFICATION_FILES.METADATA_REPORT
+                          )
+                        )
+                      ) || {};
+
+                    const dataAvailabilityReport =
+                      JSON.parse(
+                        await readFile(join(currentResultsPath, CERTIFICATION_FILES.DATA_AVAILABILITY_REPORT))
+                      ) || {};
+
+                    console.log('Ingesting results...');
+                    const result = await processDataDictionaryResults({
+                      url,
+                      providerUoi,
+                      providerUsi,
+                      recipientUoi,
+                      metadataReport,
+                      dataAvailabilityReport
+                    });
+                    console.log(chalk.bold(`Done! Result: ${result ? 'Succeeded!' : 'Failed!'}`));
+                  } catch (err) {
+                    console.log(chalk.bgRed.bold(err));
+                    return false;
+                  }
+                } else {
+                  console.log(
+                    chalk.redBright.bold(`Error: Could not find required files in ${currentResultsPath}`)
+                  );
+                  STATS.missingResultsFilePaths.push(currentResultsPath);
+                }
               }
             }
           }
         }
       }
     }
-    console.log();
   } else {
     console.log(chalk.bgRedBright.bold(`Invalid path: ${pathToResults}! \nMust be valid S3 or local path`));
   }
@@ -283,25 +319,45 @@ const restore = async (options = {}) => {
   console.log(chalk.bold(`Processing complete! Time Taken: ~${timeTaken}s`));
   console.log(chalk.magentaBright.bold('------------------------------------------------------------'));
 
-  console.log(
-    chalk.bold(`\nItems Processed: ${STATS.processed.length} of ${totalItems}`)
-  );
-  STATS.processed.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
+  if (!restoreFromBackup) {
+    console.log(chalk.bold(`\nItems Processed: ${STATS.processed.length} of ${totalItems}`));
+    STATS.processed.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
 
-  console.log(chalk.bold(`\nProvider UOI Paths Skipped: ${STATS.skippedProviderUoiPaths.length}`));
-  STATS.skippedProviderUoiPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
+    console.log(chalk.bold(`\nProvider UOI Paths Skipped: ${STATS.skippedProviderUoiPaths.length}`));
+    STATS.skippedProviderUoiPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
 
-  console.log(chalk.bold(`\nProvider USI Paths Skipped: ${STATS.skippedUsiPaths.length}`));
-  STATS.skippedUsiPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
+    console.log(chalk.bold(`\nProvider USI Paths Skipped: ${STATS.skippedUsiPaths.length}`));
+    STATS.skippedUsiPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
 
-  console.log(chalk.bold(`\nRecipient UOI Paths Skipped: ${STATS.skippedRecipientPaths.length}`));
-  STATS.skippedRecipientPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
+    console.log(chalk.bold(`\nRecipient UOI Paths Skipped: ${STATS.skippedRecipientPaths.length}`));
+    STATS.skippedRecipientPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
 
-  console.log(chalk.bold(`\nMissing Results: ${STATS.missingResultsPaths.length}`));
-  STATS.missingResultsPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
+    console.log(chalk.bold(`\nMissing Results: ${STATS.missingResultsPaths.length}`));
+    STATS.missingResultsPaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
 
-  console.log(chalk.bold(`\nMissing Results Files: ${STATS.missingResultsFilePaths.length}`));
-  STATS.missingResultsFilePaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
+    console.log(chalk.bold(`\nMissing Results Files: ${STATS.missingResultsFilePaths.length}`));
+    STATS.missingResultsFilePaths.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
+  } else {
+    console.log(
+      chalk.bold(
+        [
+          `Data Dictionary restored: ${chalk.greenBright.bold(
+            `${BACKUP_STATS['metadata-report.json'].length}`
+          )}`,
+          `Data Availability restored: ${chalk.greenBright.bold(
+            `${BACKUP_STATS['data-availability-report.json'].length}`
+          )}`,
+          `Web Api Server Core restored: ${chalk.greenBright.bold(
+            `${BACKUP_STATS['web-api-core-report.json'].length}`
+          )}`,
+          `Restores failed: ${chalk.redBright.bold(`${BACKUP_STATS.failed.length}`)}`,
+          BACKUP_STATS.failed.length
+            ? `Failed Restores IDs: ${chalk.redBright.bold(`${BACKUP_STATS.failed.join(', ')}`)}`
+            : ''
+        ].join('\n')
+      )
+    );
+  }
 
   console.log(chalk.bold('\nRestore complete! Exiting...\n'));
 };
