@@ -95,15 +95,15 @@ const syncWebApi = async (options = {}) => {
     console.log(
       chalk.yellowBright.bold(`S3 path provided but not supported at this time!\nPath: ${pathToResults}`)
     );
-    process.exit(1);
+    return;
   }
 
-  if (!isValidUrl(url)) process.exit(1);
+  if (!isValidUrl(url)) return;
 
   const recipientsList = recipients.split(',');
   if (!recipientsList.length || !recipientsList[0]) {
     console.log(chalk.redBright.bold(`Error: The recipient string '${recipients}' is invalid`));
-    process.exit(1);
+    return;
   }
   console.log(chalk.bold(`\nCertification API URL: ${url}`));
   console.log(chalk.bold(`Path to results: ${pathToResults}`));
@@ -121,7 +121,7 @@ const syncWebApi = async (options = {}) => {
     //is provider UOI valid?
     if (!orgMap[providerUoi]) {
       console.warn(chalk.redBright.bold(`Error: Could not find providerUoi '${providerUoi}'! Exiting...`));
-      process.exit(1);
+      return;
     }
 
     //is provider USI valid?
@@ -130,19 +130,19 @@ const syncWebApi = async (options = {}) => {
       console.warn(
         chalk.redBright.bold(`Error: Could not find systems for providerUoi '${providerUoi}'! Exiting...`)
       );
-      process.exit(1);
+      return;
     }
 
     if (!systems?.includes(system)) {
       console.log(`Error: Could not find system ${system} for providerUoi '${providerUoi}'! Exiting...`);
-      process.exit(1);
+      return;
     }
 
     const fileExists = await checkFileExists(pathToResults);
 
     if (!fileExists) {
       console.log(chalk.redBright.bold(`Error: Could not find file in path '${pathToResults}'`));
-      process.exit(1);
+      return;
     }
 
     const webAPIReport = JSON.parse(await readFile(pathToResults)) || {};
