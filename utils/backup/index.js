@@ -106,7 +106,7 @@ const backup = async (options = {}, preFetchedDDReportIds = []) => {
     for (const report of mergedReports) {
       const { recipientUoi, providerUoi, providerUsi, type, version, id } = report;
       const fileName = fileNameMap[type];
-      const endorsementType = type === 'web_api_server_core' ? 'web_api_server_core' : 'data_dictionary';
+      const endorsementType = type === WEB_API_SERVER_CORE ? WEB_API_SERVER_CORE : DATA_DICTIONARY;
       try {
         const finalBackupPath = path.join(
           backupPath,
@@ -115,6 +115,7 @@ const backup = async (options = {}, preFetchedDDReportIds = []) => {
           recipientUoi,
           CURRENT_DIRECTORY
         );
+        // TODO: this whole sequence can be extracted to a general function
         if (!(await checkFileExists(path.join(backupPath, `${endorsementType}-${version}`))))
           await fs.mkdir(path.join(backupPath, `${endorsementType}-${version}`));
         if (
