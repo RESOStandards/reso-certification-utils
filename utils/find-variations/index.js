@@ -333,9 +333,9 @@ const findVariations = async ({
                           );
                         }
 
-                        // if (legacyODataValue !== suggestedLegacyODataValue) {
-                        //   suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
-                        // }
+                        if (legacyODataValue !== suggestedLegacyODataValue) {
+                          suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
+                        }
 
                         POSSIBLE_VARIATIONS.lookupValues.add(suggestions);
                       }
@@ -387,7 +387,14 @@ const findVariations = async ({
                       distance: d
                     };
 
-                    if (true || lookupValue !== suggestedLookupValue) {
+                    //if (lookupValue !== suggestedLookupValue) {
+                      if (verbose)
+                        console.log(
+                          '---> lookupValue is: ' +
+                            lookupValue +
+                            ', suggestedLookupValue is: ' +
+                            suggestedLookupValue
+                        );
                       if (legacyODataValue !== suggestedLegacyODataValue) {
                         suggestions.matchedOn = 'legacyODataValue';
                         suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
@@ -402,7 +409,7 @@ const findVariations = async ({
                       }
 
                       POSSIBLE_VARIATIONS.legacyODataValues.add(suggestions);
-                    }
+                    //}
                   }
                 }
               }
