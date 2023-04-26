@@ -62,7 +62,7 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
         acc.ddWikiUrl = value;
       }
       return acc;
-    }, {});
+    }, {}) || {};
 
     acc[lookupName].push({ lookupValue, legacyODataValue, ddWikiUrl });
     STATS.numLookups++;
@@ -310,7 +310,7 @@ const findVariations = async ({
                         const { legacyODataValue: suggestedLegacyODataValue, ddWikiUrl } =
                           referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[
                             suggestedLookupValue
-                          ];
+                          ] || {};
 
                         if (lookupValue !== suggestedLookupValue) {
                           suggestions.matchedOn = 'lookupValue';
@@ -377,7 +377,7 @@ const findVariations = async ({
                     const { lookupValue: suggestedLookupValue, ddWikiUrl } =
                       referenceMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[
                         suggestedLegacyODataValue
-                      ];
+                      ] || {};
 
                     const suggestions = {
                       resourceName,
@@ -388,27 +388,27 @@ const findVariations = async ({
                     };
 
                     //if (lookupValue !== suggestedLookupValue) {
-                      if (verbose)
-                        console.log(
-                          '---> lookupValue is: ' +
+                    if (verbose)
+                      console.log(
+                        '---> lookupValue is: ' +
                             lookupValue +
                             ', suggestedLookupValue is: ' +
                             suggestedLookupValue
-                        );
-                      if (legacyODataValue !== suggestedLegacyODataValue) {
-                        suggestions.matchedOn = 'legacyODataValue';
-                        suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
-                      }
+                      );
+                    if (legacyODataValue !== suggestedLegacyODataValue) {
+                      suggestions.matchedOn = 'legacyODataValue';
+                      suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
+                    }
 
-                      if (ddWikiUrl?.length) {
-                        suggestions.ddWikiUrl = ddWikiUrl;
-                      }
+                    if (ddWikiUrl?.length) {
+                      suggestions.ddWikiUrl = ddWikiUrl;
+                    }
 
-                      if (lookupValue !== suggestedLookupValue) {
-                        suggestions.suggestedLookupValue = suggestedLookupValue;
-                      }
+                    if (lookupValue !== suggestedLookupValue) {
+                      suggestions.suggestedLookupValue = suggestedLookupValue;
+                    }
 
-                      POSSIBLE_VARIATIONS.legacyODataValues.add(suggestions);
+                    POSSIBLE_VARIATIONS.legacyODataValues.add(suggestions);
                     //}
                   }
                 }
