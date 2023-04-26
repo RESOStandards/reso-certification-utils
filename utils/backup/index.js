@@ -172,6 +172,7 @@ const backup = async (options = {}, preFetchedDDReportIds = []) => {
         ].join('\n')
       )
     );
+    return stats;
   } catch (error) {
     console.log(chalk.redBright.bold(`Error backing up data on ${url}`));
     console.log(error);

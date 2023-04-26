@@ -282,7 +282,9 @@ const postRescoredReport = async ({ serverUrl, rescoredReport, reportId }) => {
       {
         headers: {
           Authorization: `ApiKey ${CERTIFICATION_API_KEY}`
-        }
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
       }
     );
     return true;

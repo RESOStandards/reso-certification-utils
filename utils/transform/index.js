@@ -30,14 +30,18 @@ const transform = async (options = {}) => {
   stats.total = reportIds.length;
 
   if (backup) {
-    await createBackup({ url, pathToBackup, dataDictionary: true }, reportIds);
+    const { data_dictionary } =
+      (await createBackup({ url, pathToBackup, dataDictionary: true }, reportIds)) || {};
+    stats.backedUp = data_dictionary || 0;
   }
 
   console.log(chalk.greenBright.bold(`Found ${reportIds.length} data dictionary reports.`));
+  let counter = 0;
 
   // for each report id fetch the sequentially corresponding data availability report, correct the frequency count and rescore
   for (const reportId of reportIds) {
-    const { data } = (await fetchDataAvailabilityReport({ serverUrl: url, reportId })) || {};
+    const data = await fetchDataAvailabilityReport({ serverUrl: url, reportId });
+    counter++;
     if (!data) continue;
     stats.found++;
 
@@ -132,6 +136,7 @@ const transform = async (options = {}) => {
             chalk.yellowBright.bold(`Couldn't post availability report ${reportId} to the rescore endpoint\n`)
           );
         }
+        console.log(chalk.greenBright.bold(`Progress: ${counter}/${reportIds.length}`));
       } catch (error) {
         console.log(error);
         console.log(chalk.yellowBright.bold(`Couldn't rescore availability report ${reportId}\n`));
