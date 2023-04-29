@@ -11,6 +11,17 @@ const VARIATIONS_RESULTS_FILE = 'data-dictionary-variations.json';
 
 const DEFAULT_FUZZINESS = 1.0 / 3;
 
+const ANNOTATION_STANDARD_NAME = 'RESO.OData.Metadata.StandardName',
+  ANNOTATION_DD_WIKI_URL = 'RESO.DDWikiUrl';
+
+/**
+ * Trims whitespace and special characters from the given name
+ * 
+ * @param {String} name - the name of the data element to process
+ * @returns processed data element name, if possible, otherwise just returns the input
+ */
+const prepareDataElementName = name => name?.toLowerCase()?.replace(/[^0-9a-z]/gi, '') || name;
+
 const fetchReferenceMetadata = async () => {
   try {
     const referenceMetadata = getReferenceMetadata();
@@ -37,7 +48,7 @@ const isValidUrl = url => {
   }
 };
 
-const parseLookupName = lookupName => lookupName?.substring(lookupName.lastIndexOf('.'));
+const parseLookupName = lookupName => lookupName?.substring(lookupName.lastIndexOf('.') + 1);
 
 const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
   const STATS = {
@@ -54,11 +65,11 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
     }
 
     const { lookupValue, ddWikiUrl } = annotations?.reduce((acc, { term, value }) => {
-      if (term === 'RESO.OData.Metadata.StandardName') {
+      if (term === ANNOTATION_STANDARD_NAME) {
         acc.lookupValue = value;
       }
 
-      if (term === 'RESO.DDWikiUrl') {
+      if (term === ANNOTATION_DD_WIKI_URL) {
         acc.ddWikiUrl = value;
       }
       return acc;
