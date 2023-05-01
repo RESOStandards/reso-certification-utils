@@ -2,6 +2,7 @@
 const { program } = require('commander');
 const { restore } = require('./utils/restore-utils');
 const { runTests } = require('./utils/batch-test-runner');
+const { schema } = require('./utils/schema');
 
 program
   .name('reso-certification-utils')
@@ -18,8 +19,23 @@ program
 program
   .command('runDDTests')
   .requiredOption('-p, --pathToConfigFile <string>', 'Path to config file')
-  .option('-a, --runAvailability', 'Flag to run data availability tests, otherwise only metadata tests are run')
+  .option(
+    '-a, --runAvailability',
+    'Flag to run data availability tests, otherwise only metadata tests are run'
+  )
   .description('Runs Data Dictionary tests')
   .action(runTests);
+
+program
+  .command('schema')
+  .option('-g, --generate', 'Generate JSON schema from a metadata report')
+  .option('-v, --validate', 'Validate a payload against a generated schema')
+  .option('-m, --metadataPath <string>', 'Path to the metadata report JSON file')
+  .option('-o, --outputPath <string>', 'Path tho the directory to store the generated schema')
+  .option('-p, --payloadPath <string>', 'Path to the payload that needs to be validated')
+  .option('-s, --schemaPath <string>', 'Path to the generated JSON schema')
+  .option('-e, --errorPath <string>', 'Path to save error reports in case of failed validation')
+  .description('Generate a schema or validate a payload against a schema')
+  .action(schema);
 
 program.parse();
