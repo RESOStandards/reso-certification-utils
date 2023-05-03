@@ -6,11 +6,10 @@ const { promises: fs } = require('fs');
 const { resolve, join } = require('path');
 const {
   getOrgsMap,
-  getOrgSystemsMap,
   processDataDictionaryResults,
   restoreBackedUpReport
 } = require('../../data-access/cert-api-client');
-const { isValidUrl } = require('../../common');
+const { isValidUrl, fetchSystemData } = require('../../common');
 
 const { processLookupResourceMetadataFiles } = require('reso-certification-etl');
 
@@ -78,15 +77,6 @@ const fetchOrgData = async () => {
   if (!Object.keys(orgMap)?.length) throw new Error('Error: could not fetch orgs!');
   console.log(chalk.cyanBright.bold('Done!'));
   return orgMap;
-};
-
-const fetchSystemData = async () => {
-  //fetch system data
-  console.log(chalk.cyanBright.bold('\nFetching system data...'));
-  const orgSystemMap = (await getOrgSystemsMap()) || {};
-  if (!Object.keys(orgSystemMap)?.length) throw new Error('Error: could not fetch systems!');
-  console.log(chalk.cyanBright.bold('Done!'));
-  return orgSystemMap;
 };
 
 /**

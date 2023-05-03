@@ -3,6 +3,8 @@ const path = require('path');
 const fse = require('fs-extra');
 const chalk = require('chalk');
 
+const { getOrgSystemsMap } = require('./data-access/cert-api-client');
+
 /**
  * common.js - Contains programmatically derived constants related to Certification.
  */
@@ -270,6 +272,32 @@ const checkFileExists = async filePath => {
   }
 };
 
+const fetchSystemsData = async () => {
+  //fetch system data
+  console.log(chalk.cyanBright.bold('\nFetching system data...'));
+  const orgSystemMap = (await getOrgSystemsMap()) || {};
+  if (!Object.keys(orgSystemMap)?.length) throw new Error('Error: could not fetch systems!');
+  console.log(chalk.cyanBright.bold('Done!'));
+  return orgSystemMap;
+};
+
+const createCachedFunction = asyncFunc => {
+  const cache = new Map();
+
+  return async (...args) => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) {
+      return cache.get(key);
+    }
+
+    const result = await asyncFunc(...args);
+    cache.set(key, result);
+    return result;
+  };
+};
+
+const fetchSystemData = createCachedFunction(fetchSystemsData);
+
 module.exports = {
   endorsements,
   availableVersions,
@@ -286,5 +314,6 @@ module.exports = {
   CURRENT_DATA_DICTIONARY_VERSION,
   CURRENT_WEB_API_CORE_VERSION,
   isValidUrl,
-  checkFileExists
+  checkFileExists,
+  fetchSystemData
 };
