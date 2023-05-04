@@ -9,18 +9,19 @@ const { REFERENCE_METADATA_URL } = process.env;
 
 const VARIATIONS_RESULTS_FILE = 'data-dictionary-variations.json';
 
-const DEFAULT_FUZZINESS = 1.0 / 3;
+const DEFAULT_FUZZINESS = 1.0 / 3,
+  MIN_MATCHING_LENGTH = 3;
 
 const ANNOTATION_STANDARD_NAME = 'RESO.OData.Metadata.StandardName',
   ANNOTATION_DD_WIKI_URL = 'RESO.DDWikiUrl';
 
 /**
  * Trims whitespace and special characters from the given name
- * 
+ *
  * @param {String} name - the name of the data element to process
  * @returns processed data element name, if possible, otherwise just returns the input
  */
-const prepareDataElementName = name => name?.toLowerCase()?.replace(/[^0-9a-z]/gi, '') || name;
+const normalizeDataElementName = name => name?.toLowerCase()?.replace(/[^0-9a-z]/gi, '') || name;
 
 const fetchReferenceMetadata = async () => {
   try {
@@ -64,16 +65,17 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
       acc[lookupName] = [];
     }
 
-    const { lookupValue, ddWikiUrl } = annotations?.reduce((acc, { term, value }) => {
-      if (term === ANNOTATION_STANDARD_NAME) {
-        acc.lookupValue = value;
-      }
+    const { lookupValue, ddWikiUrl } =
+      annotations?.reduce((acc, { term, value }) => {
+        if (term === ANNOTATION_STANDARD_NAME) {
+          acc.lookupValue = value;
+        }
 
-      if (term === ANNOTATION_DD_WIKI_URL) {
-        acc.ddWikiUrl = value;
-      }
-      return acc;
-    }, {}) || {};
+        if (term === ANNOTATION_DD_WIKI_URL) {
+          acc.ddWikiUrl = value;
+        }
+        return acc;
+      }, {}) || {};
 
     acc[lookupName].push({ lookupValue, legacyODataValue, ddWikiUrl });
     STATS.numLookups++;
@@ -226,7 +228,7 @@ const findVariations = async ({
     //build a map of reference metadata
     console.log(chalk.cyanBright.bold('\nBuilding references...'));
     startTime = new Date();
-    const { metadataMap: referenceMetadataMap = {}, stats: referenceMetadataStats = {} } =
+    const { metadataMap: standardMetadataMap = {}, stats: referenceMetadataStats = {} } =
       buildMetadataMap(referenceMetadata);
     console.log(chalk.whiteBright.bold(`Time taken: ${calculateElapsedTimeString(startTime, true)}`));
     console.log(chalk.whiteBright.bold('Metadata info:', getMetadataInfo(referenceMetadataStats)));
@@ -244,52 +246,68 @@ const findVariations = async ({
     startTime = new Date();
 
     Object.keys(metadataReportMap).forEach(resourceName => {
-      //check resources
-      if (!referenceMetadataMap?.[resourceName]) {
-        const suggestedResourceName = closest(resourceName, Object.keys(referenceMetadataMap));
+      //check for resource variations if the resource name doesn't match the reference metadata exactly
+      if (!standardMetadataMap?.[resourceName]) {
+        Object.keys(standardMetadataMap).forEach(standardResourceName => {
+          const normalizedStandardResourceName = normalizeDataElementName(standardResourceName),
+            normalizedResourceName = normalizeDataElementName(resourceName);
 
-        const d = distance(resourceName, suggestedResourceName);
-        if (d < Math.round(fuzziness * resourceName?.length)) {
-          if (verbose) {
-            console.log(
-              chalk.bold('\nResource Variations Found!'),
-              `\nFound possible match for resource '${resourceName}'...`
-            );
-            console.log('Suggested Resource Name:', suggestedResourceName);
+
+          if (normalizedResourceName === normalizedStandardResourceName && resourceName !== standardResourceName) {
+            POSSIBLE_VARIATIONS.resources.add({
+              resourceName,
+              suggestion: standardResourceName,
+              distance: d,
+              maxDistance,
+              method: 'Substring Match'
+            });
+          } else if (resourceName?.length > MIN_MATCHING_LENGTH) {
+            const d = distance(normalizedStandardResourceName, normalizedResourceName),
+              maxDistance = Math.floor(fuzziness * resourceName?.length);
+
+            if (!standardMetadataMap?.[resourceName] && d <= maxDistance) {
+              POSSIBLE_VARIATIONS.resources.add({
+                resourceName,
+                suggestion: standardResourceName,
+                distance: d,
+                maxDistance,
+                method: "Edit Distance Match"
+              });
+            }
           }
-
-          POSSIBLE_VARIATIONS.resources.add({
-            resourceName,
-            suggestedResourceName,
-            distance: d
-          });
-        }
+        });
       } else {
-        //standard resource - check field variations
+        //found standard resource - check field variations
         Object.keys(metadataReportMap?.[resourceName]).forEach(fieldName => {
-          if (!referenceMetadataMap?.[resourceName]?.[fieldName]) {
-            const suggestedFieldName = closest(fieldName, Object.keys(referenceMetadataMap[resourceName]));
+          if (!standardMetadataMap?.[resourceName]?.[fieldName]) {
+            //field was not found in reference metadata - look for variations
+            Object.keys(standardMetadataMap?.[resourceName]).forEach(standardFieldName => {
+              const normalizedFieldName = normalizeDataElementName(fieldName),
+                normalizedStandardFieldName = normalizeDataElementName(standardFieldName);
 
-            const d = distance(fieldName, suggestedFieldName);
-            if (d < Math.round(fuzziness * fieldName?.length)) {
-              if (!metadataReportMap?.[resourceName]?.[suggestedFieldName]) {
+              const d = distance(normalizedFieldName, normalizedStandardFieldName),
+                maxDistance = Math.floor(fuzziness * fieldName?.length);
+
+              if (!metadataReportMap?.[resourceName]?.[standardFieldName] && d <= maxDistance) {
                 if (verbose) {
                   console.log(
                     chalk.bold('\nField Variations Found!'),
                     `\nFound possible match for resource '${resourceName}' and field '${fieldName}'...`
                   );
 
-                  console.log(`\tSuggested Field Name '${suggestedFieldName}'`);
+                  console.log(`\tSuggested Field Name '${standardFieldName}'`);
                 }
 
                 POSSIBLE_VARIATIONS.fields.add({
                   resourceName,
                   fieldName,
-                  suggestedFieldName,
-                  distance: d
+                  suggestion: standardFieldName,
+                  elementType: 'field',
+                  distance: d,
+                  maxDistance
                 });
               }
-            }
+            });
           } else {
             //standard field - if lookup field then try and process the nested lookups
             const { lookupValues = {}, legacyODataValues = {} } =
@@ -298,10 +316,10 @@ const findVariations = async ({
             Object.values(lookupValues).forEach(({ lookupValue, legacyODataValue }) => {
               //lookup value can be null since it's the display name and not every system adds display names in this case
               if (lookupValue) {
-                if (!referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[lookupValue]) {
+                if (!standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[lookupValue]) {
                   const suggestedLookupValue = closest(
                     lookupValue,
-                    Object.keys(referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues)
+                    Object.keys(standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues)
                   );
 
                   if (suggestedLookupValue) {
@@ -319,7 +337,7 @@ const findVariations = async ({
                         };
 
                         const { legacyODataValue: suggestedLegacyODataValue, ddWikiUrl } =
-                          referenceMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[
+                          standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[
                             suggestedLookupValue
                           ] || {};
 
@@ -358,12 +376,12 @@ const findVariations = async ({
 
             Object.values(legacyODataValues).forEach(({ lookupValue, legacyODataValue }) => {
               if (
-                referenceMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues &&
-                !referenceMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[legacyODataValue]
+                standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues &&
+                !standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[legacyODataValue]
               ) {
                 const suggestedLegacyODataValue = closest(
                   legacyODataValue,
-                  Object.keys(referenceMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues)
+                  Object.keys(standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues)
                 );
 
                 const d = distance(legacyODataValue, suggestedLegacyODataValue);
@@ -386,7 +404,7 @@ const findVariations = async ({
                     }
 
                     const { lookupValue: suggestedLookupValue, ddWikiUrl } =
-                      referenceMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[
+                      standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[
                         suggestedLegacyODataValue
                       ] || {};
 
@@ -402,9 +420,9 @@ const findVariations = async ({
                     if (verbose)
                       console.log(
                         '---> lookupValue is: ' +
-                            lookupValue +
-                            ', suggestedLookupValue is: ' +
-                            suggestedLookupValue
+                          lookupValue +
+                          ', suggestedLookupValue is: ' +
+                          suggestedLookupValue
                       );
                     if (legacyODataValue !== suggestedLegacyODataValue) {
                       suggestions.matchedOn = 'legacyODataValue';
@@ -437,8 +455,38 @@ const findVariations = async ({
     console.log(chalk.cyanBright.bold(`Saving results to ${VARIATIONS_RESULTS_FILE}...`));
 
     const variations = {
-      resources: Array.from(POSSIBLE_VARIATIONS.resources),
-      fields: Array.from(POSSIBLE_VARIATIONS.fields),
+      resources: Object.values(
+        Array.from(POSSIBLE_VARIATIONS.resources).reduce((acc, { resourceName, ...suggestion }) => {
+          if (!acc?.[resourceName]) {
+            acc[resourceName] = {
+              resourceName,
+              suggestions: []
+            };
+          }
+
+          acc[resourceName].suggestions.push(suggestion);
+
+          return acc;
+        }, {})
+      ),
+      fields: Object.values(
+        Array.from(POSSIBLE_VARIATIONS.fields).reduce((acc, { resourceName, fieldName, ...suggestion }) => {
+          if (!acc?.[resourceName]) {
+            acc[resourceName] = {};
+          }
+
+          if (!acc?.[resourceName]?.[fieldName]) {
+            acc[resourceName][fieldName] = {
+              resourceName,
+              fieldName,
+              suggestions: []
+            };
+          }
+          acc[resourceName][fieldName].suggestions.push(suggestion);
+
+          return acc;
+        }, {})
+      ).flatMap(item => Object.values(item)),
       lookups: [...POSSIBLE_VARIATIONS.lookupValues, ...POSSIBLE_VARIATIONS.legacyODataValues],
       expansions: Array.from(POSSIBLE_VARIATIONS.expansions),
       complexTypes: Array.from(POSSIBLE_VARIATIONS.complexTypes)
@@ -449,9 +497,10 @@ const findVariations = async ({
       Buffer.from(
         JSON.stringify(
           {
-            description: 'Data Dictionary Variations',
+            description: 'Data Dictionary Variations Report',
             version: '1.7',
             generatedOn: new Date().toISOString(),
+            fuzziness: parseFloat(fuzziness),
             variations
           },
           null,
