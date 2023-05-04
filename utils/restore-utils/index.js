@@ -186,7 +186,7 @@ const restore = async (options = {}) => {
               pathToResults,
               providerUoiAndUsiPath,
               recipientUoi,
-              CERTIFICATION_RESULTS_DIRECTORY
+              restoreFromBackup ? '' : CERTIFICATION_RESULTS_DIRECTORY
             );
             console.log(chalk.bold(`Path: ${currentResultsPath}`));
             const results = await readDirectory(currentResultsPath);
