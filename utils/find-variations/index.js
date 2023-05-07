@@ -15,6 +15,11 @@ const DEFAULT_FUZZINESS = 1.0 / 3,
 const ANNOTATION_STANDARD_NAME = 'RESO.OData.Metadata.StandardName',
   ANNOTATION_DD_WIKI_URL = 'RESO.DDWikiUrl';
 
+const MATCHING_STRATEGIES = {
+  SUBSTRING: 'Substring',
+  EDIT_DISTANCE: 'Edit Distance'
+};
+
 /**
  * Trims whitespace and special characters from the given name
  *
@@ -85,7 +90,7 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
   return {
     metadataMap: {
       ...fields.reduce(
-        (acc, { resourceName, fieldName, type, isExpansion = false, isComplexType = false }) => {
+        (acc, { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations }) => {
           if (!acc[resourceName]) {
             acc[resourceName] = {};
             STATS.numResources++;
@@ -93,11 +98,20 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
 
           const isLookupField = !!lookupMap?.[type];
 
+          const { ddWikiUrl } =
+            annotations?.reduce((acc, { term, value }) => {
+              if (term === ANNOTATION_DD_WIKI_URL) {
+                acc.ddWikiUrl = value;
+              }
+              return acc;
+            }, {}) || {};
+
           //add field to map
           acc[resourceName][fieldName] = {
             isExpansion,
             isLookupField,
-            isComplexType: isComplexType || (!isExpansion && !type?.startsWith('Edm.') && !isLookupField)
+            isComplexType: isComplexType || (!isExpansion && !type?.startsWith('Edm.') && !isLookupField),
+            ddWikiUrl
           };
 
           if (isLookupField && lookupMap?.[type]) {
@@ -252,26 +266,30 @@ const findVariations = async ({
           const normalizedStandardResourceName = normalizeDataElementName(standardResourceName),
             normalizedResourceName = normalizeDataElementName(resourceName);
 
-
-          if (normalizedResourceName === normalizedStandardResourceName && resourceName !== standardResourceName) {
+          if (
+            normalizedResourceName === normalizedStandardResourceName &&
+            resourceName !== standardResourceName
+          ) {
+            //TODO: refactor ddWikiUrl accessor
             POSSIBLE_VARIATIONS.resources.add({
               resourceName,
               suggestion: standardResourceName,
-              distance: d,
-              maxDistance,
-              method: 'Substring Match'
+              strategy: MATCHING_STRATEGIES.SUBSTRING,
+              ddWikiUrl: getReferenceMetadata()?.resources?.find(item => item?.resourceName === standardResourceName)?.wikiPageURL
             });
           } else if (resourceName?.length > MIN_MATCHING_LENGTH) {
             const d = distance(normalizedStandardResourceName, normalizedResourceName),
               maxDistance = Math.floor(fuzziness * resourceName?.length);
 
+            //TODO: refactor ddWikiUrl accessor
             if (!standardMetadataMap?.[resourceName] && d <= maxDistance) {
               POSSIBLE_VARIATIONS.resources.add({
                 resourceName,
                 suggestion: standardResourceName,
                 distance: d,
                 maxDistance,
-                method: "Edit Distance Match"
+                strategy: MATCHING_STRATEGIES.EDIT_DISTANCE,
+                ddWikiUrl: getReferenceMetadata()?.resources?.find(item => item?.resourceName === standardResourceName)?.wikiPageURL
               });
             }
           }
@@ -285,27 +303,50 @@ const findVariations = async ({
               const normalizedFieldName = normalizeDataElementName(fieldName),
                 normalizedStandardFieldName = normalizeDataElementName(standardFieldName);
 
-              const d = distance(normalizedFieldName, normalizedStandardFieldName),
-                maxDistance = Math.floor(fuzziness * fieldName?.length);
-
-              if (!metadataReportMap?.[resourceName]?.[standardFieldName] && d <= maxDistance) {
-                if (verbose) {
-                  console.log(
-                    chalk.bold('\nField Variations Found!'),
-                    `\nFound possible match for resource '${resourceName}' and field '${fieldName}'...`
-                  );
-
-                  console.log(`\tSuggested Field Name '${standardFieldName}'`);
+              if (
+                normalizedStandardFieldName.includes(normalizedFieldName) ||
+                normalizedFieldName.includes(normalizedStandardFieldName) ||
+                (normalizedFieldName === normalizedStandardFieldName && fieldName !== standardFieldName)
+              ) {
+                // Only add suggestion to the map if a local field with a similar name
+                // wasn't already present in standard form
+                if (!metadataReportMap[resourceName][standardFieldName]) {
+                  POSSIBLE_VARIATIONS.fields.add({
+                    resourceName,
+                    fieldName,
+                    suggestion: standardFieldName,
+                    strategy: MATCHING_STRATEGIES.SUBSTRING,
+                    ddWikiUrl: standardMetadataMap?.[resourceName]?.[standardFieldName]?.ddWikiUrl
+                  });
                 }
+              } else if (fieldName?.length > MIN_MATCHING_LENGTH) {
+                // Use Edit Distance matching if a substring match wasn't found
+                // https://en.wikipedia.org/wiki/Edit_distance
+                // https://en.wikipedia.org/wiki/Levenshtein_distance
+                // https://github.com/ka-weihe/fastest-levenshtein
+                const d = distance(normalizedFieldName, normalizedStandardFieldName),
+                  maxDistance = Math.floor(fuzziness * fieldName?.length);
 
-                POSSIBLE_VARIATIONS.fields.add({
-                  resourceName,
-                  fieldName,
-                  suggestion: standardFieldName,
-                  elementType: 'field',
-                  distance: d,
-                  maxDistance
-                });
+                if (!metadataReportMap?.[resourceName]?.[standardFieldName] && d <= maxDistance) {
+                  if (verbose) {
+                    console.log(
+                      chalk.bold('\nField Variations Found!'),
+                      `\nFound possible match for resource '${resourceName}' and field '${fieldName}'...`
+                    );
+
+                    console.log(`\tSuggested Field Name '${standardFieldName}'`);
+                  }
+
+                  POSSIBLE_VARIATIONS.fields.add({
+                    resourceName,
+                    fieldName,
+                    suggestion: standardFieldName,
+                    distance: d,
+                    maxDistance,
+                    strategy: MATCHING_STRATEGIES.EDIT_DISTANCE,
+                    ddWikiUrl: standardMetadataMap?.[resourceName]?.[standardFieldName]?.ddWikiUrl
+                  });
+                }
               }
             });
           } else {
