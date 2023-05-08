@@ -299,7 +299,7 @@ const findVariations = async ({
           }
         });
       } else {
-        //found standard resource - check field variations
+        //found standard resource - check field name variations
         Object.keys(metadataReportMap?.[resourceName]).forEach(fieldName => {
           if (!standardMetadataMap?.[resourceName]?.[fieldName]) {
             //field was not found in reference metadata - look for variations
@@ -307,49 +307,53 @@ const findVariations = async ({
               const normalizedFieldName = normalizeDataElementName(fieldName),
                 normalizedStandardFieldName = normalizeDataElementName(standardFieldName);
 
-              if (
-                normalizedStandardFieldName.includes(normalizedFieldName) ||
-                normalizedFieldName.includes(normalizedStandardFieldName) ||
-                (normalizedFieldName === normalizedStandardFieldName && fieldName !== standardFieldName)
-              ) {
-                // Only add suggestion to the map if a local field with a similar name
-                // wasn't already present in standard form
-                if (!metadataReportMap[resourceName][standardFieldName]) {
-                  POSSIBLE_VARIATIONS.fields.add({
-                    resourceName,
-                    fieldName,
-                    suggestedFieldName: standardFieldName,
-                    strategy: MATCHING_STRATEGIES.SUBSTRING,
-                    ddWikiUrl: standardMetadataMap?.[resourceName]?.[standardFieldName]?.ddWikiUrl
-                  });
-                }
-              } else if (fieldName?.length > MIN_MATCHING_LENGTH) {
-                // Use Edit Distance matching if a substring match wasn't found
-                // https://en.wikipedia.org/wiki/Edit_distance
-                // https://en.wikipedia.org/wiki/Levenshtein_distance
-                // https://github.com/ka-weihe/fastest-levenshtein
-                const d = distance(normalizedFieldName, normalizedStandardFieldName),
-                  maxDistance = Math.floor(fuzziness * fieldName?.length);
-
-                if (!metadataReportMap?.[resourceName]?.[standardFieldName] && d <= maxDistance) {
-                  if (verbose) {
-                    console.log(
-                      chalk.bold('\nField Variations Found!'),
-                      `\nFound possible match for resource '${resourceName}' and field '${fieldName}'...`
-                    );
-
-                    console.log(`\tSuggested Field Name '${standardFieldName}'`);
+              if (!standardMetadataMap?.[resourceName]?.[standardFieldName]?.isExpansion) {
+                //allow substring matching for anything less than the minimum matching length
+                //unless the case-insensitive substring matches exactly
+                if (
+                  ((normalizedStandardFieldName.includes(normalizedFieldName) ||
+                  normalizedFieldName.includes(normalizedStandardFieldName)) && fieldName?.length > MIN_MATCHING_LENGTH) ||
+                  (normalizedFieldName === normalizedStandardFieldName && fieldName !== standardFieldName)
+                ) {
+                  // Only add suggestion to the map if a local field with a similar name
+                  // wasn't already present in standard form
+                  if (!metadataReportMap[resourceName][standardFieldName]) {
+                    POSSIBLE_VARIATIONS.fields.add({
+                      resourceName,
+                      fieldName,
+                      suggestedFieldName: standardFieldName,
+                      strategy: MATCHING_STRATEGIES.SUBSTRING,
+                      ddWikiUrl: standardMetadataMap?.[resourceName]?.[standardFieldName]?.ddWikiUrl
+                    });
                   }
+                } else if (fieldName?.length > MIN_MATCHING_LENGTH) {
+                  // Use Edit Distance matching if a substring match wasn't found
+                  // https://en.wikipedia.org/wiki/Edit_distance
+                  // https://en.wikipedia.org/wiki/Levenshtein_distance
+                  // https://github.com/ka-weihe/fastest-levenshtein
+                  const d = distance(normalizedFieldName, normalizedStandardFieldName),
+                    maxDistance = Math.floor(fuzziness * fieldName?.length);
 
-                  POSSIBLE_VARIATIONS.fields.add({
-                    resourceName,
-                    fieldName,
-                    suggestedFieldName: standardFieldName,
-                    distance: d,
-                    maxDistance,
-                    strategy: MATCHING_STRATEGIES.EDIT_DISTANCE,
-                    ddWikiUrl: standardMetadataMap?.[resourceName]?.[standardFieldName]?.ddWikiUrl
-                  });
+                  if (!metadataReportMap?.[resourceName]?.[standardFieldName] && d <= maxDistance) {
+                    if (verbose) {
+                      console.log(
+                        chalk.bold('\nField Variations Found!'),
+                        `\nFound possible match for resource '${resourceName}' and field '${fieldName}'...`
+                      );
+
+                      console.log(`\tSuggested Field Name '${standardFieldName}'`);
+                    }
+
+                    POSSIBLE_VARIATIONS.fields.add({
+                      resourceName,
+                      fieldName,
+                      suggestedFieldName: standardFieldName,
+                      distance: d,
+                      maxDistance,
+                      strategy: MATCHING_STRATEGIES.EDIT_DISTANCE,
+                      ddWikiUrl: standardMetadataMap?.[resourceName]?.[standardFieldName]?.ddWikiUrl
+                    });
+                  }
                 }
               }
             });
@@ -362,61 +366,95 @@ const findVariations = async ({
             Object.values(lookupValues).forEach(({ lookupValue, legacyODataValue }) => {
               //lookup value can be null since it's the display name and not every system adds display names in this case
               if (lookupValue) {
+                //if the lookupValue doesn't exist in the standard metadata map then try and find matches
                 if (!standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[lookupValue]) {
-                  const suggestedLookupValue = closest(
-                    lookupValue,
-                    Object.keys(standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues)
-                  );
+                  //look through the existing lookupValues to see if we can find matches
+                  Object.keys(standardMetadataMap[resourceName][fieldName].lookupValues).forEach(
+                    standardLookupValue => {
+                      const normalizedLookupValue = normalizeDataElementName(lookupValue),
+                        normalizedStandardLookupValue = normalizeDataElementName(standardLookupValue);
 
-                  if (suggestedLookupValue) {
-                    const d = distance(lookupValue, suggestedLookupValue);
-                    if (d < Math.round(fuzziness * lookupValue?.length)) {
+                      //first check case-insensitive substring matches
                       if (
-                        !metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues?.[suggestedLookupValue]
+                        ((normalizedLookupValue.includes(normalizedStandardLookupValue) ||
+                        normalizedStandardLookupValue.includes(normalizedLookupValue)) && lookupValue?.length > MIN_MATCHING_LENGTH) ||
+                        (normalizedLookupValue === normalizedStandardLookupValue &&
+                          lookupValue !== standardLookupValue)
                       ) {
-                        const suggestion = {
-                          resourceName,
-                          fieldName,
-                          lookupValue,
-                          legacyODataValue,
-                          distance: d,
-                          strategy: MATCHING_STRATEGIES.EDIT_DISTANCE
-                        };
+                        if (
+                          !metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues[standardLookupValue]
+                        ) {
+                          const { legacyODataValue: standardODataLookupValue, ddWikiUrl } =
+                            standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[
+                              standardLookupValue
+                            ] || {};
 
-                        const { legacyODataValue: suggestedLegacyODataValue, ddWikiUrl } =
-                          standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[
-                            suggestedLookupValue
-                          ] || {};
+                          POSSIBLE_VARIATIONS.lookupValues.add({
+                            resourceName,
+                            fieldName,
+                            lookupValue,
+                            legacyODataValue,
+                            suggestedLookupValue: standardLookupValue,
+                            suggestedLegacyODataValue: standardODataLookupValue,
+                            matchedOn: 'lookupValue',
+                            strategy: MATCHING_STRATEGIES.SUBSTRING,
+                            ddWikiUrl
+                          });
+                        }
+                      } else if (lookupValue?.length > MIN_MATCHING_LENGTH) {
+                        const d = distance(normalizedLookupValue, normalizedStandardLookupValue),
+                          maxDistance = Math.floor(fuzziness * lookupValue?.length);
 
-                        if (lookupValue !== suggestedLookupValue) {
-                          suggestion.matchedOn = 'lookupValue';
-                          suggestion.suggestedLookupValue = suggestedLookupValue;
-                          if (suggestedLegacyODataValue) {
-                            suggestion.suggestedLegacyODataValue = suggestedLegacyODataValue;
-                            suggestion.ddWikiUrl = ddWikiUrl;
+                        if (
+                          !metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues[
+                            standardLookupValue
+                          ] &&
+                          d <= maxDistance
+                        ) {
+                          const suggestion = {
+                            resourceName,
+                            fieldName,
+                            lookupValue,
+                            legacyODataValue,
+                            distance: d,
+                            strategy: MATCHING_STRATEGIES.EDIT_DISTANCE
+                          };
+
+                          const { legacyODataValue: standardODataLookupValue, ddWikiUrl } =
+                            standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[
+                              standardLookupValue
+                            ] || {};
+
+                          if (lookupValue !== standardLookupValue) {
+                            suggestion.matchedOn = 'lookupValue';
+                            suggestion.suggestedLookupValue = standardLookupValue;
+                            if (standardODataLookupValue?.length) {
+                              suggestion.suggestedLegacyODataValue = standardODataLookupValue;
+                              suggestion.ddWikiUrl = ddWikiUrl;
+                            }
                           }
+
+                          if (verbose) {
+                            console.log(
+                              chalk.bold('\nLookup Value Variations Found!'),
+                              `\nFound possible match for resource '${resourceName}', field '${fieldName}', lookupValue '${lookupValue}', and legacyODataValue '${legacyODataValue}'...`
+                            );
+
+                            console.log(
+                              chalk.bold('Suggested Lookup Value:'),
+                              `'${suggestedLookupValue}', with legacyODataValue: '${standardODataLookupValue}'`
+                            );
+                          }
+
+                          if (legacyODataValue !== standardODataLookupValue) {
+                            suggestion.suggestedLegacyODataValue = standardODataLookupValue;
+                          }
+
+                          POSSIBLE_VARIATIONS.lookupValues.add(suggestion);
                         }
-
-                        if (verbose) {
-                          console.log(
-                            chalk.bold('\nLookup Value Variations Found!'),
-                            `\nFound possible match for resource '${resourceName}', field '${fieldName}', lookupValue '${lookupValue}', and legacyODataValue '${legacyODataValue}'...`
-                          );
-
-                          console.log(
-                            chalk.bold('Suggested Lookup Value:'),
-                            `'${suggestedLookupValue}', with legacyODataValue: '${suggestedLegacyODataValue}'`
-                          );
-                        }
-
-                        if (legacyODataValue !== suggestedLegacyODataValue) {
-                          suggestion.suggestedLegacyODataValue = suggestedLegacyODataValue;
-                        }
-
-                        POSSIBLE_VARIATIONS.lookupValues.add(suggestion);
                       }
                     }
-                  }
+                  );
                 }
               }
             });
