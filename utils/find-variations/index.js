@@ -273,9 +273,11 @@ const findVariations = async ({
             //TODO: refactor ddWikiUrl accessor
             POSSIBLE_VARIATIONS.resources.add({
               resourceName,
-              suggestion: standardResourceName,
+              suggestedResourceName: standardResourceName,
               strategy: MATCHING_STRATEGIES.SUBSTRING,
-              ddWikiUrl: getReferenceMetadata()?.resources?.find(item => item?.resourceName === standardResourceName)?.wikiPageURL
+              ddWikiUrl: getReferenceMetadata()?.resources?.find(
+                item => item?.resourceName === standardResourceName
+              )?.wikiPageURL
             });
           } else if (resourceName?.length > MIN_MATCHING_LENGTH) {
             const d = distance(normalizedStandardResourceName, normalizedResourceName),
@@ -285,11 +287,13 @@ const findVariations = async ({
             if (!standardMetadataMap?.[resourceName] && d <= maxDistance) {
               POSSIBLE_VARIATIONS.resources.add({
                 resourceName,
-                suggestion: standardResourceName,
+                suggestedResourceName: standardResourceName,
                 distance: d,
                 maxDistance,
                 strategy: MATCHING_STRATEGIES.EDIT_DISTANCE,
-                ddWikiUrl: getReferenceMetadata()?.resources?.find(item => item?.resourceName === standardResourceName)?.wikiPageURL
+                ddWikiUrl: getReferenceMetadata()?.resources?.find(
+                  item => item?.resourceName === standardResourceName
+                )?.wikiPageURL
               });
             }
           }
@@ -314,7 +318,7 @@ const findVariations = async ({
                   POSSIBLE_VARIATIONS.fields.add({
                     resourceName,
                     fieldName,
-                    suggestion: standardFieldName,
+                    suggestedFieldName: standardFieldName,
                     strategy: MATCHING_STRATEGIES.SUBSTRING,
                     ddWikiUrl: standardMetadataMap?.[resourceName]?.[standardFieldName]?.ddWikiUrl
                   });
@@ -340,7 +344,7 @@ const findVariations = async ({
                   POSSIBLE_VARIATIONS.fields.add({
                     resourceName,
                     fieldName,
-                    suggestion: standardFieldName,
+                    suggestedFieldName: standardFieldName,
                     distance: d,
                     maxDistance,
                     strategy: MATCHING_STRATEGIES.EDIT_DISTANCE,
@@ -354,6 +358,7 @@ const findVariations = async ({
             const { lookupValues = {}, legacyODataValues = {} } =
               metadataReportMap?.[resourceName]?.[fieldName] || {};
 
+            //check lookupValues
             Object.values(lookupValues).forEach(({ lookupValue, legacyODataValue }) => {
               //lookup value can be null since it's the display name and not every system adds display names in this case
               if (lookupValue) {
@@ -369,12 +374,13 @@ const findVariations = async ({
                       if (
                         !metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues?.[suggestedLookupValue]
                       ) {
-                        const suggestions = {
+                        const suggestion = {
                           resourceName,
                           fieldName,
                           lookupValue,
                           legacyODataValue,
-                          distance: d
+                          distance: d,
+                          strategy: MATCHING_STRATEGIES.EDIT_DISTANCE
                         };
 
                         const { legacyODataValue: suggestedLegacyODataValue, ddWikiUrl } =
@@ -383,11 +389,11 @@ const findVariations = async ({
                           ] || {};
 
                         if (lookupValue !== suggestedLookupValue) {
-                          suggestions.matchedOn = 'lookupValue';
-                          suggestions.suggestedLookupValue = suggestedLookupValue;
+                          suggestion.matchedOn = 'lookupValue';
+                          suggestion.suggestedLookupValue = suggestedLookupValue;
                           if (suggestedLegacyODataValue) {
-                            suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
-                            suggestions.ddWikiUrl = ddWikiUrl;
+                            suggestion.suggestedLegacyODataValue = suggestedLegacyODataValue;
+                            suggestion.ddWikiUrl = ddWikiUrl;
                           }
                         }
 
@@ -404,10 +410,10 @@ const findVariations = async ({
                         }
 
                         if (legacyODataValue !== suggestedLegacyODataValue) {
-                          suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
+                          suggestion.suggestedLegacyODataValue = suggestedLegacyODataValue;
                         }
 
-                        POSSIBLE_VARIATIONS.lookupValues.add(suggestions);
+                        POSSIBLE_VARIATIONS.lookupValues.add(suggestion);
                       }
                     }
                   }
@@ -415,6 +421,7 @@ const findVariations = async ({
               }
             });
 
+            //check legacyODataValues
             Object.values(legacyODataValues).forEach(({ lookupValue, legacyODataValue }) => {
               if (
                 standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues &&
@@ -449,12 +456,13 @@ const findVariations = async ({
                         suggestedLegacyODataValue
                       ] || {};
 
-                    const suggestions = {
+                    const suggestion = {
                       resourceName,
                       fieldName,
                       lookupValue,
                       legacyODataValue,
-                      distance: d
+                      distance: d,
+                      strategy: MATCHING_STRATEGIES.EDIT_DISTANCE
                     };
 
                     //if (lookupValue !== suggestedLookupValue) {
@@ -466,19 +474,19 @@ const findVariations = async ({
                           suggestedLookupValue
                       );
                     if (legacyODataValue !== suggestedLegacyODataValue) {
-                      suggestions.matchedOn = 'legacyODataValue';
-                      suggestions.suggestedLegacyODataValue = suggestedLegacyODataValue;
+                      suggestion.matchedOn = 'legacyODataValue';
+                      suggestion.suggestedLegacyODataValue = suggestedLegacyODataValue;
                     }
 
                     if (ddWikiUrl?.length) {
-                      suggestions.ddWikiUrl = ddWikiUrl;
+                      suggestion.ddWikiUrl = ddWikiUrl;
                     }
 
                     if (lookupValue !== suggestedLookupValue) {
-                      suggestions.suggestedLookupValue = suggestedLookupValue;
+                      suggestion.suggestedLookupValue = suggestedLookupValue;
                     }
 
-                    POSSIBLE_VARIATIONS.legacyODataValues.add(suggestions);
+                    POSSIBLE_VARIATIONS.legacyODataValues.add(suggestion);
                     //}
                   }
                 }
@@ -528,7 +536,34 @@ const findVariations = async ({
           return acc;
         }, {})
       ).flatMap(item => Object.values(item)),
-      lookups: [...POSSIBLE_VARIATIONS.lookupValues, ...POSSIBLE_VARIATIONS.legacyODataValues],
+      lookups: Object.values(
+        [...POSSIBLE_VARIATIONS.lookupValues, ...POSSIBLE_VARIATIONS.legacyODataValues].reduce(
+          (acc, { resourceName, fieldName, lookupValue, legacyODataValue, ...rest }) => {
+            if (!acc?.[resourceName]) {
+              acc[resourceName] = {};
+            }
+
+            if (!acc?.[resourceName]?.[fieldName]) {
+              acc[resourceName][fieldName] = {};
+            }
+
+            if (!acc?.[resourceName]?.[fieldName]?.[legacyODataValue + lookupValue]) {
+              acc[resourceName][fieldName][legacyODataValue + lookupValue] = {
+                resourceName,
+                fieldName,
+                legacyODataValue,
+                lookupValue,
+                suggestions: []
+              };
+            }
+
+            acc?.[resourceName]?.[fieldName]?.[legacyODataValue + lookupValue]?.suggestions.push({ ...rest });
+
+            return acc;
+          },
+          {}
+        )
+      ).flatMap(item => Object.values(Object.values(item).flatMap(item => Object.values(item)))),
       expansions: Array.from(POSSIBLE_VARIATIONS.expansions),
       complexTypes: Array.from(POSSIBLE_VARIATIONS.complexTypes)
     };
