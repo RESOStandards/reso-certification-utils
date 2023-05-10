@@ -40,15 +40,15 @@ const transform = async (options = {}) => {
 
   // for each report id fetch the sequentially corresponding data availability report, correct the frequency count and rescore
   for (const reportId of reportIds) {
+    console.clear();
+    console.log(chalk.greenBright.bold(`Progress: ${++counter}/${reportIds.length}`));
+
     const data = await fetchDataAvailabilityReport({ serverUrl: url, reportId });
-    counter++;
     if (!data) continue;
     stats.found++;
 
     // rescore
     if (rescore) {
-      console.log(chalk.greenBright.bold(`Rescoring report ${reportId}`));
-
       const fieldsMap = data.fields.reduce((acc, field) => {
         const { resourceName, fieldName } = field;
         if (!acc[resourceName]) acc[resourceName] = {};
@@ -90,8 +90,11 @@ const transform = async (options = {}) => {
       data.lookupValues.forEach(lookup => {
         const { fieldName, frequency, resourceName, availability, lookupValue } = lookup;
         if (lookupValue === 'EMPTY_LIST' || lookupValue === 'NULL_VALUE') {
-          fieldsMap[resourceName][fieldName].frequency -= frequency;
-          fieldsMap[resourceName][fieldName].availability -= availability;
+          // only adjust counts if not adjusted already (prevents multiple count adjustments)
+          if (fieldsMap[resourceName][fieldName].frequency > frequency)
+            fieldsMap[resourceName][fieldName].frequency -= frequency;
+          if (fieldsMap[resourceName][fieldName].availability > availability)
+            fieldsMap[resourceName][fieldName].availability -= availability;
         }
       });
       try {
@@ -136,7 +139,6 @@ const transform = async (options = {}) => {
             chalk.yellowBright.bold(`Couldn't post availability report ${reportId} to the rescore endpoint\n`)
           );
         }
-        console.log(chalk.greenBright.bold(`Progress: ${counter}/${reportIds.length}`));
       } catch (error) {
         console.log(error);
         console.log(chalk.yellowBright.bold(`Couldn't rescore availability report ${reportId}\n`));
