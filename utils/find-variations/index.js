@@ -20,6 +20,11 @@ const MATCHING_STRATEGIES = {
   EDIT_DISTANCE: 'Edit Distance'
 };
 
+const MATCHED_ON = {
+  LOOKUP_VALUE: 'lookupValue',
+  LEGACY_ODATA_VALUE: 'legacyODataValue'
+};
+
 /**
  * Trims whitespace and special characters from the given name
  *
@@ -28,9 +33,9 @@ const MATCHING_STRATEGIES = {
  */
 const normalizeDataElementName = name => name?.toLowerCase()?.replace(/[^0-9a-z]/gi, '') || name;
 
-const fetchReferenceMetadata = async () => {
+const fetchReferenceMetadata = async version => {
   try {
-    const referenceMetadata = getReferenceMetadata();
+    const referenceMetadata = getReferenceMetadata(version);
     if (Object.keys(referenceMetadata)?.length) {
       return referenceMetadata;
     }
@@ -176,7 +181,7 @@ const getMetadataInfo = ({ numResources = 0, numFields = 0, numLookups = 0, numE
  * @param {String} path
  * @throws Error if path is not a valid S3 or local path
  */
-const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAULT_FUZZINESS, verbose = false } = {}) => {
+const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAULT_FUZZINESS, debug = false, version = '1.7' } = {}) => {
   if (!pathToMetadataReportJson?.length) {
     console.error(chalk.redBright.bold(`Invalid value! pathToMetadataReportJson = '${pathToMetadataReportJson}'`));
     return;
@@ -190,12 +195,12 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
   console.log(chalk.bgBlueBright.whiteBright(`Using fuzziness of up to ${Math.round(fuzziness * 100)}% of word length!`));
 
   const POSSIBLE_VARIATIONS = {
-    resources: new Set(),
-    fields: new Set(),
-    lookupValues: new Set(),
-    legacyODataValues: new Set(),
-    expansions: new Set(),
-    complexTypes: new Set()
+    resources: [],
+    fields: [],
+    lookupValues: [],
+    legacyODataValues: [],
+    expansions: [],
+    complexTypes: []
   };
 
   const TOTAL_START_TIME = new Date();
@@ -211,7 +216,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
     //get latest version of reference metadata
     console.log(chalk.cyanBright.bold('\nFetching reference metadata...'));
     startTime = new Date();
-    const referenceMetadata = await fetchReferenceMetadata();
+    const referenceMetadata = await fetchReferenceMetadata(version);
     console.log(chalk.whiteBright.bold(`Time Taken: ${calculateElapsedTimeString(startTime)}\n`));
     if (!referenceMetadata) return;
 
@@ -244,20 +249,19 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
             normalizedResourceName = normalizeDataElementName(resourceName);
 
           if (normalizedResourceName === normalizedStandardResourceName && resourceName !== standardResourceName) {
-            //TODO: refactor ddWikiUrl accessor
-            POSSIBLE_VARIATIONS.resources.add({
+            POSSIBLE_VARIATIONS.resources.push({
               resourceName,
               suggestedResourceName: standardResourceName,
               strategy: MATCHING_STRATEGIES.SUBSTRING,
-              ddWikiUrl: getDDWikiUrlForResourceName(standardResourceName)
+              ddWikiUrl: getDDWikiUrlForResourceName(standardResourceName),
+              exactMatch: true
             });
           } else if (resourceName?.length > MIN_MATCHING_LENGTH) {
             const d = distance(normalizedStandardResourceName, normalizedResourceName),
               maxDistance = Math.floor(fuzziness * resourceName?.length);
 
-            //TODO: refactor ddWikiUrl accessor
-            if (!standardMetadataMap?.[resourceName] && d <= maxDistance) {
-              POSSIBLE_VARIATIONS.resources.add({
+            if (!metadataReportMap?.[standardResourceName] && d <= maxDistance) {
+              POSSIBLE_VARIATIONS.resources.push({
                 resourceName,
                 suggestedResourceName: standardResourceName,
                 distance: d,
@@ -289,13 +293,20 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                   // Only add suggestion to the map if a local field with a similar name
                   // wasn't already present in standard form
                   if (!metadataReportMap[resourceName][standardFieldName]) {
-                    POSSIBLE_VARIATIONS.fields.add({
+                    const suggestion = {
                       resourceName,
                       fieldName,
                       suggestedFieldName: standardFieldName,
                       strategy: MATCHING_STRATEGIES.SUBSTRING,
                       ddWikiUrl: standardMetadataMap?.[resourceName]?.[standardFieldName]?.ddWikiUrl
-                    });
+                    };
+
+                    if (normalizedFieldName === normalizedStandardFieldName && fieldName !== standardFieldName) {
+                      suggestion.exactMatch = true;
+                      POSSIBLE_VARIATIONS.fields.unshift(suggestion);
+                    } else {
+                      POSSIBLE_VARIATIONS.fields.push(suggestion);
+                    }
                   }
                 } else if (fieldName?.length > MIN_MATCHING_LENGTH) {
                   // Use Edit Distance matching if a substring match wasn't found
@@ -306,7 +317,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                     maxDistance = Math.floor(fuzziness * fieldName?.length);
 
                   if (!metadataReportMap?.[resourceName]?.[standardFieldName] && d <= maxDistance) {
-                    if (verbose) {
+                    if (debug) {
                       console.log(
                         chalk.bold('\nField Variations Found!'),
                         `\nFound possible match for resource '${resourceName}' and field '${fieldName}'...`
@@ -315,7 +326,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                       console.log(`\tSuggested Field Name '${standardFieldName}'`);
                     }
 
-                    POSSIBLE_VARIATIONS.fields.add({
+                    POSSIBLE_VARIATIONS.fields.push({
                       resourceName,
                       fieldName,
                       suggestedFieldName: standardFieldName,
@@ -354,17 +365,36 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                         const { legacyODataValue: standardODataLookupValue, ddWikiUrl } =
                           standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[standardLookupValue] || {};
 
-                        POSSIBLE_VARIATIONS.lookupValues.add({
+                        const suggestion = {
                           resourceName,
                           fieldName,
                           lookupValue,
                           legacyODataValue,
                           suggestedLookupValue: standardLookupValue,
                           suggestedLegacyODataValue: standardODataLookupValue,
-                          matchedOn: 'lookupValue',
+                          matchedOn: MATCHED_ON.LOOKUP_VALUE,
                           strategy: MATCHING_STRATEGIES.SUBSTRING,
                           ddWikiUrl
-                        });
+                        };
+
+                        if (normalizedLookupValue === normalizedStandardLookupValue && lookupValue !== standardLookupValue) {
+                          suggestion.exactMatch = true;
+                          POSSIBLE_VARIATIONS.lookupValues.unshift(suggestion);
+                        } else {
+                          POSSIBLE_VARIATIONS.lookupValues.push(suggestion);
+                        }
+
+                        if (debug) {
+                          console.log(
+                            chalk.bold('\nLookup Value Variations Found!'),
+                            `\nFound possible match for resource '${resourceName}', field '${fieldName}', lookupValue '${lookupValue}', and legacyODataValue '${legacyODataValue}'...`
+                          );
+
+                          console.log(
+                            chalk.bold('Suggested Lookup Value:'),
+                            `'${standardLookupValue}', with legacyODataValue: '${standardODataLookupValue}'`
+                          );
+                        }
                       }
                     } else if (lookupValue?.length > MIN_MATCHING_LENGTH) {
                       const d = distance(normalizedLookupValue, normalizedStandardLookupValue),
@@ -384,7 +414,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                           standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[standardLookupValue] || {};
 
                         if (lookupValue !== standardLookupValue) {
-                          suggestion.matchedOn = 'lookupValue';
+                          suggestion.matchedOn = MATCHED_ON.LOOKUP_VALUE;
                           suggestion.suggestedLookupValue = standardLookupValue;
                           if (standardODataLookupValue?.length) {
                             suggestion.suggestedLegacyODataValue = standardODataLookupValue;
@@ -392,7 +422,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                           }
                         }
 
-                        if (verbose) {
+                        if (debug) {
                           console.log(
                             chalk.bold('\nLookup Value Variations Found!'),
                             `\nFound possible match for resource '${resourceName}', field '${fieldName}', lookupValue '${lookupValue}', and legacyODataValue '${legacyODataValue}'...`
@@ -408,7 +438,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                           suggestion.suggestedLegacyODataValue = standardODataLookupValue;
                         }
 
-                        POSSIBLE_VARIATIONS.lookupValues.add(suggestion);
+                        POSSIBLE_VARIATIONS.lookupValues.push(suggestion);
                       }
                     }
                   });
@@ -428,28 +458,44 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                       ((normalizedODataValue.includes(normalizedStandardODataValue) ||
                         normalizedStandardODataValue.includes(normalizedODataValue)) &&
                         legacyODataValue?.length > MIN_MATCHING_LENGTH) ||
-                      (normalizedODataValue === normalizedStandardODataValue && legacyODataValue !== normalizedODataValue)
+                      (normalizedODataValue === normalizedStandardODataValue && legacyODataValue !== standardODataLookupValue)
                     ) {
-                      if (!metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues?.[standardODataLookupValue]) {
+                      if (!metadataReportMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[standardODataLookupValue]) {
                         const { lookupValue: standardLookupValue, ddWikiUrl } =
                           standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[standardODataLookupValue] || {};
 
-                        POSSIBLE_VARIATIONS.lookupValues.add({
+                        const suggestion = {
                           resourceName,
                           fieldName,
                           lookupValue,
                           legacyODataValue,
                           suggestedLookupValue: standardLookupValue,
                           suggestedLegacyODataValue: standardODataLookupValue,
-                          matchedOn: 'legacyODataValue',
+                          matchedOn: MATCHED_ON.LEGACY_ODATA_VALUE,
                           strategy: MATCHING_STRATEGIES.SUBSTRING,
                           ddWikiUrl
-                        });
+                        };
+
+                        if (normalizedODataValue === normalizedStandardODataValue && legacyODataValue !== standardODataLookupValue) {
+                          suggestion.exactMatch = true;
+                          POSSIBLE_VARIATIONS.legacyODataValues.unshift(suggestion);
+                        } else {
+                          POSSIBLE_VARIATIONS.legacyODataValues.push(suggestion);
+                        }
+
+                        if (debug) {
+                          console.log(
+                            chalk.bold('\nLegacy OData Value variations found!'),
+                            `\nFound possible match for resource '${resourceName}', field '${fieldName}', lookupValue '${lookupValue}', and legacyODataValue '${legacyODataValue}'...`
+                          );
+
+                          console.log(chalk.bold('Suggested Legacy OData Value:'), `'${standardODataLookupValue}'`);
+                        }
                       } else if (legacyODataValue?.length > MIN_MATCHING_LENGTH) {
                         const d = distance(legacyODataValue, standardODataLookupValue);
                         if (d < Math.round(fuzziness * legacyODataValue?.length)) {
                           if (!metadataReportMap?.[resourceName]?.[fieldName]?.legacyODataValues[standardODataLookupValue]) {
-                            if (verbose) {
+                            if (debug) {
                               console.log(
                                 chalk.bold('\nLegacy OData Value variations found!'),
                                 `\nFound possible match for resource '${resourceName}', field '${fieldName}', lookupValue '${lookupValue}', and legacyODataValue '${legacyODataValue}'...`
@@ -470,10 +516,8 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                               strategy: MATCHING_STRATEGIES.EDIT_DISTANCE
                             };
 
-                            if (verbose)
-                              console.log('---> lookupValue is: ' + lookupValue + ', suggestedLookupValue is: ' + suggestedLookupValue);
                             if (legacyODataValue !== standardODataLookupValue) {
-                              suggestion.matchedOn = 'legacyODataValue';
+                              suggestion.matchedOn = MATCHED_ON.LEGACY_ODATA_VALUE;
                               suggestion.suggestedLegacyODataValue = standardODataLookupValue;
                             }
 
@@ -485,7 +529,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                               suggestion.suggestedLookupValue = suggestedLookupValue;
                             }
 
-                            POSSIBLE_VARIATIONS.legacyODataValues.add(suggestion);
+                            POSSIBLE_VARIATIONS.legacyODataValues.push(suggestion);
                           }
                         }
                       }
@@ -561,9 +605,11 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
               };
             }
 
-            if (!acc[resourceName][fieldName][combinedKey].suggestions.some(
-              x => x?.suggestedLookupValue === rest?.suggestedLookupValue && x?.suggestedLegacyODataValue === rest?.suggestedLegacyODataValue
-            )
+            if (
+              !acc[resourceName][fieldName][combinedKey].suggestions.some(
+                x =>
+                  x?.suggestedLookupValue === rest?.suggestedLookupValue && x?.suggestedLegacyODataValue === rest?.suggestedLegacyODataValue
+              )
             ) {
               acc[resourceName][fieldName][combinedKey].suggestions.push({ ...rest });
             }
@@ -583,7 +629,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
         JSON.stringify(
           {
             description: 'Data Dictionary Variations Report',
-            version: '1.7',
+            version,
             generatedOn: new Date().toISOString(),
             fuzziness: parseFloat(fuzziness),
             ...variations

@@ -27,7 +27,8 @@ program
   .command('findVariations')
   .requiredOption('-p, --pathToMetadataReportJson <string>', 'Path to metadata-report.json file')
   .option('-f, --fuzziness <float>', 'Set fuzziness to something besides the default')
-  .option('-v, --verbose <boolean>', 'Set to true to see additional information')
+  .option('-v, --version <string>', 'Data Dictionary version to compare to, i.e. 1.7 or 2.0')
+  .option('-d, --debug', 'Pass to see extra debugging information')
   .description('Finds possible variations in metadata using a number of methods.')
   .action(findVariations);
 
