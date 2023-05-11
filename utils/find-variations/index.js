@@ -233,6 +233,9 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
     console.log(chalk.cyanBright.bold('\nMatching process starting...'));
     startTime = new Date();
 
+    const getDDWikiUrlForResourceName = standardResourceName =>
+      getReferenceMetadata()?.resources?.find(item => item?.resourceName === standardResourceName)?.wikiPageURL || null;
+
     Object.keys(metadataReportMap).forEach(resourceName => {
       //check for resource variations if the resource name doesn't match the reference metadata exactly
       if (!standardMetadataMap?.[resourceName]) {
@@ -246,7 +249,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
               resourceName,
               suggestedResourceName: standardResourceName,
               strategy: MATCHING_STRATEGIES.SUBSTRING,
-              ddWikiUrl: getReferenceMetadata()?.resources?.find(item => item?.resourceName === standardResourceName)?.wikiPageURL
+              ddWikiUrl: getDDWikiUrlForResourceName(standardResourceName)
             });
           } else if (resourceName?.length > MIN_MATCHING_LENGTH) {
             const d = distance(normalizedStandardResourceName, normalizedResourceName),
@@ -260,7 +263,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                 distance: d,
                 maxDistance,
                 strategy: MATCHING_STRATEGIES.EDIT_DISTANCE,
-                ddWikiUrl: getReferenceMetadata()?.resources?.find(item => item?.resourceName === standardResourceName)?.wikiPageURL
+                ddWikiUrl: getDDWikiUrlForResourceName(standardResourceName)
               });
             }
           }
@@ -413,7 +416,6 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
               }
             });
 
-            
             //check legacyODataValues
             Object.values(legacyODataValues).forEach(({ lookupValue, legacyODataValue }) => {
               if (legacyODataValue?.length) {
@@ -423,7 +425,9 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                       normalizedStandardODataValue = normalizeDataElementName(standardODataLookupValue);
 
                     if (
-                      ((normalizedODataValue.includes(normalizedStandardODataValue) || normalizedStandardODataValue.includes(normalizedODataValue)) && legacyODataValue?.length > MIN_MATCHING_LENGTH) ||
+                      ((normalizedODataValue.includes(normalizedStandardODataValue) ||
+                        normalizedStandardODataValue.includes(normalizedODataValue)) &&
+                        legacyODataValue?.length > MIN_MATCHING_LENGTH) ||
                       (normalizedODataValue === normalizedStandardODataValue && legacyODataValue !== normalizedODataValue)
                     ) {
                       if (!metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues?.[standardODataLookupValue]) {
@@ -441,8 +445,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                           strategy: MATCHING_STRATEGIES.SUBSTRING,
                           ddWikiUrl
                         });
-                      } else if (legacyODataValue?.length > MIN_MATCHING_LENGTH
-                      ) {
+                      } else if (legacyODataValue?.length > MIN_MATCHING_LENGTH) {
                         const d = distance(legacyODataValue, standardODataLookupValue);
                         if (d < Math.round(fuzziness * legacyODataValue?.length)) {
                           if (!metadataReportMap?.[resourceName]?.[fieldName]?.legacyODataValues[standardODataLookupValue]) {
@@ -546,8 +549,10 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
               acc[resourceName][fieldName] = {};
             }
 
-            if (!acc?.[resourceName]?.[fieldName]?.[legacyODataValue + lookupValue]) {
-              acc[resourceName][fieldName][legacyODataValue + lookupValue] = {
+            const combinedKey = legacyODataValue + lookupValue;
+
+            if (!acc?.[resourceName]?.[fieldName]?.[combinedKey]) {
+              acc[resourceName][fieldName][combinedKey] = {
                 resourceName,
                 fieldName,
                 legacyODataValue,
@@ -556,7 +561,12 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
               };
             }
 
-            acc?.[resourceName]?.[fieldName]?.[legacyODataValue + lookupValue]?.suggestions.push({ ...rest });
+            if (!acc[resourceName][fieldName][combinedKey].suggestions.some(
+                x => x?.suggestedLookupValue === rest?.suggestedLookupValue && x?.suggestedLegacyODataValue === rest?.suggestedLegacyODataValue
+              )
+            ) {
+              acc[resourceName][fieldName][combinedKey].suggestions.push({ ...rest });
+            }
 
             return acc;
           },
