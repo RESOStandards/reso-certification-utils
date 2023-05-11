@@ -632,7 +632,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
             version,
             generatedOn: new Date().toISOString(),
             fuzziness: parseFloat(fuzziness),
-            ...variations
+            variations
           },
           null,
           '  '
