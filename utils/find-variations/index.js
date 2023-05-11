@@ -2,7 +2,7 @@
 
 const chalk = require('chalk');
 const { readFile, writeFile } = require('fs/promises');
-const { distance, closest } = require('fastest-levenshtein');
+const { distance } = require('fastest-levenshtein');
 const { getReferenceMetadata } = require('reso-certification-etl');
 
 const { REFERENCE_METADATA_URL } = process.env;
@@ -400,7 +400,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
 
                           console.log(
                             chalk.bold('Suggested Lookup Value:'),
-                            `'${suggestedLookupValue}', with legacyODataValue: '${standardODataLookupValue}'`
+                            `'${standardLookupValue}', with legacyODataValue: '${standardODataLookupValue}'`
                           );
                         }
 
@@ -562,8 +562,8 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
             }
 
             if (!acc[resourceName][fieldName][combinedKey].suggestions.some(
-                x => x?.suggestedLookupValue === rest?.suggestedLookupValue && x?.suggestedLegacyODataValue === rest?.suggestedLegacyODataValue
-              )
+              x => x?.suggestedLookupValue === rest?.suggestedLookupValue && x?.suggestedLegacyODataValue === rest?.suggestedLegacyODataValue
+            )
             ) {
               acc[resourceName][fieldName][combinedKey].suggestions.push({ ...rest });
             }
