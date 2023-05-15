@@ -99,7 +99,15 @@ const transform = async (options = {}) => {
       });
       try {
         // recover the raw availability report
-        const { description, version, generatedOn, resources, fields, lookupValues, lookups } = data;
+        const {
+          description = 'RESO Data Availability Report',
+          version,
+          generatedOn,
+          resources,
+          fields,
+          lookupValues,
+          lookups
+        } = data;
 
         const rawAvailabilityReport = {
           resources,
