@@ -551,7 +551,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
 
     const variations = {
       resources: Object.values(
-        Array.from(POSSIBLE_VARIATIONS.resources).reduce((acc, { resourceName, ...suggestion }) => {
+        POSSIBLE_VARIATIONS.resources.reduce((acc, { resourceName, ...suggestion }) => {
           if (!acc?.[resourceName]) {
             acc[resourceName] = {
               resourceName,
@@ -565,7 +565,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
         }, {})
       ),
       fields: Object.values(
-        Array.from(POSSIBLE_VARIATIONS.fields).reduce((acc, { resourceName, fieldName, ...suggestion }) => {
+        POSSIBLE_VARIATIONS.fields.reduce((acc, { resourceName, fieldName, ...suggestion }) => {
           if (!acc?.[resourceName]) {
             acc[resourceName] = {};
           }
@@ -619,8 +619,8 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
           {}
         )
       ).flatMap(item => Object.values(Object.values(item).flatMap(item => Object.values(item)))),
-      expansions: Array.from(POSSIBLE_VARIATIONS.expansions),
-      complexTypes: Array.from(POSSIBLE_VARIATIONS.complexTypes)
+      expansions: POSSIBLE_VARIATIONS.expansions,
+      complexTypes: POSSIBLE_VARIATIONS.complexTypes
     };
 
     await writeFile(
