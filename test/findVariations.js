@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { findVariations } = require('../utils/find-variations')
+const { findVariations } = require('../utils/find-variations');
 
 describe('findVariations', () => {
   describe('Check known exact match', () => {

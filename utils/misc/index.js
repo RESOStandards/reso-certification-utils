@@ -42,19 +42,19 @@ const generatePascalCaseODataValuesFromReferenceMetadata = async (version = '1.7
       const { lookupValue, displayName } =
         annotations?.reduce((acc, { term, value }) => {
           if (term === ANNOTATION_STANDARD_NAME) {
-            if (false && !value.match(/^[0-9a-z]+$/)) {
-              acc.lookupValue = value;
-            } else {
-              acc.lookupValue = value
-                ?.replace('(s)', 's')
-                ?.replace('(S)', 's')
-                ?.replace('&', 'And')
-                ?.replace('$', 'Dollar')
-                ?.replace('%', 'Percent');
-            }
-
-            acc.displayName = value;
+            // if (false && !value.match(/^[0-9a-z]+$/)) {
+            //   acc.lookupValue = value;
+            // } else {
+            acc.lookupValue = value
+              ?.replace('(s)', 's')
+              ?.replace('(S)', 's')
+              ?.replace('&', 'And')
+              ?.replace('$', 'Dollar')
+              ?.replace('%', 'Percent');
           }
+
+          acc.displayName = value;
+          //}
           return acc;
         }, {}) || {};
 
