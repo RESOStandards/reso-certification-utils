@@ -7,7 +7,7 @@ const { findVariations } = require('./utils/find-variations/index.js');
 program
   .name('reso-certification-utils')
   .description('Command line batch-testing and restore utils')
-  .version('0.0.2');
+  .version('0.0.3');
 
 program
   .command('restore')

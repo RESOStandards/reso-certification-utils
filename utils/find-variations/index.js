@@ -78,16 +78,24 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
       acc[lookupName] = [];
     }
 
-    const { lookupValue: annotatedLookupValue, ddWikiUrl } = annotations?.reduce((acc, { term, value }) => {
-      if (term === ANNOTATION_STANDARD_NAME) {
-        acc.lookupValue = value;
-      }
+    const { lookupValue: annotatedLookupValue, ddWikiUrl } =
+      annotations?.reduce((acc, { term, value }) => {
+        if (term === ANNOTATION_STANDARD_NAME) {
+          acc.lookupValue = value;
+        }
 
-      if (term === ANNOTATION_DD_WIKI_URL) {
-        acc.ddWikiUrl = value;
-      }
+        if (term === ANNOTATION_DD_WIKI_URL) {
+          acc.ddWikiUrl = value;
+        }
+        return acc;
+      }, {}) || {};
+
+    if (
+      (lookupValue?.startsWith('Sample') && lookupValue?.endsWith('EnumValue')) ||
+      (annotatedLookupValue?.startsWith('Sample') && annotatedLookupValue.endsWith('EnumValue'))
+    ) {
       return acc;
-    }, {}) || {};
+    }
 
     if (isStringEnumeration(type)) {
       acc[lookupName].push({ lookupValue, ddWikiUrl, isStringEnumeration: true });
@@ -137,7 +145,6 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
           Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue, ddWikiUrl, isStringEnumeration }) => {
             const lookupName = parseLookupName(type);
 
-            
             //skip legacyOData matching if we're using string enumerations
             if (!isStringEnumeration && legacyODataValue?.length) {
               acc[resourceName][fieldName].legacyODataValues[legacyODataValue] = {
@@ -186,42 +193,18 @@ const getMetadataInfo = ({ numResources = 0, numFields = 0, numLookups = 0, numE
   return `Resources: ${numResources}, Fields: ${numFields}, Lookups: ${numLookups}, Expansions: ${numExpansions}, Complex Types: ${numComplexTypes}`;
 };
 
-/**
- * Finds potential variations for a given metadata report
- * @param {String} path
- * @throws Error if path is not a valid S3 or local path
- */
-const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAULT_FUZZINESS, version = '1.7' } = {}) => {
-  if (!pathToMetadataReportJson?.length) {
-    console.error(chalk.redBright.bold(`Invalid value! pathToMetadataReportJson = '${pathToMetadataReportJson}'`));
-    return;
-  }
-
-  if (!parseFloat(fuzziness) || fuzziness < 0 || fuzziness > 1) {
-    console.error(chalk.redBright.bold('Invalid value! fuzziness must be a decimal number in the range [0, 1]'));
-    return;
-  }
-
-  console.log(chalk.bgBlueBright.whiteBright(`Using fuzziness of up to ${Math.round(fuzziness * 100)}% of word length!`));
-
-  const POSSIBLE_VARIATIONS = {
-    resources: [],
-    fields: [],
-    lookupValues: [],
-    legacyODataValues: [],
-    expansions: [],
-    complexTypes: []
-  };
-
-  const TOTAL_START_TIME = new Date();
-
-  let startTime;
-
+const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_FUZZINESS, version = '1.7' }) => {
   try {
-    //load metadata report from given path - might nee to take report json rather than from path
-    console.log(chalk.cyanBright.bold('\nLoading metadata report: '), chalk.whiteBright.bold(pathToMetadataReportJson));
-    const metadataReportJson = JSON.parse(await readFile(pathToMetadataReportJson, { encoding: 'utf8' }));
-    console.log(chalk.greenBright.bold('Done!'));
+    const POSSIBLE_VARIATIONS = {
+      resources: [],
+      fields: [],
+      lookupValues: [],
+      legacyODataValues: [],
+      expansions: [],
+      complexTypes: []
+    };
+
+    let startTime;
 
     //get latest version of reference metadata
     console.log(chalk.cyanBright.bold('\nFetching reference metadata...'));
@@ -289,17 +272,18 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
           }
         });
       } else {
-
         //found standard resource - check field name variations
         Object.keys(metadataReportMap?.[resourceName]).forEach(fieldName => {
+          //check for fieldName in the reference metadata
           if (!standardMetadataMap?.[resourceName]?.[fieldName]) {
             //field was not found in reference metadata - look for variations
             Object.keys(standardMetadataMap?.[resourceName]).forEach(standardFieldName => {
+              //case-insensitive, no special characters
               const normalizedFieldName = normalizeDataElementName(fieldName),
                 normalizedStandardFieldName = normalizeDataElementName(standardFieldName);
 
               if (!standardMetadataMap?.[resourceName]?.[standardFieldName]?.isExpansion) {
-                //allow substring matching for anything less than the minimum matching length
+                //allow substring matching for anything greater than the minimum matching length
                 //unless the case-insensitive substring matches exactly
                 if (
                   ((normalizedStandardFieldName.includes(normalizedFieldName) ||
@@ -309,7 +293,7 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                 ) {
                   // Only add suggestion to the map if a local field with a similar name
                   // wasn't already present in standard form
-                  if (!metadataReportMap[resourceName][standardFieldName]) {
+                  if (!metadataReportMap?.[resourceName]?.[standardFieldName]) {
                     const suggestion = {
                       resourceName,
                       fieldName,
@@ -359,7 +343,6 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
 
             //check lookupValues
             Object.values(lookupValues).forEach(({ lookupValue, legacyODataValue, isStringEnumeration }) => {
-              
               //lookup value can be null since it's the display name and not every system adds display names in this case
               if (lookupValue?.length) {
                 const standardLookupValues = standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues || {};
@@ -425,10 +408,10 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
                         if (lookupValue !== standardLookupValue) {
                           suggestion.matchedOn = MATCHED_ON.LOOKUP_VALUE;
                           suggestion.suggestedLookupValue = standardLookupValue;
-                          if (standardODataLookupValue?.length) {
+                          if (!isStringEnumeration && standardODataLookupValue?.length) {
                             suggestion.suggestedLegacyODataValue = standardODataLookupValue;
-                            suggestion.ddWikiUrl = ddWikiUrl;
                           }
+                          suggestion.ddWikiUrl = ddWikiUrl;
                         }
 
                         if (!isStringEnumeration && legacyODataValue !== standardODataLookupValue) {
@@ -616,31 +599,57 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
       complexTypes: POSSIBLE_VARIATIONS.complexTypes
     };
 
-    await writeFile(
-      VARIATIONS_RESULTS_FILE,
-      Buffer.from(
-        JSON.stringify(
-          {
-            description: 'Data Dictionary Variations Report',
-            version,
-            generatedOn: new Date().toISOString(),
-            fuzziness: parseFloat(fuzziness),
-            variations
-          },
-          null,
-          '  '
-        )
-      )
-    );
+    return {
+      description: 'Data Dictionary Variations Report',
+      version,
+      generatedOn: new Date().toISOString(),
+      fuzziness: parseFloat(fuzziness),
+      variations
+    };
+  } catch (err) {
+    console.error(err);
+    return {};
+  }
+};
+
+/**
+ * Finds potential variations for a given metadata report
+ * @param {String} path
+ * @throws Error if path is not a valid S3 or local path
+ */
+const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAULT_FUZZINESS, version = '1.7' } = {}) => {
+  if (!pathToMetadataReportJson?.length) {
+    console.error(chalk.redBright.bold(`Invalid value! pathToMetadataReportJson = '${pathToMetadataReportJson}'`));
+    return;
+  }
+
+  if (!parseFloat(fuzziness) || fuzziness < 0 || fuzziness > 1) {
+    console.error(chalk.redBright.bold('Invalid value! fuzziness must be a decimal number in the range [0, 1]'));
+    return;
+  }
+
+  console.log(chalk.bgBlueBright.whiteBright(`Using fuzziness of up to ${Math.round(fuzziness * 100)}% of word length!`));
+
+  const TOTAL_START_TIME = new Date();
+
+  try {
+    //load metadata report from given path - might nee to take report json rather than from path
+    console.log(chalk.cyanBright.bold('\nLoading metadata report: '), chalk.whiteBright.bold(pathToMetadataReportJson));
+    const metadataReportJson = JSON.parse(await readFile(pathToMetadataReportJson, { encoding: 'utf8' }));
+    console.log(chalk.greenBright.bold('Done!'));
+
+    const report = await computeVariations({ metadataReportJson, fuzziness, version });
+
+    await writeFile(VARIATIONS_RESULTS_FILE, Buffer.from(JSON.stringify(report, null, '  ')));
     console.log(chalk.greenBright.bold('Done!'));
 
     console.log('\n');
     console.log(chalk.bold('Results:'));
-    console.log(`  • Suggested Resources: ${variations?.resources?.length || 0}`);
-    console.log(`  • Suggested Fields: ${variations?.fields?.length || 0}`);
-    console.log(`  • Suggested Lookups: ${variations?.lookups.length || 0}`);
-    console.log(`  • Suggested Expansions: ${variations?.expansions?.length || 0}`);
-    console.log(`  • Suggested Complex Types: ${variations?.complexTypes?.length || 0}`);
+    console.log(`  • Suggested Resources: ${report?.variations?.resources?.length || 0}`);
+    console.log(`  • Suggested Fields: ${report?.variations?.fields?.length || 0}`);
+    console.log(`  • Suggested Lookups: ${report?.variations?.lookups.length || 0}`);
+    console.log(`  • Suggested Expansions: ${report?.variations?.expansions?.length || 0}`);
+    console.log(`  • Suggested Complex Types: ${report?.variations?.complexTypes?.length || 0}`);
     console.log();
 
     //TODO: add a checker to connect to Sagemaker
@@ -657,5 +666,6 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
 
 module.exports = {
   findVariations,
+  computeVariations,
   isValidUrl
 };
