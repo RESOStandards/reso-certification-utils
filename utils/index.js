@@ -3,8 +3,8 @@ const { runTests } = require('./batch-test-runner');
 const { findVariations, computeVariations } = require('./find-variations/index.js');
 
 module.exports = {
-  restore, 
+  restore,
   runTests,
   findVariations,
   computeVariations
-}
+};
