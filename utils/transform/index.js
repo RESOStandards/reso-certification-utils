@@ -106,7 +106,8 @@ const transform = async (options = {}) => {
           resources,
           fields,
           lookupValues,
-          lookups
+          lookups,
+          optInStatus
         } = data;
 
         const rawAvailabilityReport = {
@@ -134,7 +135,8 @@ const transform = async (options = {}) => {
             ...rescoredReport,
             description,
             version,
-            generatedOn
+            generatedOn,
+            optInStatus
           },
           reportId
         });
