@@ -522,9 +522,6 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
     console.log(chalk.greenBright.bold('Done!'));
     console.log(chalk.whiteBright.bold(`Time Taken: ${calculateElapsedTimeString(startTime, true)}`));
 
-    console.log('\n');
-    console.log(chalk.cyanBright.bold(`Saving results to ${VARIATIONS_RESULTS_FILE}...`));
-
     const variations = {
       resources: Object.values(
         POSSIBLE_VARIATIONS.resources.reduce((acc, { resourceName, ...suggestion }) => {
@@ -639,6 +636,9 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
     console.log(chalk.greenBright.bold('Done!'));
 
     const report = await computeVariations({ metadataReportJson, fuzziness, version });
+
+    console.log('\n');
+    console.log(chalk.cyanBright.bold(`Saving results to ${VARIATIONS_RESULTS_FILE}...`));
 
     await writeFile(VARIATIONS_RESULTS_FILE, Buffer.from(JSON.stringify(report, null, '  ')));
     console.log(chalk.greenBright.bold('Done!'));
