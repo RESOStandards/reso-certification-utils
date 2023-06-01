@@ -26,6 +26,85 @@ const MATCHED_ON = {
   LEGACY_ODATA_VALUE: 'legacyODataValue'
 };
 
+const prepareResults = ({
+  resources = [],
+  fields = [],
+  lookupValues = [],
+  legacyODataValues = [],
+  expansions = [],
+  complexTypes = []
+} = {}) => {
+  return {
+    resources: Object.values(
+      resources.reduce((acc, { resourceName, ...suggestion }) => {
+        if (!acc?.[resourceName]) {
+          acc[resourceName] = {
+            resourceName,
+            suggestions: []
+          };
+        }
+
+        acc[resourceName].suggestions.push(suggestion);
+
+        return acc;
+      }, {})
+    ),
+    fields: Object.values(
+      fields.reduce((acc, { resourceName, fieldName, ...suggestion }) => {
+        if (!acc?.[resourceName]) {
+          acc[resourceName] = {};
+        }
+
+        if (!acc?.[resourceName]?.[fieldName]) {
+          acc[resourceName][fieldName] = {
+            resourceName,
+            fieldName,
+            suggestions: []
+          };
+        }
+        acc[resourceName][fieldName].suggestions.push(suggestion);
+
+        return acc;
+      }, {})
+    ).flatMap(item => Object.values(item)),
+    lookups: Object.values(
+      [...lookupValues, ...legacyODataValues].reduce((acc, { resourceName, fieldName, lookupValue, legacyODataValue, ...rest }) => {
+        if (!acc?.[resourceName]) {
+          acc[resourceName] = {};
+        }
+
+        if (!acc?.[resourceName]?.[fieldName]) {
+          acc[resourceName][fieldName] = {};
+        }
+
+        const combinedKey = legacyODataValue + lookupValue;
+
+        if (!acc?.[resourceName]?.[fieldName]?.[combinedKey]) {
+          acc[resourceName][fieldName][combinedKey] = {
+            resourceName,
+            fieldName,
+            legacyODataValue,
+            lookupValue,
+            suggestions: []
+          };
+        }
+
+        if (
+          !acc[resourceName][fieldName][combinedKey].suggestions.some(
+            x => x?.suggestedLookupValue === rest?.suggestedLookupValue && x?.suggestedLegacyODataValue === rest?.suggestedLegacyODataValue
+          )
+        ) {
+          acc[resourceName][fieldName][combinedKey].suggestions.push({ ...rest });
+        }
+
+        return acc;
+      }, {})
+    ).flatMap(item => Object.values(Object.values(item).flatMap(item => Object.values(item)))),
+    expansions,
+    complexTypes
+  };
+};
+
 /**
  * Trims whitespace and special characters from the given name
  *
@@ -280,9 +359,10 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
             Object.keys(standardMetadataMap?.[resourceName]).forEach(standardFieldName => {
               //case-insensitive, no special characters
               const normalizedFieldName = normalizeDataElementName(fieldName),
-                normalizedStandardFieldName = normalizeDataElementName(standardFieldName);
+                normalizedStandardFieldName = normalizeDataElementName(standardFieldName),
+                isExpansion = standardMetadataMap?.[resourceName]?.[standardFieldName]?.isExpansion || false;
 
-              if (!standardMetadataMap?.[resourceName]?.[standardFieldName]?.isExpansion) {
+              if (!isExpansion) {
                 //allow substring matching for anything greater than the minimum matching length
                 //unless the case-insensitive substring matches exactly
                 if (
@@ -345,23 +425,28 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
             Object.values(lookupValues).forEach(({ lookupValue, legacyODataValue, isStringEnumeration }) => {
               //lookup value can be null since it's the display name and not every system adds display names in this case
               if (lookupValue?.length) {
-                const standardLookupValues = standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues || {};
+                const standardLookupValues = standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues || {},
+                  hasStandardLookupValue = standardLookupValues?.[lookupValue] || false;
 
                 //if the lookupValue doesn't exist in the standard metadata map then try and find matches
-                if (Object.keys(standardLookupValues)?.length && !standardLookupValues?.[lookupValue]) {
+                if (!hasStandardLookupValue) {
                   //look through the existing lookupValues to see if we can find matches
                   Object.keys(standardLookupValues).forEach(standardLookupValue => {
                     const normalizedLookupValue = normalizeDataElementName(lookupValue),
-                      normalizedStandardLookupValue = normalizeDataElementName(standardLookupValue);
+                      normalizedStandardLookupValue = normalizeDataElementName(standardLookupValue),
+                      isMinMatchingLength = lookupValue?.length > MIN_MATCHING_LENGTH,
+                      hasSubstringMatch =
+                        isMinMatchingLength &&
+                        (normalizedLookupValue.includes(normalizedStandardLookupValue) ||
+                          normalizedStandardLookupValue.includes(normalizedLookupValue)),
+                      isExactMatch = normalizedLookupValue === normalizedStandardLookupValue && lookupValue !== standardLookupValue;
+
+                    const hasStandardLookupValue =
+                      metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues[standardLookupValue] || false;
 
                     //first check case-insensitive substring matches
-                    if (
-                      ((normalizedLookupValue.includes(normalizedStandardLookupValue) ||
-                        normalizedStandardLookupValue.includes(normalizedLookupValue)) &&
-                        lookupValue?.length > MIN_MATCHING_LENGTH) ||
-                      (normalizedLookupValue === normalizedStandardLookupValue && lookupValue !== standardLookupValue)
-                    ) {
-                      if (!metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues[standardLookupValue]) {
+                    if (isExactMatch || hasSubstringMatch) {
+                      if (!hasStandardLookupValue) {
                         const { legacyODataValue: standardODataLookupValue, ddWikiUrl } =
                           standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues?.[standardLookupValue] || {};
 
@@ -387,11 +472,11 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
                           POSSIBLE_VARIATIONS.lookupValues.push(suggestion);
                         }
                       }
-                    } else if (lookupValue?.length > MIN_MATCHING_LENGTH) {
+                    } else if (isMinMatchingLength) {
                       const d = distance(normalizedLookupValue, normalizedStandardLookupValue),
                         maxDistance = Math.floor(fuzziness * lookupValue?.length);
 
-                      if (!metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues[standardLookupValue] && d <= maxDistance) {
+                      if (!hasStandardLookupValue && d <= maxDistance) {
                         const suggestion = {
                           resourceName,
                           fieldName,
@@ -433,20 +518,24 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
             //check legacyODataValues
             Object.values(legacyODataValues).forEach(({ lookupValue, legacyODataValue }) => {
               if (legacyODataValue?.length) {
-                const standardLegacyODataValues = standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues || {};
+                const standardLegacyODataValues = standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues || {},
+                  hasStandardLegacyODataValue = standardLegacyODataValues?.[legacyODataValue] || false;
 
-                if (Object.keys(standardLegacyODataValues)?.length && !standardLegacyODataValues?.[legacyODataValue]) {
+                if (!hasStandardLegacyODataValue) {
                   Object.keys(standardLegacyODataValues).forEach(standardODataLookupValue => {
                     const normalizedODataValue = normalizeDataElementName(legacyODataValue),
-                      normalizedStandardODataValue = normalizeDataElementName(standardODataLookupValue);
+                      normalizedStandardODataValue = normalizeDataElementName(standardODataLookupValue),
+                      isMinMatchingLength = legacyODataValue?.length > MIN_MATCHING_LENGTH,
+                      isExactMatch = normalizedODataValue === normalizedStandardODataValue && legacyODataValue !== standardODataLookupValue,
+                      hasStandardLegacyODataValue =
+                        metadataReportMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[standardODataLookupValue],
+                      hasSubstringMatch =
+                        isMinMatchingLength &&
+                        (normalizedODataValue.includes(normalizedStandardODataValue) ||
+                          normalizedStandardODataValue.includes(normalizedODataValue));
 
-                    if (
-                      ((normalizedODataValue.includes(normalizedStandardODataValue) ||
-                        normalizedStandardODataValue.includes(normalizedODataValue)) &&
-                        legacyODataValue?.length > MIN_MATCHING_LENGTH) ||
-                      (normalizedODataValue === normalizedStandardODataValue && legacyODataValue !== standardODataLookupValue)
-                    ) {
-                      if (!metadataReportMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[standardODataLookupValue]) {
+                    if (!hasStandardLegacyODataValue) {
+                      if (isExactMatch || hasSubstringMatch) {
                         const { lookupValue: standardLookupValue, ddWikiUrl } =
                           standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[standardODataLookupValue] || {};
 
@@ -462,20 +551,17 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
                           ddWikiUrl
                         };
 
-                        if (normalizedODataValue === normalizedStandardODataValue && legacyODataValue !== standardODataLookupValue) {
+                        if (isExactMatch) {
                           suggestion.exactMatch = true;
                           POSSIBLE_VARIATIONS.legacyODataValues.unshift(suggestion);
                         } else {
                           POSSIBLE_VARIATIONS.legacyODataValues.push(suggestion);
                         }
-                      } else if (legacyODataValue?.length > MIN_MATCHING_LENGTH) {
+                      } else if (isMinMatchingLength) {
                         const d = distance(legacyODataValue, standardODataLookupValue),
                           maxDistance = Math.round(fuzziness * legacyODataValue?.length);
 
-                        if (
-                          !metadataReportMap?.[resourceName]?.[fieldName]?.legacyODataValues[standardODataLookupValue] &&
-                          d <= maxDistance
-                        ) {
+                        if (!hasStandardLegacyODataValue && d <= maxDistance) {
                           const { lookupValue: suggestedLookupValue, ddWikiUrl } =
                             standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[standardODataLookupValue] || {};
 
@@ -522,86 +608,12 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
     console.log(chalk.greenBright.bold('Done!'));
     console.log(chalk.whiteBright.bold(`Time Taken: ${calculateElapsedTimeString(startTime, true)}`));
 
-    const variations = {
-      resources: Object.values(
-        POSSIBLE_VARIATIONS.resources.reduce((acc, { resourceName, ...suggestion }) => {
-          if (!acc?.[resourceName]) {
-            acc[resourceName] = {
-              resourceName,
-              suggestions: []
-            };
-          }
-
-          acc[resourceName].suggestions.push(suggestion);
-
-          return acc;
-        }, {})
-      ),
-      fields: Object.values(
-        POSSIBLE_VARIATIONS.fields.reduce((acc, { resourceName, fieldName, ...suggestion }) => {
-          if (!acc?.[resourceName]) {
-            acc[resourceName] = {};
-          }
-
-          if (!acc?.[resourceName]?.[fieldName]) {
-            acc[resourceName][fieldName] = {
-              resourceName,
-              fieldName,
-              suggestions: []
-            };
-          }
-          acc[resourceName][fieldName].suggestions.push(suggestion);
-
-          return acc;
-        }, {})
-      ).flatMap(item => Object.values(item)),
-      lookups: Object.values(
-        [...POSSIBLE_VARIATIONS.lookupValues, ...POSSIBLE_VARIATIONS.legacyODataValues].reduce(
-          (acc, { resourceName, fieldName, lookupValue, legacyODataValue, ...rest }) => {
-            if (!acc?.[resourceName]) {
-              acc[resourceName] = {};
-            }
-
-            if (!acc?.[resourceName]?.[fieldName]) {
-              acc[resourceName][fieldName] = {};
-            }
-
-            const combinedKey = legacyODataValue + lookupValue;
-
-            if (!acc?.[resourceName]?.[fieldName]?.[combinedKey]) {
-              acc[resourceName][fieldName][combinedKey] = {
-                resourceName,
-                fieldName,
-                legacyODataValue,
-                lookupValue,
-                suggestions: []
-              };
-            }
-
-            if (
-              !acc[resourceName][fieldName][combinedKey].suggestions.some(
-                x =>
-                  x?.suggestedLookupValue === rest?.suggestedLookupValue && x?.suggestedLegacyODataValue === rest?.suggestedLegacyODataValue
-              )
-            ) {
-              acc[resourceName][fieldName][combinedKey].suggestions.push({ ...rest });
-            }
-
-            return acc;
-          },
-          {}
-        )
-      ).flatMap(item => Object.values(Object.values(item).flatMap(item => Object.values(item)))),
-      expansions: POSSIBLE_VARIATIONS.expansions,
-      complexTypes: POSSIBLE_VARIATIONS.complexTypes
-    };
-
     return {
       description: 'Data Dictionary Variations Report',
       version,
       generatedOn: new Date().toISOString(),
       fuzziness: parseFloat(fuzziness),
-      variations
+      variations: prepareResults(POSSIBLE_VARIATIONS)
     };
   } catch (err) {
     console.error(err);
