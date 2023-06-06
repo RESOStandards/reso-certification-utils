@@ -126,8 +126,15 @@ describe('computeVariations reference metadata checks', () => {
 
         const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_1_7 });
 
-        assert.deepStrictEqual(variations.resources.length, 1, 'Exactly one resource name should have matched!');
-        assert.deepStrictEqual(variations.resourceName, testMetadataReportJson.resourceName);
+        assert.equal(variations.resources.length, 1, 'Exactly one resource name should have matched!');
+        assert.equal(variations.resourceName, testMetadataReportJson.resourceName);
+
+        //the suggestions should have the resource name in them
+        assert.equal(
+          variations.resources[0].suggestions.some(x => x?.suggestedResourceName === resourceName),
+          true,
+          `Match for resource '${resourceName}' not found in suggestions!`
+        );
 
         processedResources.add(resourceName);
       }
@@ -217,12 +224,18 @@ describe('computeVariations reference metadata checks', () => {
 
         const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_2_0 });
 
-        assert.deepStrictEqual(
+        assert.equal(
           variations.resources.length,
           1,
           'Exactly one resource name should have matched! Variations: ' + JSON.stringify(variations, null, ' ')
         );
-        assert.deepStrictEqual(variations.resourceName, testMetadataReportJson.resourceName);
+        assert.equal(variations.resourceName, testMetadataReportJson.resourceName);
+
+        assert.equal(
+          variations.resources[0].suggestions.some(x => x?.suggestedResourceName === resourceName),
+          true,
+          `Match for resource '${resourceName}' not found in suggestions!`
+        );
 
         processedResources.add(resourceName);
       }
