@@ -10,4 +10,4 @@ jobs:
     - name: Install and run ESLint
       run: eslint . --quiet
     - name: Run Mocha Tests
-      run: npm test
+      run: npm install && npm test
