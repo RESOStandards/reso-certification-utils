@@ -1,7 +1,7 @@
 #! /usr/bin/env node
-const { restore } = require('./utils/restore-utils');
-const { runTests } = require('./utils/batch-test-runner');
-const { findVariations, computeVariations } = require('./utils/find-variations/index.js');
+const { restore } = require('./lib/restore-utils');
+const { runTests } = require('./lib/batch-test-runner');
+const { findVariations, computeVariations } = require('./lib/find-variations/index.js');
 
 if (require?.main === module) {
   const { program } = require('commander');

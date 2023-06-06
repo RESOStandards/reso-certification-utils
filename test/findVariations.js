@@ -2,7 +2,7 @@
 
 const assert = require('assert');
 const { computeVariations } = require('../index.js');
-const { getReferenceMetadata } = require('../utils/misc/index.js');
+const { getReferenceMetadata } = require('../lib/misc/index.js');
 
 const TEST_FUZZINESS = 0.25,
   DD_1_7 = '1.7',
