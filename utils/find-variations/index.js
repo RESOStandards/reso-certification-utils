@@ -311,10 +311,10 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
     startTime = new Date();
 
     const getDDWikiUrlForResourceName = standardResourceName =>
-      getReferenceMetadata()?.resources?.find(item => item?.resourceName === standardResourceName)?.wikiPageURL || null;
+      getReferenceMetadata()?.resources?.find(item => item?.resourceName === standardResourceName)?.wikiPageURL ?? null;
 
     Object.keys(metadataReportMap).forEach(resourceName => {
-      const isStandardResource = standardMetadataMap?.[resourceName] || false;
+      const isStandardResource = standardMetadataMap?.[resourceName] ?? false;
 
       //check for resource variations if the resource name doesn't match the reference metadata exactly
       if (!isStandardResource) {
@@ -366,28 +366,28 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
       } else {
         //found standard resource - check field name variations
         Object.keys(metadataReportMap?.[resourceName]).forEach(fieldName => {
-          const isStandardField = standardMetadataMap?.[resourceName]?.[fieldName] || false;
+          const isStandardField = standardMetadataMap?.[resourceName]?.[fieldName] ?? false;
 
           if (!isStandardField) {
             //field was not found in reference metadata - look for variations
             Object.keys(standardMetadataMap?.[resourceName]).forEach(standardFieldName => {
-              const isExpansion = standardMetadataMap?.[resourceName]?.[standardFieldName]?.isExpansion || false;
+              const isExpansion = standardMetadataMap?.[resourceName]?.[standardFieldName]?.isExpansion ?? false;
 
               if (!isExpansion) {
                 //case-insensitive, no special characters
                 const normalizedFieldName = normalizeDataElementName(fieldName),
                   normalizedStandardFieldName = normalizeDataElementName(standardFieldName),
                   isMinMatchingLength = fieldName?.length > MIN_MATCHING_LENGTH,
+                  isExactMatch = normalizedFieldName === normalizedStandardFieldName && fieldName !== standardFieldName,
+                  isStandardField = metadataReportMap?.[resourceName]?.[standardFieldName] ?? false,
                   isSubstringMatch =
                     isMinMatchingLength &&
                     (normalizedStandardFieldName.includes(normalizedFieldName) ||
-                      normalizedFieldName.includes(normalizedStandardFieldName)),
-                  isExactMatch = normalizedFieldName === normalizedStandardFieldName && fieldName !== standardFieldName,
-                  hasStandardField = metadataReportMap?.[resourceName]?.[standardFieldName] || false;
+                      normalizedFieldName.includes(normalizedStandardFieldName));
 
                 //allow substring matching for anything greater than the minimum matching length
                 //unless the case-insensitive substring matches exactly
-                if (!hasStandardField && (isSubstringMatch || isExactMatch)) {
+                if (!isStandardField && (isSubstringMatch || isExactMatch)) {
                   // Only add suggestion to the map if a local field with a similar name
                   // wasn't already present in standard form
 
@@ -413,7 +413,7 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
                   const d = distance(normalizedFieldName, normalizedStandardFieldName),
                     maxDistance = Math.floor(fuzziness * fieldName?.length);
 
-                  if (!hasStandardField && d <= maxDistance) {
+                  if (!isStandardField && d <= maxDistance) {
                     const suggestion = {
                       resourceName,
                       fieldName,
@@ -442,7 +442,7 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
               //lookup value can be null since it's the display name and not every system adds display names in this case
               if (lookupValue?.length) {
                 const standardLookupValues = standardMetadataMap?.[resourceName]?.[fieldName]?.lookupValues || {},
-                  isStandardLookupValue = standardLookupValues?.[lookupValue] || false;
+                  isStandardLookupValue = standardLookupValues?.[lookupValue] ?? false;
 
                 //if the lookupValue doesn't exist in the standard metadata map then try and find matches
                 if (!isStandardLookupValue) {
@@ -454,7 +454,7 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
                       isMinMatchingLength = lookupValue?.length > MIN_MATCHING_LENGTH,
                       isExactMatch = normalizedLookupValue === normalizedStandardLookupValue && lookupValue !== standardLookupValue,
                       isStandardLookupValue =
-                      metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues[standardLookupValue] || false,
+                      metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues[standardLookupValue] ?? false,
                       isSubstringMatch =
                         isMinMatchingLength &&
                         (normalizedLookupValue.includes(normalizedStandardLookupValue) ||
@@ -535,22 +535,22 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
             Object.values(legacyODataValues).forEach(({ lookupValue, legacyODataValue }) => {
               if (legacyODataValue?.length) {
                 const standardLegacyODataValues = standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues || {},
-                  hasStandardLegacyODataValue = standardLegacyODataValues?.[legacyODataValue] || false;
+                  isStandardLegacyODataValue = standardLegacyODataValues?.[legacyODataValue] ?? false;
 
-                if (!hasStandardLegacyODataValue) {
+                if (!isStandardLegacyODataValue) {
                   Object.keys(standardLegacyODataValues).forEach(standardODataLookupValue => {
                     const normalizedODataValue = normalizeDataElementName(legacyODataValue),
                       normalizedStandardODataValue = normalizeDataElementName(standardODataLookupValue),
                       isMinMatchingLength = legacyODataValue?.length > MIN_MATCHING_LENGTH,
                       isExactMatch = normalizedODataValue === normalizedStandardODataValue && legacyODataValue !== standardODataLookupValue,
-                      hasStandardLegacyODataValue =
+                      isStandardLegacyODataValue =
                         metadataReportMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[standardODataLookupValue],
                       isSubstringMatch =
                         isMinMatchingLength &&
                         (normalizedODataValue.includes(normalizedStandardODataValue) ||
                           normalizedStandardODataValue.includes(normalizedODataValue));
 
-                    if (!hasStandardLegacyODataValue) {
+                    if (!isStandardLegacyODataValue) {
                       if (isExactMatch || isSubstringMatch) {
                         const { lookupValue: standardLookupValue, ddWikiUrl } =
                           standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[standardODataLookupValue] || {};
@@ -577,7 +577,7 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
                         const d = distance(legacyODataValue, standardODataLookupValue),
                           maxDistance = Math.round(fuzziness * legacyODataValue?.length);
 
-                        if (!hasStandardLegacyODataValue && d <= maxDistance) {
+                        if (!isStandardLegacyODataValue && d <= maxDistance) {
                           const { lookupValue: suggestedLookupValue, ddWikiUrl } =
                             standardMetadataMap?.[resourceName]?.[fieldName]?.legacyODataValues?.[standardODataLookupValue] || {};
 
@@ -673,11 +673,11 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
 
     console.log('\n');
     console.log(chalk.bold('Results:'));
-    console.log(`  • Suggested Resources: ${report?.variations?.resources?.length || 0}`);
-    console.log(`  • Suggested Fields: ${report?.variations?.fields?.length || 0}`);
-    console.log(`  • Suggested Lookups: ${report?.variations?.lookups.length || 0}`);
-    console.log(`  • Suggested Expansions: ${report?.variations?.expansions?.length || 0}`);
-    console.log(`  • Suggested Complex Types: ${report?.variations?.complexTypes?.length || 0}`);
+    console.log(`  • Suggested Resources: ${report?.variations?.resources?.length ?? 0}`);
+    console.log(`  • Suggested Fields: ${report?.variations?.fields?.length ?? 0}`);
+    console.log(`  • Suggested Lookups: ${report?.variations?.lookups.length ?? 0}`);
+    console.log(`  • Suggested Expansions: ${report?.variations?.expansions?.length ?? 0}`);
+    console.log(`  • Suggested Complex Types: ${report?.variations?.complexTypes?.length ?? 0}`);
     console.log();
 
     //TODO: add a checker to connect to Sagemaker
