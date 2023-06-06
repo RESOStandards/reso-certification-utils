@@ -26,6 +26,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "-": "^0.0.1",
     "@aws-sdk/client-s3": "^3.306.0",
     "axios": "^0.24.0",
     "boxen": "^6.2.1",
@@ -35,7 +36,9 @@
     "dotenv": "^16.0.1",
     "fastest-levenshtein": "^1.0.16",
     "fs-extra": "^10.0.0",
+    "g": "^2.0.1",
     "mocha": "^9.1.3",
+    "pascal-case": "^3.1.2",
     "reso-certification-etl": "github:RESOStandards/reso-certification-etl#1c2fc0bb5ae1e6f71775cd81d7ae3db46da6bf86",
     "yargs": "^16.2.0"
   },

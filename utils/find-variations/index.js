@@ -11,7 +11,8 @@ const VARIATIONS_RESULTS_FILE = 'data-dictionary-variations.json';
 
 const DEFAULT_FUZZINESS = 1.0 / 3,
   MIN_MATCHING_LENGTH = 3,
-  CLOSE_MATCH_DISTANCE = 1;
+  CLOSE_MATCH_DISTANCE = 1,
+  DEFAULT_VERSION = '1.7';
 
 const ANNOTATION_STANDARD_NAME = 'RESO.OData.Metadata.StandardName',
   ANNOTATION_DD_WIKI_URL = 'RESO.DDWikiUrl';
@@ -35,20 +36,21 @@ const prepareResults = ({
   complexTypes = []
 } = {}) => {
   return {
-    resources: Object.values(
-      resources.reduce((acc, { resourceName, ...suggestion }) => {
-        if (!acc?.[resourceName]) {
-          acc[resourceName] = {
-            resourceName,
-            suggestions: []
-          };
-        }
+    resources:
+      Object.values(
+        resources.reduce((acc, { resourceName, ...suggestion }) => {
+          if (!acc?.[resourceName]) {
+            acc[resourceName] = {
+              resourceName,
+              suggestions: []
+            };
+          }
 
-        acc[resourceName].suggestions.push(suggestion);
+          acc[resourceName].suggestions.push(suggestion);
 
-        return acc;
-      }, {})
-    ),
+          return acc;
+        }, {})
+      ) || [],
     fields: Object.values(
       fields.reduce((acc, { resourceName, fieldName, ...suggestion }) => {
         if (!acc?.[resourceName]) {
@@ -121,7 +123,6 @@ const fetchReferenceMetadata = async version => {
     }
   } catch (err) {
     try {
-      console.log(chalk.bold(`Loading default metadata from '${REFERENCE_METADATA_URL}'`));
       return (await fetch(REFERENCE_METADATA_URL)).json();
     } catch (err2) {
       return null;
@@ -134,7 +135,6 @@ const isValidUrl = url => {
     new URL(url);
     return true;
   } catch (err) {
-    console.log(chalk.redBright.bold(`Error: Cannot parse given url: ${url}`));
     return false;
   }
 };
@@ -272,7 +272,12 @@ const getMetadataInfo = ({ numResources = 0, numFields = 0, numLookups = 0, numE
   return `Resources: ${numResources}, Fields: ${numFields}, Lookups: ${numLookups}, Expansions: ${numExpansions}, Complex Types: ${numComplexTypes}`;
 };
 
-const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_FUZZINESS, version = '1.7' }) => {
+const computeVariations = async ({
+  metadataReportJson = {},
+  fuzziness = DEFAULT_FUZZINESS,
+  version = DEFAULT_VERSION,
+  useConsole = false
+} = {}) => {
   try {
     const POSSIBLE_VARIATIONS = {
       resources: [],
@@ -286,29 +291,46 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
     let startTime;
 
     //get latest version of reference metadata
-    console.log(chalk.cyanBright.bold('\nFetching reference metadata...'));
-    startTime = new Date();
+    if (useConsole) {
+      console.log(chalk.cyanBright.bold('\nFetching reference metadata...'));
+      startTime = new Date();
+    }
+
     const referenceMetadata = await fetchReferenceMetadata(version);
-    console.log(chalk.whiteBright.bold(`Time Taken: ${calculateElapsedTimeString(startTime)}\n`));
+    if (useConsole) console.log(chalk.whiteBright.bold(`Time Taken: ${calculateElapsedTimeString(startTime)}\n`));
     if (!referenceMetadata) return;
 
     //build a map of reference metadata
-    console.log(chalk.cyanBright.bold('\nBuilding references...'));
-    startTime = new Date();
+    if (useConsole) {
+      console.log(chalk.cyanBright.bold('\nBuilding references...'));
+      startTime = new Date();
+    }
+
     const { metadataMap: standardMetadataMap = {}, stats: referenceMetadataStats = {} } = buildMetadataMap(referenceMetadata);
-    console.log(chalk.whiteBright.bold(`Time taken: ${calculateElapsedTimeString(startTime, true)}`));
-    console.log(chalk.whiteBright.bold('Metadata info:', getMetadataInfo(referenceMetadataStats)));
+
+    if (useConsole) {
+      console.log(chalk.whiteBright.bold('Metadata info:', getMetadataInfo(referenceMetadataStats)));
+      console.log(chalk.whiteBright.bold(`Time taken: ${calculateElapsedTimeString(startTime, true)}`));
+    }
 
     //Pre-process metadata report into map
-    console.log(chalk.cyanBright.bold('\nProcessing Metadata Report...'));
-    startTime = new Date();
+    if (useConsole) {
+      console.log(chalk.cyanBright.bold('\nProcessing Metadata Report...'));
+      startTime = new Date();
+    }
+
     const { metadataMap: metadataReportMap = {}, stats: metadataReportStats = {} } = buildMetadataMap(metadataReportJson);
-    console.log(chalk.whiteBright.bold(`Time taken: ${calculateElapsedTimeString(startTime, true)}`));
-    console.log(chalk.whiteBright.bold('Metadata info:', getMetadataInfo(metadataReportStats)));
+
+    if (useConsole) {
+      console.log(chalk.whiteBright.bold(`Time taken: ${calculateElapsedTimeString(startTime, true)}`));
+      console.log(chalk.whiteBright.bold('Metadata info:', getMetadataInfo(metadataReportStats)));
+    }
 
     //run matching process using substrings and edit distance
-    console.log(chalk.cyanBright.bold('\nMatching process starting...'));
-    startTime = new Date();
+    if (useConsole) {
+      console.log(chalk.cyanBright.bold('\nMatching process starting...'));
+      startTime = new Date();
+    }
 
     const getDDWikiUrlForResourceName = standardResourceName =>
       getReferenceMetadata()?.resources?.find(item => item?.resourceName === standardResourceName)?.wikiPageURL ?? null;
@@ -322,12 +344,14 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
           const normalizedStandardResourceName = normalizeDataElementName(standardResourceName),
             normalizedResourceName = normalizeDataElementName(resourceName),
             isMinMatchingLength = resourceName?.length > MIN_MATCHING_LENGTH,
-            isSubstringMatch = isMinMatchingLength && (normalizedResourceName.includes(normalizedStandardResourceName) || normalizedStandardResourceName.includes(normalizedResourceName)),
+            isSubstringMatch =
+              isMinMatchingLength &&
+              (normalizedResourceName.includes(normalizedStandardResourceName) ||
+                normalizedStandardResourceName.includes(normalizedResourceName)),
             isExactMatch = normalizedResourceName === normalizedStandardResourceName && resourceName !== standardResourceName,
             hasStandardResource = metadataReportMap?.[standardResourceName];
 
           if (!hasStandardResource && (isExactMatch || isSubstringMatch)) {
-
             const suggestion = {
               resourceName,
               suggestedResourceName: standardResourceName,
@@ -340,7 +364,6 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
             }
 
             POSSIBLE_VARIATIONS.resources.push(suggestion);
-
           } else if (isMinMatchingLength) {
             const d = distance(normalizedStandardResourceName, normalizedResourceName),
               maxDistance = Math.floor(fuzziness * resourceName?.length);
@@ -448,13 +471,11 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
                 if (!isStandardLookupValue) {
                   //look through the existing lookupValues to see if we can find matches
                   Object.keys(standardLookupValues).forEach(standardLookupValue => {
-                    
                     const normalizedLookupValue = normalizeDataElementName(lookupValue),
                       normalizedStandardLookupValue = normalizeDataElementName(standardLookupValue),
                       isMinMatchingLength = lookupValue?.length > MIN_MATCHING_LENGTH,
                       isExactMatch = normalizedLookupValue === normalizedStandardLookupValue && lookupValue !== standardLookupValue,
-                      isStandardLookupValue =
-                      metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues[standardLookupValue] ?? false,
+                      isStandardLookupValue = metadataReportMap?.[resourceName]?.[fieldName]?.lookupValues[standardLookupValue] ?? false,
                       isSubstringMatch =
                         isMinMatchingLength &&
                         (normalizedLookupValue.includes(normalizedStandardLookupValue) ||
@@ -621,8 +642,10 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
       }
     });
 
-    console.log(chalk.greenBright.bold('Done!'));
-    console.log(chalk.whiteBright.bold(`Time Taken: ${calculateElapsedTimeString(startTime, true)}`));
+    if (useConsole) {
+      console.log(chalk.greenBright.bold('Done!'));
+      console.log(chalk.whiteBright.bold(`Time Taken: ${calculateElapsedTimeString(startTime, true)}`));
+    }
 
     return {
       description: 'Data Dictionary Variations Report',
@@ -633,7 +656,7 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
     };
   } catch (err) {
     console.error(err);
-    return {};
+    return { err: JSON.stringify(err) };
   }
 };
 
@@ -642,7 +665,12 @@ const computeVariations = async ({ metadataReportJson = {}, fuzziness = DEFAULT_
  * @param {String} path
  * @throws Error if path is not a valid S3 or local path
  */
-const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAULT_FUZZINESS, version = '1.7' } = {}) => {
+const findVariations = async ({
+  pathToMetadataReportJson = '',
+  fuzziness = DEFAULT_FUZZINESS,
+  version = '1.7',
+  useConsole = false
+} = {}) => {
   if (!pathToMetadataReportJson?.length) {
     console.error(chalk.redBright.bold(`Invalid value! pathToMetadataReportJson = '${pathToMetadataReportJson}'`));
     return;
@@ -659,33 +687,34 @@ const findVariations = async ({ pathToMetadataReportJson = '', fuzziness = DEFAU
 
   try {
     //load metadata report from given path - might nee to take report json rather than from path
-    console.log(chalk.cyanBright.bold('\nLoading metadata report: '), chalk.whiteBright.bold(pathToMetadataReportJson));
+    if (useConsole) console.log(chalk.cyanBright.bold('\nLoading metadata report: '), chalk.whiteBright.bold(pathToMetadataReportJson));
     const metadataReportJson = JSON.parse(await readFile(pathToMetadataReportJson, { encoding: 'utf8' }));
-    console.log(chalk.greenBright.bold('Done!'));
+    if (useConsole) console.log(chalk.greenBright.bold('Done!'));
 
     const report = await computeVariations({ metadataReportJson, fuzziness, version });
 
-    console.log('\n');
-    console.log(chalk.cyanBright.bold(`Saving results to ${VARIATIONS_RESULTS_FILE}...`));
-
+    if (useConsole) console.log('\n');
+    if (useConsole) console.log(chalk.cyanBright.bold(`Saving results to ${VARIATIONS_RESULTS_FILE}...`));
     await writeFile(VARIATIONS_RESULTS_FILE, Buffer.from(JSON.stringify(report, null, '  ')));
-    console.log(chalk.greenBright.bold('Done!'));
+    if (useConsole) console.log(chalk.greenBright.bold('Done!'));
 
-    console.log('\n');
-    console.log(chalk.bold('Results:'));
-    console.log(`  • Suggested Resources: ${report?.variations?.resources?.length ?? 0}`);
-    console.log(`  • Suggested Fields: ${report?.variations?.fields?.length ?? 0}`);
-    console.log(`  • Suggested Lookups: ${report?.variations?.lookups.length ?? 0}`);
-    console.log(`  • Suggested Expansions: ${report?.variations?.expansions?.length ?? 0}`);
-    console.log(`  • Suggested Complex Types: ${report?.variations?.complexTypes?.length ?? 0}`);
-    console.log();
+    if (useConsole) {
+      console.log('\n');
+      console.log(chalk.bold('Results:'));
+      console.log(`  • Suggested Resources: ${report?.variations?.resources?.length ?? 0}`);
+      console.log(`  • Suggested Fields: ${report?.variations?.fields?.length ?? 0}`);
+      console.log(`  • Suggested Lookups: ${report?.variations?.lookups.length ?? 0}`);
+      console.log(`  • Suggested Expansions: ${report?.variations?.expansions?.length ?? 0}`);
+      console.log(`  • Suggested Complex Types: ${report?.variations?.complexTypes?.length ?? 0}`);
+      console.log();
 
-    //TODO: add a checker to connect to Sagemaker
+      //TODO: add a checker to connect to Sagemaker
 
-    //TODO: add a checker to connect to human-curated variations
+      //TODO: add a checker to connect to human-curated variations
 
-    console.log(chalk.greenBright.bold('\nProcessing complete! Exiting...'));
-    console.log(chalk.magentaBright.bold(`Total runtime: ${calculateElapsedTimeString(TOTAL_START_TIME)}`));
+      console.log(chalk.greenBright.bold('\nProcessing complete! Exiting...'));
+      console.log(chalk.magentaBright.bold(`Total runtime: ${calculateElapsedTimeString(TOTAL_START_TIME)}`));
+    }
   } catch (err) {
     console.log(chalk.redBright.bold(`\nError in 'findVariations'!\n${err?.message}`));
     console.log(chalk.redBright.bold(`\nStacktrace: \n${err?.stack}`));

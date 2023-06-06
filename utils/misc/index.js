@@ -1,3 +1,5 @@
+'use strict';
+
 const { pascalCase } = require('pascal-case');
 const { getReferenceMetadata } = require('reso-certification-etl');
 const { writeFile } = require('fs/promises');
@@ -79,5 +81,6 @@ const generatePascalCaseODataValuesFromReferenceMetadata = async (version = '1.7
 };
 
 module.exports = {
+  getReferenceMetadata,
   generatePascalCaseODataValuesFromReferenceMetadata
 };
