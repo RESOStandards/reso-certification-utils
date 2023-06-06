@@ -42,7 +42,7 @@ describe('findVariations', () => {
     }
   });
 
-  it(`Should have no variations flagged when using the reference metadata for version ${DD_1_7}`, async () => {
+  it(`Should have no variations flagged when using version ${DD_1_7} metadata`, async () => {
     try {
       const metadataReportJson = await getReferenceMetadata(DD_1_7);
       
@@ -75,7 +75,40 @@ describe('findVariations', () => {
     }
   });
 
-  it(`Should have no variations flagged when using the reference metadata for version ${DD_2_0}`, async () => {
+  it(`Should have no variations flagged when using version ${DD_1_7} metadata with 100% fuzziness`, async () => {
+    try {
+      const MAX_FUZZINESS = 1.0;
+      const metadataReportJson = await getReferenceMetadata(DD_1_7);
+      
+      const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
+        metadataReportJson,
+        fuzziness: 1.0,
+        version: DD_1_7
+      });
+
+      assert.notEqual(description.length, 0);
+      assert.notEqual(version.length, 0);
+      assert.notEqual(generatedOn.length, 0);
+
+      //check that the variations object is present and has values
+      assert.equal(!!Object.keys(variations).length, true);
+
+      const { resources, fields, lookups, expansions, complexTypes } = variations;
+
+      assert.deepStrictEqual(resources, [], `'resources' is non-empty but expected []!`);
+      assert.deepStrictEqual(fields, [], `'fields' is non-empty but expected []!!`);
+      assert.deepStrictEqual(lookups, [], `'lookups' is non-empty but expected []!!`);
+      assert.deepStrictEqual(expansions, [], `'expansions' is non-empty but expected []!!`);
+      assert.deepStrictEqual(complexTypes, [], `'complexTypes' is non-empty but expected []!!`);
+
+      assert.equal(fuzziness, MAX_FUZZINESS, `Expected fuzziness to be 1.0 but was: ${fuzziness}`);
+
+    } catch (err) {
+      assert.ok(false, err?.message);
+    }
+  });
+
+  it(`Should have no variations flagged when using version ${DD_2_0} metadata`, async () => {
     try {
       const metadataReportJson = await getReferenceMetadata(DD_2_0);
       
@@ -107,4 +140,38 @@ describe('findVariations', () => {
       assert.ok(false, err);
     }
   });
+
+  it(`Should have no variations flagged when using version ${DD_2_0} metadata with 100% fuzziness`, async () => {
+    try {
+      const MAX_FUZZINESS = 1.0;
+      const metadataReportJson = await getReferenceMetadata(DD_2_0);
+      
+      const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
+        metadataReportJson,
+        fuzziness: MAX_FUZZINESS,
+        version: DD_2_0
+      });
+
+      assert.notEqual(description.length, 0);
+      assert.notEqual(version.length, 0);
+      assert.notEqual(generatedOn.length, 0);
+
+      //check that the variations object is present and has values
+      assert.equal(!!Object.keys(variations).length, true);
+
+      const { resources, fields, lookups, expansions, complexTypes } = variations;
+
+      assert.deepStrictEqual(resources, [], `'resources' is non-empty but expected []!`);
+      assert.deepStrictEqual(fields, [], `'fields' is non-empty but expected []!!`);
+      assert.deepStrictEqual(lookups, [], `'lookups' is non-empty but expected []!!`);
+      assert.deepStrictEqual(expansions, [], `'expansions' is non-empty but expected []!!`);
+      assert.deepStrictEqual(complexTypes, [], `'complexTypes' is non-empty but expected []!!`);
+
+      assert.equal(fuzziness, MAX_FUZZINESS, `Expected fuzziness to be 1.0 but was: ${fuzziness}`);
+
+    } catch (err) {
+      assert.ok(false, err?.message);
+    }
+  });
+
 });
