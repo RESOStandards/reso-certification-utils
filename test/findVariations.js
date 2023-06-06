@@ -5,10 +5,11 @@ const { computeVariations } = require('../index.js');
 const { getReferenceMetadata } = require('../utils/misc/index.js');
 
 const TEST_FUZZINESS = 0.25,
-  DD_1_7 = '1.7', DD_2_0 = '2.0',
+  DD_1_7 = '1.7',
+  DD_2_0 = '2.0',
   DEFAULT_VERSION = DD_1_7;
 
-describe('findVariations', () => {
+describe('computeVariations reference metadata checks', () => {
   it('Should have required properties when the metadata report is empty', async () => {
     const metadataReportJson = {};
 
@@ -28,11 +29,11 @@ describe('findVariations', () => {
 
       const { resources, fields, lookups, expansions, complexTypes } = variations;
 
-      assert.deepStrictEqual(resources, [], `'resources' is non-empty but expected []!`);
-      assert.deepStrictEqual(fields, [], `'fields' is non-empty but expected []!!`);
-      assert.deepStrictEqual(lookups, [], `'lookups' is non-empty but expected []!!`);
-      assert.deepStrictEqual(expansions, [], `'expansions' is non-empty but expected []!!`);
-      assert.deepStrictEqual(complexTypes, [], `'complexTypes' is non-empty but expected []!!`);
+      assert.deepStrictEqual(resources, [], '"resources" is non-empty but expected []!');
+      assert.deepStrictEqual(fields, [], '"fields" is non-empty but expected []!!');
+      assert.deepStrictEqual(lookups, [], '"lookups" is non-empty but expected []!!');
+      assert.deepStrictEqual(expansions, [], '"expansions" is non-empty but expected []!!');
+      assert.deepStrictEqual(complexTypes, [], '"complexTypes" is non-empty but expected []!!');
 
       //check version and fuzziness
       assert.equal(version, DEFAULT_VERSION, `'${version}' does not match version specified: '${DEFAULT_VERSION}'`);
@@ -45,7 +46,7 @@ describe('findVariations', () => {
   it(`Should have no variations flagged when using version ${DD_1_7} metadata`, async () => {
     try {
       const metadataReportJson = await getReferenceMetadata(DD_1_7);
-      
+
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: TEST_FUZZINESS,
@@ -61,11 +62,11 @@ describe('findVariations', () => {
 
       const { resources, fields, lookups, expansions, complexTypes } = variations;
 
-      assert.deepStrictEqual(resources, [], `'resources' is non-empty but expected []!`);
-      assert.deepStrictEqual(fields, [], `'fields' is non-empty but expected []!!`);
-      assert.deepStrictEqual(lookups, [], `'lookups' is non-empty but expected []!!`);
-      assert.deepStrictEqual(expansions, [], `'expansions' is non-empty but expected []!!`);
-      assert.deepStrictEqual(complexTypes, [], `'complexTypes' is non-empty but expected []!!`);
+      assert.deepStrictEqual(resources, [], '"resources" is non-empty but expected []!');
+      assert.deepStrictEqual(fields, [], '"fields" is non-empty but expected []!!');
+      assert.deepStrictEqual(lookups, [], '"lookups" is non-empty but expected []!!');
+      assert.deepStrictEqual(expansions, [], '"expansions" is non-empty but expected []!!');
+      assert.deepStrictEqual(complexTypes, [], '"complexTypes" is non-empty but expected []!!');
 
       //check version and fuzziness
       assert.equal(version, DD_1_7, `Version '${version}' does not match version specified: '${DD_1_7}'`);
@@ -79,7 +80,7 @@ describe('findVariations', () => {
     try {
       const MAX_FUZZINESS = 1.0;
       const metadataReportJson = await getReferenceMetadata(DD_1_7);
-      
+
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: 1.0,
@@ -95,23 +96,48 @@ describe('findVariations', () => {
 
       const { resources, fields, lookups, expansions, complexTypes } = variations;
 
-      assert.deepStrictEqual(resources, [], `'resources' is non-empty but expected []!`);
-      assert.deepStrictEqual(fields, [], `'fields' is non-empty but expected []!!`);
-      assert.deepStrictEqual(lookups, [], `'lookups' is non-empty but expected []!!`);
-      assert.deepStrictEqual(expansions, [], `'expansions' is non-empty but expected []!!`);
-      assert.deepStrictEqual(complexTypes, [], `'complexTypes' is non-empty but expected []!!`);
+      assert.deepStrictEqual(resources, [], '"resources" is non-empty but expected []!');
+      assert.deepStrictEqual(fields, [], '"fields" is non-empty but expected []!!');
+      assert.deepStrictEqual(lookups, [], '"lookups" is non-empty but expected []!!');
+      assert.deepStrictEqual(expansions, [], '"expansions" is non-empty but expected []!!');
+      assert.deepStrictEqual(complexTypes, [], '"complexTypes" is non-empty but expected []!!');
 
       assert.equal(fuzziness, MAX_FUZZINESS, `Expected fuzziness to be 1.0 but was: ${fuzziness}`);
-
     } catch (err) {
       assert.ok(false, err?.message);
+    }
+  });
+
+  it(`Should identify known ${DD_1_7} resources when the variation is lowercase`, async () => {
+    const metadataReportJson = await getReferenceMetadata(DD_1_7);
+
+    const processedResources = new Set();
+
+    for await (const { resourceName, fieldName } of Object.values(metadataReportJson.fields)) {
+      if (!processedResources.has(resourceName)) {
+        const testMetadataReportJson = {
+          fields: [
+            {
+              resourceName: resourceName?.toLowerCase(),
+              fieldName
+            }
+          ]
+        };
+
+        const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_1_7 });
+
+        assert.deepStrictEqual(variations.resources.length, 1, 'Exactly one resource name should have matched!');
+        assert.deepStrictEqual(variations.resourceName, testMetadataReportJson.resourceName);
+
+        processedResources.add(resourceName);
+      }
     }
   });
 
   it(`Should have no variations flagged when using version ${DD_2_0} metadata`, async () => {
     try {
       const metadataReportJson = await getReferenceMetadata(DD_2_0);
-      
+
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: TEST_FUZZINESS,
@@ -145,7 +171,7 @@ describe('findVariations', () => {
     try {
       const MAX_FUZZINESS = 1.0;
       const metadataReportJson = await getReferenceMetadata(DD_2_0);
-      
+
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: MAX_FUZZINESS,
@@ -161,17 +187,45 @@ describe('findVariations', () => {
 
       const { resources, fields, lookups, expansions, complexTypes } = variations;
 
-      assert.deepStrictEqual(resources, [], `'resources' is non-empty but expected []!`);
-      assert.deepStrictEqual(fields, [], `'fields' is non-empty but expected []!!`);
-      assert.deepStrictEqual(lookups, [], `'lookups' is non-empty but expected []!!`);
-      assert.deepStrictEqual(expansions, [], `'expansions' is non-empty but expected []!!`);
-      assert.deepStrictEqual(complexTypes, [], `'complexTypes' is non-empty but expected []!!`);
+      assert.deepStrictEqual(resources, [], '"resources" is non-empty but expected []!');
+      assert.deepStrictEqual(fields, [], '"fields" is non-empty but expected []!!');
+      assert.deepStrictEqual(lookups, [], '"lookups" is non-empty but expected []!!');
+      assert.deepStrictEqual(expansions, [], '"expansions" is non-empty but expected []!!');
+      assert.deepStrictEqual(complexTypes, [], '"complexTypes" is non-empty but expected []!!');
 
       assert.equal(fuzziness, MAX_FUZZINESS, `Expected fuzziness to be 1.0 but was: ${fuzziness}`);
-
     } catch (err) {
       assert.ok(false, err?.message);
     }
   });
 
+  it(`Should identify known ${DD_2_0} resources when the variation is lowercase`, async () => {
+    const metadataReportJson = await getReferenceMetadata(DD_2_0);
+
+    const processedResources = new Set();
+
+    for await (const { resourceName, fieldName } of Object.values(metadataReportJson.fields)) {
+      if (!processedResources.has(resourceName)) {
+        const testMetadataReportJson = {
+          fields: [
+            {
+              resourceName: resourceName?.toLowerCase(),
+              fieldName
+            }
+          ]
+        };
+
+        const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_2_0 });
+
+        assert.deepStrictEqual(
+          variations.resources.length,
+          1,
+          'Exactly one resource name should have matched! Variations: ' + JSON.stringify(variations, null, ' ')
+        );
+        assert.deepStrictEqual(variations.resourceName, testMetadataReportJson.resourceName);
+
+        processedResources.add(resourceName);
+      }
+    }
+  });
 });
