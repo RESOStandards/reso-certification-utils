@@ -4,7 +4,7 @@
   "description": "NodeJS package with reference artifacts and ETL processes for Certification.",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha --timeout 30000"
   },
   "bin": {
     "reso-certification-utils": "index.js"

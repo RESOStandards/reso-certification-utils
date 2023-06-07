@@ -4,6 +4,28 @@ const assert = require('assert');
 const { computeVariations } = require('../index.js');
 const { getReferenceMetadata } = require('../lib/misc/index.js');
 
+const getRandomNonAlphaNumericCharacter = () => {
+  const chars = ['_', '&', '-', ' ', ', '];
+
+  return chars[Math.floor(Math.random() * chars.length)];
+};
+
+const isEven = (n = 0) => n % 2 == 0;
+
+const intersperseNonAlphaNumericNoise = (value = '') => {
+  let newValue = '';
+  
+  for (let i = 0; i < value.length; i++) {
+    if (isEven(Math.floor(Math.random() * 100))) {
+      newValue += value[i] + getRandomNonAlphaNumericCharacter();
+    } else {
+      newValue += value[i];
+    }
+  }
+
+  return newValue;
+};
+
 const TEST_FUZZINESS = 0.25,
   DD_1_7 = '1.7',
   DD_2_0 = '2.0',
@@ -108,7 +130,7 @@ describe('computeVariations reference metadata checks', () => {
     }
   });
 
-  it(`Should identify known ${DD_1_7} resources when the variation is lowercase`, async () => {
+  it(`Should identify known ${DD_1_7} resources with lowercase and non-alphanumeric noise`, async () => {
     const metadataReportJson = await getReferenceMetadata(DD_1_7);
 
     const processedResources = new Set();
@@ -118,7 +140,7 @@ describe('computeVariations reference metadata checks', () => {
         const testMetadataReportJson = {
           fields: [
             {
-              resourceName: resourceName?.toLowerCase(),
+              resourceName: intersperseNonAlphaNumericNoise(resourceName?.toLowerCase()),
               fieldName
             }
           ]
@@ -139,6 +161,58 @@ describe('computeVariations reference metadata checks', () => {
         processedResources.add(resourceName);
       }
     }
+  });
+
+  it(`Should identify known ${DD_1_7} fields when the variation is lowercase with non-alphanumeric noise`, async () => {
+    const metadataReportJson = await getReferenceMetadata(DD_1_7);
+
+    const testMetadataReportJson = Object.values(metadataReportJson?.fields ?? []).reduce(
+      (acc, { resourceName, fieldName, isExpansion }) => {
+        if (isExpansion) return acc;
+        acc.fields.push({ resourceName, fieldName: intersperseNonAlphaNumericNoise(fieldName?.toLowerCase()) });
+        return acc;
+      },
+      { fields: [] }
+    );
+
+    const { variations = [] } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_1_7 });
+
+    const { fields: metadataReportFields = [] } = metadataReportJson,
+      { fields: fieldVariations = [] } = variations;
+
+    //items are concatenated for comparisons
+    const metadataReportFieldsSet = new Set(
+      metadataReportFields.flatMap(({ resourceName, fieldName, isExpansion = false }) => {
+        if (isExpansion) return [];
+        return `${resourceName}${fieldName}`;
+      })
+    );
+
+    const unmatchedItems = fieldVariations.flatMap(({ resourceName, fieldName, suggestions = [] }) => {
+      if (suggestions.some(({ suggestedFieldName }) => metadataReportFieldsSet.has(`${resourceName}${suggestedFieldName}`))) {
+        return [];
+      } else {
+        return {
+          resourceName,
+          fieldName
+        };
+      }
+    });
+
+    assert.equal(unmatchedItems?.length, 0, 'Each field should have been matched to at least one match in the reference metadata!');
+
+    const noExactMatches = fieldVariations.flatMap(({ resourceName, fieldName, suggestions = [] }) => {
+      if (suggestions.some(x => x?.exactMatch)) {
+        return [];
+      } else {
+        return {
+          resourceName,
+          fieldName
+        };
+      }
+    });
+
+    assert.equal(noExactMatches.length, 0, 'Every item in the reference set should have matched exactly to one item in the suggestions!');
   });
 
   it(`Should have no variations flagged when using version ${DD_2_0} metadata`, async () => {
@@ -206,7 +280,7 @@ describe('computeVariations reference metadata checks', () => {
     }
   });
 
-  it(`Should identify known ${DD_2_0} resources when the variation is lowercase`, async () => {
+  it(`Should identify known ${DD_2_0} resources when the variation is lowercase with non-alphanumeric noise`, async () => {
     const metadataReportJson = await getReferenceMetadata(DD_2_0);
 
     const processedResources = new Set();
@@ -216,7 +290,7 @@ describe('computeVariations reference metadata checks', () => {
         const testMetadataReportJson = {
           fields: [
             {
-              resourceName: resourceName?.toLowerCase(),
+              resourceName: intersperseNonAlphaNumericNoise(resourceName?.toLowerCase()),
               fieldName
             }
           ]
@@ -240,5 +314,58 @@ describe('computeVariations reference metadata checks', () => {
         processedResources.add(resourceName);
       }
     }
+  });
+
+  it(`Should identify known ${DD_2_0} fields when the variation is lowercase with non-alphanumeric noise`, async () => {
+    const metadataReportJson = await getReferenceMetadata(DD_2_0);
+
+    const testMetadataReportJson = Object.values(metadataReportJson?.fields ?? []).reduce(
+      (acc, { resourceName, fieldName, isExpansion }) => {
+        if (isExpansion) return acc;
+
+        acc.fields.push({ resourceName, fieldName: intersperseNonAlphaNumericNoise(fieldName?.toLowerCase()) });
+        return acc;
+      },
+      { fields: [] }
+    );
+
+    const { variations = [] } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_2_0 });
+
+    const { fields: metadataReportFields = [] } = metadataReportJson,
+      { fields: fieldVariations = [] } = variations;
+
+    //items are concatenated for comparisons
+    const metadataReportFieldsSet = new Set(
+      metadataReportFields.flatMap(({ resourceName, fieldName, isExpansion = false }) => {
+        if (isExpansion) return [];
+        return `${resourceName}${fieldName}`;
+      })
+    );
+
+    const unmatchedItems = fieldVariations.flatMap(({ resourceName, fieldName, suggestions = [] }) => {
+      if (suggestions.some(({ suggestedFieldName }) => metadataReportFieldsSet.has(`${resourceName}${suggestedFieldName}`))) {
+        return [];
+      } else {
+        return {
+          resourceName,
+          fieldName
+        };
+      }
+    });
+
+    assert.equal(unmatchedItems?.length, 0, 'Each field should have been matched to at least one match in the reference metadata!');
+
+    const noExactMatches = fieldVariations.flatMap(({ resourceName, fieldName, suggestions = [] }) => {
+      if (suggestions.some(x => x?.exactMatch)) {
+        return [];
+      } else {
+        return {
+          resourceName,
+          fieldName
+        };
+      }
+    });
+
+    assert.equal(noExactMatches.length, 0, 'Every item in the reference set should have matched exactly to one item in the suggestions!');
   });
 });
