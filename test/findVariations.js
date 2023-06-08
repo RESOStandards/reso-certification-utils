@@ -10,11 +10,11 @@ const getRandomNonAlphaNumericCharacter = () => {
   return chars[Math.floor(Math.random() * chars.length)];
 };
 
-const isEven = (n = 0) => n % 2 == 0;
+const isEven = (n = 0) => (parseInt(n) ? n % 2 == 0 : false);
 
 const intersperseNonAlphaNumericNoise = (value = '') => {
   let newValue = '';
-  
+
   for (let i = 0; i < value.length; i++) {
     if (isEven(Math.floor(Math.random() * 100))) {
       newValue += value[i] + getRandomNonAlphaNumericCharacter();
@@ -367,5 +367,48 @@ describe('computeVariations reference metadata checks', () => {
     });
 
     assert.equal(noExactMatches.length, 0, 'Every item in the reference set should have matched exactly to one item in the suggestions!');
+  });
+
+  it('Should identify known fields as a close match when an item is one character different', async () => {
+
+    //close matches
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ListtPrice'
+        },
+        {
+          resourceName: 'Property',
+          fieldName: 'CancelationDate'
+        },
+        {
+          resourceName: 'Office',
+          fieldName: 'MoodificationTimestamp'
+        },
+        {
+          resourceName: 'Member',
+          fieldName: 'MemmberEmail'
+        }
+      ]
+    };
+
+    const { variations = [] } = await computeVariations({ metadataReportJson });
+
+    const { fields: fieldVariations = [] } = variations;
+
+    const noCloseMatches = fieldVariations.flatMap(({ resourceName, fieldName, suggestions = [] }) => {
+      if (suggestions.some(x => x?.closeMatch)) {
+        return [];
+      } else {
+        return {
+          resourceName,
+          fieldName
+        };
+      }
+    });
+
+    assert.equal(noCloseMatches.length, 0, 'Every item should have a close match!');
+    assert.equal(fieldVariations?.length, metadataReportJson?.fields?.length, 'All items should have been matched!');
   });
 });
