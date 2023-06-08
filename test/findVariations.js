@@ -369,46 +369,150 @@ describe('computeVariations reference metadata checks', () => {
     assert.equal(noExactMatches.length, 0, 'Every item in the reference set should have matched exactly to one item in the suggestions!');
   });
 
-  it('Should identify known fields as a close match when an item is one character different', async () => {
+  describe('computeVariations special test cases - fields', async () => {
+    it('Should identify known fields as a close match when an item is one character different', async () => {
+      //close matches
+      const metadataReportJson = {
+        fields: [
+          {
+            resourceName: 'Property',
+            fieldName: 'ListtPrice'
+          },
+          {
+            resourceName: 'Property',
+            fieldName: 'CancelationDate'
+          },
+          {
+            resourceName: 'Office',
+            fieldName: 'MoodificationTimestamp'
+          },
+          {
+            resourceName: 'Member',
+            fieldName: 'MemmberEmail'
+          }
+        ]
+      };
 
-    //close matches
-    const metadataReportJson = {
-      fields: [
-        {
-          resourceName: 'Property',
-          fieldName: 'ListtPrice'
-        },
-        {
-          resourceName: 'Property',
-          fieldName: 'CancelationDate'
-        },
-        {
-          resourceName: 'Office',
-          fieldName: 'MoodificationTimestamp'
-        },
-        {
-          resourceName: 'Member',
-          fieldName: 'MemmberEmail'
+      const { variations = [] } = await computeVariations({ metadataReportJson });
+
+      const { fields: fieldVariations = [] } = variations;
+
+      const noCloseMatches = fieldVariations.flatMap(({ resourceName, fieldName, suggestions = [] }) => {
+        if (suggestions.some(x => x?.closeMatch)) {
+          return [];
+        } else {
+          return {
+            resourceName,
+            fieldName
+          };
         }
-      ]
-    };
+      });
 
-    const { variations = [] } = await computeVariations({ metadataReportJson });
-
-    const { fields: fieldVariations = [] } = variations;
-
-    const noCloseMatches = fieldVariations.flatMap(({ resourceName, fieldName, suggestions = [] }) => {
-      if (suggestions.some(x => x?.closeMatch)) {
-        return [];
-      } else {
-        return {
-          resourceName,
-          fieldName
-        };
-      }
+      assert.equal(noCloseMatches.length, 0, 'Every item should have a close match!');
+      assert.equal(fieldVariations?.length, metadataReportJson?.fields?.length, 'All items should have been matched!');
     });
 
-    assert.equal(noCloseMatches.length, 0, 'Every item should have a close match!');
-    assert.equal(fieldVariations?.length, metadataReportJson?.fields?.length, 'All items should have been matched!');
+    it('Should suggest standard fields if not already present in the metadata', async () => {
+      const localTestFieldName = 'APIModificationTimestamp',
+        standardTestFieldName = 'ModificationTimestamp';
+
+      //close matches
+      const metadataReportJson = {
+        fields: [
+          {
+            resourceName: 'Property',
+            fieldName: localTestFieldName
+          }
+        ]
+      };
+
+      const { variations = [] } = await computeVariations({ metadataReportJson });
+
+      const { fields: fieldVariations = [] } = variations;
+
+      const testItems = fieldVariations.filter(item => item?.fieldName === localTestFieldName);
+
+      //ensure there is exactly one match and no duplication of items
+      assert.equal(testItems?.length, 1, `There should be one suggestion for '${localTestFieldName}'!`);
+
+      //the suggestion should contain the standard field
+      assert.equal(
+        testItems[0]?.suggestions?.some(suggestion => suggestion?.suggestedFieldName === standardTestFieldName),
+        true,
+        `Suggestion for standard field '${standardTestFieldName}' must be present in the suggestions!`
+      );
+    });
+
+    it('Should not suggest standard fields if already present in the metadata', async () => {
+      const localTestFieldName = 'APIModificationTimestamp',
+        standardTestFieldName = 'ModificationTimestamp';
+
+      //close matches
+      const metadataReportJson = {
+        fields: [
+          {
+            resourceName: 'Property',
+            fieldName: localTestFieldName
+          },
+          {
+            resourceName: 'Property',
+            fieldName: standardTestFieldName
+          }
+        ]
+      };
+
+      const { variations = [] } = await computeVariations({ metadataReportJson });
+
+      const { fields: fieldVariations = [] } = variations;
+
+      const testItems = fieldVariations.filter(item => item?.fieldName === localTestFieldName);
+
+      //ensure there is exactly one match and no duplication of items
+      assert.equal(
+        testItems?.length,
+        0,
+        `There should be no suggestions for '${localTestFieldName}' with the standard field '${standardTestFieldName}' present!`
+      );
+    });
+
+    it('Should not suggest standard fields if already present in the metadata - multiple suggestions', async () => {
+      const localTestFieldName = 'Price',
+        standardTestFieldName = 'ListPrice';
+
+      //close matches
+      const metadataReportJson = {
+        fields: [
+          {
+            resourceName: 'Property',
+            fieldName: localTestFieldName
+          },
+          {
+            resourceName: 'Property',
+            fieldName: standardTestFieldName
+          }
+        ]
+      };
+
+      const { variations = [] } = await computeVariations({ metadataReportJson });
+
+      const { fields: fieldVariations = [] } = variations;
+
+      const testItems = fieldVariations.filter(item => item?.fieldName === localTestFieldName);
+
+      //ensure there is exactly one match and no duplication of items
+      assert.equal(testItems?.length, 1, `There should be exactly one element with fieldName '${localTestFieldName}'`);
+
+      const [testItem] = testItems;
+
+      //ensure that there was at least one suggestion
+      assert.equal(testItem.suggestions?.length > 0, true, 'There should be at least one suggestion!');
+
+      //ensure that the existing standard field does not show up in the suggestions
+      assert.equal(
+        testItem.suggestions.some(suggestion => suggestion?.suggestedFieldName === standardTestFieldName),
+        false,
+        `Suggestions should not contain the test standard field name '${standardTestFieldName}'`
+      );
+    });
   });
 });
