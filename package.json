@@ -30,7 +30,6 @@
     "axios": "^0.24.0",
     "chalk": "^4.1.2",
     "commander": "^9.4.0",
-    "conf": "^10.2.0",
     "dotenv": "^16.0.1",
     "fastest-levenshtein": "^1.0.16",
     "fs-extra": "^10.0.0",
@@ -38,8 +37,5 @@
     "pascal-case": "^3.1.2",
     "reso-certification-etl": "github:RESOStandards/reso-certification-etl#1c2fc0bb5ae1e6f71775cd81d7ae3db46da6bf86",
     "yargs": "^16.2.0"
-  },
-  "devDependencies": {
-    "eslint": "^8.5.0"
   }
 }
