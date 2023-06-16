@@ -2,7 +2,7 @@
 
 const chalk = require('chalk');
 const { promises: fs } = require('fs');
-const { generateSchema } = require('./generate');
+const { generateSchema, getResources } = require('./generate');
 const path = require('path');
 const { validatePayload } = require('./validate');
 
@@ -32,7 +32,9 @@ const schema = async (options = {}) => {
     schemaPath = '',
     errorPath = '',
     generate = false,
-    validate = false
+    validate = false,
+    additionalProperties = false,
+    resource = 'property'
   } = options;
   if ((!generate && !validate) || (generate && validate)) {
     console.log(chalk.yellowBright.bold('Invalid options'));
@@ -46,7 +48,13 @@ const schema = async (options = {}) => {
         console.log(chalk.redBright.bold('Invalid metadata file'));
         return;
       }
-      const schema = generateSchema(metadataReportJson);
+      const resources = getResources(metadataReportJson) || [];
+      const resourceIndex = resources.map(r => r.toLowerCase()).indexOf(resource.toLowerCase());
+      if (resourceIndex < 0) {
+        console.log(chalk.redBright.bold(`Invalid resource: ${resource}`));
+        return;
+      }
+      const schema = generateSchema(metadataReportJson, additionalProperties, resources[resourceIndex]);
       if (!schema) {
         console.log(chalk.redBright.bold('Error generating JSON schema from the given metadata report'));
         return;
@@ -77,12 +85,14 @@ const schema = async (options = {}) => {
         console.log(chalk.redBright.bold('Invalid payloads file'));
         return;
       }
+      const payloadFilename =
+        payloadPath?.slice(payloadPath?.lastIndexOf('/') + 1, payloadPath?.length) || '';
       const result = validatePayload(schemaJson, payloadsJson);
       if (result.errors) {
         console.log(result.errors);
         if (errorPath) {
           const success = await writeFile(
-            path.join(errorPath, 'ajv-error.json'),
+            path.join(errorPath, `ajv-error-${payloadFilename}.json`),
             JSON.stringify(result.errors)
           );
           if (!success) {
@@ -90,7 +100,9 @@ const schema = async (options = {}) => {
             return;
           } else {
             console.log(
-              chalk.yellowBright.bold(`Written the validation errors to the file ${errorPath}/ajv-error.json`)
+              chalk.yellowBright.bold(
+                `Written the validation errors to the file ${errorPath}/ajv-error-${payloadFilename}.json`
+              )
             );
           }
         } else {

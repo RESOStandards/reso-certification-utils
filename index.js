@@ -35,6 +35,8 @@ program
   .option('-p, --payloadPath <string>', 'Path to the payload that needs to be validated')
   .option('-s, --schemaPath <string>', 'Path to the generated JSON schema')
   .option('-e, --errorPath <string>', 'Path to save error reports in case of failed validation')
+  .option('-a, --additionalProperties', 'Pass this flag to allow additional properties in the schema')
+  .option('-r, --resource <string>', 'The resource for which to generate the schema')
   .description('Generate a schema or validate a payload against a schema')
   .action(schema);
 

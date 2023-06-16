@@ -1,4 +1,4 @@
-function createDefinitions(resources, lookups) {
+function createDefinitions(resources, lookups, additionalProperties = false) {
   const typeMappings = {
     'Edm.String': 'string',
     'Edm.Boolean': 'boolean',
@@ -50,7 +50,9 @@ function createDefinitions(resources, lookups) {
           if (field.type.startsWith('org.reso.metadata')) {
             const possibleValues = getPossibleValuesForNamespacedType(field.type);
             if (possibleValues.length > 0) {
-              itemTypeSchema['enum'] = possibleValues;
+              if (!additionalProperties) {
+                itemTypeSchema['enum'] = possibleValues;
+              }
               itemTypeSchema['type'] = 'string';
             }
           }
@@ -77,7 +79,9 @@ function createDefinitions(resources, lookups) {
         if (field.type.startsWith('org.reso.metadata')) {
           const possibleValues = getPossibleValuesForNamespacedType(field.type);
           if (possibleValues.length > 0) {
-            schema['enum'] = possibleValues;
+            if (!additionalProperties) {
+              schema['enum'] = possibleValues;
+            }
             schema['type'] = 'string';
           }
         }
@@ -88,22 +92,15 @@ function createDefinitions(resources, lookups) {
     definitions[resourceName] = {
       type: 'object',
       properties,
-      additionalProperties: false
+      additionalProperties
     };
   }
 
   return definitions;
 }
 
-function createSchema(resources, lookups) {
-  const definitions = createDefinitions(resources, lookups);
-  const rootResources = [...new Set(Object.keys(resources))];
-
-  const anyOfResources = rootResources.map(resource => {
-    return {
-      $ref: `#/definitions/${resource}`
-    };
-  });
+function createSchema(resources, lookups, additionalProperties, resource) {
+  const definitions = createDefinitions(resources, lookups, additionalProperties);
 
   const schema = {
     $schema: 'http://json-schema.org/draft-07/schema#',
@@ -115,7 +112,7 @@ function createSchema(resources, lookups) {
       value: {
         type: 'array',
         items: {
-          anyOf: anyOfResources
+          $ref: `#/definitions/${resource}`
         }
       }
     },
@@ -142,10 +139,10 @@ function getResourcesFromMetadata(metadata) {
   return resources;
 }
 
-function generateSchema(metadataJson) {
+function generateSchema(metadataJson, additionalProperties, resource) {
   try {
     const resources = getResourcesFromMetadata(metadataJson);
-    const schema = createSchema(resources, metadataJson?.lookups);
+    const schema = createSchema(resources, metadataJson?.lookups, additionalProperties, resource);
     return schema;
   } catch (err) {
     console.log(err);
@@ -153,6 +150,11 @@ function generateSchema(metadataJson) {
   }
 }
 
+function getResources(metadataJson) {
+  return Object.keys(getResourcesFromMetadata(metadataJson));
+}
+
 module.exports = {
-  generateSchema
+  generateSchema,
+  getResources
 };
