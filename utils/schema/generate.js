@@ -12,6 +12,9 @@ function createDefinitions(resources, lookups, additionalProperties = false) {
     'Edm.Date': 'string'
   };
 
+  const EDM_DATE_TIME_OFFSET = typeMappings['Edm.DateTimeOffset'];
+  const EDM_DATE = typeMappings['Edm.Date'];
+
   // Preprocess the lookups data to create a hashmap
   const lookupsMap = {};
   lookups.forEach(lookup => {
@@ -21,10 +24,12 @@ function createDefinitions(resources, lookups, additionalProperties = false) {
     lookupsMap[lookup.lookupName].add(lookup.lookupValue);
   });
 
-  function getPossibleValuesForNamespacedType(lookupName) {
+  const getPossibleLookupValues = lookupName => {
     const possibleValues = lookupsMap[lookupName];
     return possibleValues ? [...possibleValues] : [];
-  }
+  };
+
+  const isSimpleType = type => type?.startsWith('Edm.');
 
   const definitions = {};
 
@@ -34,7 +39,9 @@ function createDefinitions(resources, lookups, additionalProperties = false) {
     resourceFields.forEach(field => {
       const { fieldName } = field;
       let schema = {};
-      if (field.isExpansion || field.isCollection) {
+      if (field?.isComplexType) {
+        // to be handled in DD v2.1
+      } else if (field.isExpansion || field.isCollection) {
         const itemTypeSchema = {};
 
         if (field.isExpansion) {
@@ -43,12 +50,11 @@ function createDefinitions(resources, lookups, additionalProperties = false) {
           const mappedType = typeMappings[field.type] || 'object';
           itemTypeSchema['type'] = mappedType;
           if (field.maxLength) itemTypeSchema['maxLength'] = field.maxLength;
-          if (field.type === 'Edm.DateTimeOffset') itemTypeSchema['format'] = 'date-time';
-          if (field.type === 'Edm.Date') itemTypeSchema['format'] = 'date';
+          if (field.type === EDM_DATE_TIME_OFFSET) itemTypeSchema['format'] = 'date-time';
+          if (field.type === EDM_DATE) itemTypeSchema['format'] = 'date';
 
-          // probably needs to be another condition?
-          if (field.type.startsWith('org.reso.metadata')) {
-            const possibleValues = getPossibleValuesForNamespacedType(field.type);
+          if (!isSimpleType(field.type)) {
+            const possibleValues = getPossibleLookupValues(field.type);
             if (possibleValues.length > 0) {
               if (!additionalProperties) {
                 itemTypeSchema['enum'] = possibleValues;
@@ -72,12 +78,11 @@ function createDefinitions(resources, lookups, additionalProperties = false) {
 
         if (field.nullable) schema['nullable'] = field.nullable;
         if (field.maxLength) schema['maxLength'] = field.maxLength;
-        // do we need any special treatment for dates?
-        if (field.type === 'Edm.DateTimeOffset') schema['format'] = 'date-time';
-        if (field.type === 'Edm.Date') schema['format'] = 'date';
+        if (field.type === EDM_DATE_TIME_OFFSET) schema['format'] = 'date-time';
+        if (field.type === EDM_DATE) schema['format'] = 'date';
 
-        if (field.type.startsWith('org.reso.metadata')) {
-          const possibleValues = getPossibleValuesForNamespacedType(field.type);
+        if (!isSimpleType(field.type)) {
+          const possibleValues = getPossibleLookupValues(field.type);
           if (possibleValues.length > 0) {
             if (!additionalProperties) {
               schema['enum'] = possibleValues;
@@ -99,24 +104,33 @@ function createDefinitions(resources, lookups, additionalProperties = false) {
   return definitions;
 }
 
-function createSchema(resources, lookups, additionalProperties, resource) {
+function createSchema(resources, lookups, additionalProperties) {
   const definitions = createDefinitions(resources, lookups, additionalProperties);
 
   const schema = {
     $schema: 'http://json-schema.org/draft-07/schema#',
     type: 'object',
-    properties: {
-      '@reso.context': {
-        type: 'string'
+    oneOf: [
+      {
+        properties: {
+          '@reso.context': {
+            type: 'string'
+          }
+        },
+        additionalProperties
       },
-      value: {
-        type: 'array',
-        items: {
-          $ref: `#/definitions/${resource}`
-        }
+      {
+        properties: {
+          '@reso.context': {
+            type: 'string'
+          },
+          value: {
+            type: 'array'
+          }
+        },
+        additionalProperties: false
       }
-    },
-    additionalProperties: false,
+    ],
     definitions: definitions
   };
 
