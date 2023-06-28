@@ -104,6 +104,3 @@ dist
 .tern-port
 
 config.json
-
-errors/
-schema/
