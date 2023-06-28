@@ -87,7 +87,7 @@ const schema = async (options = {}) => {
       }
       const payloadFilename =
         payloadPath?.slice(payloadPath?.lastIndexOf('/') + 1, payloadPath?.length) || '';
-      const result = validatePayload(schemaJson, payloadsJson);
+      const result = validatePayload(payloadsJson, schemaJson);
       if (result.errors) {
         console.log(result.errors);
         if (errorPath) {
@@ -108,7 +108,7 @@ const schema = async (options = {}) => {
         } else {
           console.log(
             chalk.redBright.bold(
-              'Errors truncated on stdout. Provide a directory to store error reports with -e'
+              'Errors can get truncated on stdout. Provide a directory to store error reports with -e'
             )
           );
         }
