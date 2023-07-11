@@ -273,7 +273,7 @@ const fetchDataAvailabilityReport = async ({ serverUrl = '', reportId = '' }) =>
   }
 };
 
-const postRescoredReport = async ({ serverUrl, rescoredReport, reportId }) => {
+const postTransformedReport = async ({ serverUrl, rescoredReport, reportId }) => {
   const RESCORE_BASE_URL = 'api/v1/payload/data_availability';
   try {
     await axios.post(
@@ -324,7 +324,7 @@ module.exports = {
   fetchDataDictionaryReportIds,
   fetchDataAvailabilityReport,
   fetchSingleDDReport,
-  postRescoredReport,
+  postTransformedReport,
   fetchAllWebApiReports,
   restoreBackedUpReport
 };

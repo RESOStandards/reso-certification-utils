@@ -1,25 +1,37 @@
 const chalk = require('chalk');
 const { ENDORSEMENTS_PATH } = process.env;
 const { isValidUrl } = require('../../common');
+const { rescore: rescoreReports } = require('./transformations/rescore');
+const { runEtlOnReport } = require('./transformations/runEtl');
 const {
   fetchDataDictionaryReportIds,
   fetchDataAvailabilityReport,
   sleep,
-  postRescoredReport
+  postTransformedReport
 } = require('../../data-access/cert-api-client');
-const {
-  processDataAvailability: { processDataAvailability }
-} = require('reso-certification-etl');
 const { backup: createBackup } = require('../backup');
 
+const composeTransformations = async (transformations = [], initialData = {}) => {
+  let result = initialData;
+  for (const t of transformations) {
+    const value = t(result);
+    if (value instanceof Promise) {
+      result = await value;
+    } else {
+      result = value;
+    }
+  }
+  return result;
+};
+
 const transform = async (options = {}) => {
-  const { url = '', pathToBackup = '', backup = false, rescore = false } = options;
+  const { url = '', pathToBackup = '', backup = false, rescore = false, runEtl = false } = options;
   if (!isValidUrl(url)) return;
   const stats = {
     total: 0,
     found: 0,
     backedUp: 0,
-    rescored: 0
+    transformed: 0
   };
 
   console.log(chalk.greenBright.bold(`Fetching data dictionary reports on ${url}`));
@@ -38,7 +50,6 @@ const transform = async (options = {}) => {
   console.log(chalk.greenBright.bold(`Found ${reportIds.length} data dictionary reports.`));
   let counter = 0;
 
-  // for each report id fetch the sequentially corresponding data availability report, correct the frequency count and rescore
   for (const reportId of reportIds) {
     console.clear();
     console.log(chalk.greenBright.bold(`Progress: ${++counter}/${reportIds.length}`));
@@ -47,111 +58,34 @@ const transform = async (options = {}) => {
     if (!data) continue;
     stats.found++;
 
-    // rescore
+    const transformations = [];
     if (rescore) {
-      const fieldsMap = data.fields.reduce((acc, field) => {
-        const { resourceName, fieldName } = field;
-        if (!acc[resourceName]) acc[resourceName] = {};
-        acc[resourceName][fieldName] = field;
-        return acc;
-      }, {});
-
-      // const lookupValuesMap = data.lookupValues.reduce((acc, lookup) => {
-      //   const { fieldName, resourceName, frequency, availability } = lookup;
-      //   if (!acc[resourceName]) acc[resourceName] = {};
-      //   if (!acc[resourceName][fieldName])
-      //     acc[resourceName][fieldName] = {
-      //       frequency: 0,
-      //       availability: 0
-      //     };
-      //   acc[resourceName][fieldName].frequency += frequency;
-      //   acc[resourceName][fieldName].availability += availability;
-      //   return acc;
-      // }, {});
-
-      // TODO: verify that this is correct
-      // sanity check values
-      // Object.entries(lookupValuesMap).forEach(([rName, value]) => {
-      //   Object.entries(value).forEach(([fName, { frequency, availability }]) => {
-      //     if (fieldsMap[rName][fName].frequency !== frequency) {
-      //       console.log(
-      //         `Frequency mistmatch [${rName}-${fName}]\n Count: ${fieldsMap[rName][fName].frequency}\nActual: ${frequency}`
-      //       );
-      //     }
-      //     if (fieldsMap[rName][fName].availability !== availability) {
-      //       console.log(
-      //         `Availability mistmatch.\n Count: ${fieldsMap[rName][fName].availability}\nActual: ${availability}`
-      //       );
-      //     }
-      //   });
-      // });
-
-      // adjust frequency and availability values
-      data.lookupValues.forEach(lookup => {
-        const { fieldName, frequency, resourceName, availability, lookupValue } = lookup;
-        if (lookupValue === 'EMPTY_LIST' || lookupValue === 'NULL_VALUE') {
-          // only adjust counts if not adjusted already (prevents multiple count adjustments)
-          if (fieldsMap[resourceName][fieldName].frequency > frequency)
-            fieldsMap[resourceName][fieldName].frequency -= frequency;
-          if (fieldsMap[resourceName][fieldName].availability > availability)
-            fieldsMap[resourceName][fieldName].availability -= availability;
-        }
-      });
+      transformations.push(rescoreReports);
+    }
+    if (runEtl) {
+      transformations.push(runEtlOnReport);
+    }
+    if (transformations.length) {
+      const finalTransformedReport = await composeTransformations(transformations, data);
       try {
-        // recover the raw availability report
-        const {
-          description = 'RESO Data Availability Report',
-          version,
-          generatedOn,
-          resources,
-          fields,
-          lookupValues,
-          lookups,
-          optInStatus
-        } = data;
-
-        const rawAvailabilityReport = {
-          resources,
-          fields: fields.map(({ resourceName, fieldName, frequency }) => ({
-            resourceName,
-            fieldName,
-            frequency
-          })),
-          lookupValues: lookupValues.map(({ resourceName, fieldName, lookupValue, frequency }) => ({
-            resourceName,
-            fieldName,
-            lookupValue,
-            frequency
-          })),
-          lookups
-        };
-
-        const rescoredReport = await processDataAvailability(rawAvailabilityReport);
-
-        // post the rescored report to the /rescore endpoint
-        const responseStatus = await postRescoredReport({
+        // post the transformed report to the /rescore endpoint
+        const responseStatus = await postTransformedReport({
           serverUrl: url,
-          rescoredReport: {
-            ...rescoredReport,
-            description,
-            version,
-            generatedOn,
-            optInStatus
-          },
+          rescoredReport: finalTransformedReport,
           reportId
         });
 
         if (responseStatus) {
-          stats.rescored++;
+          stats.transformed++;
           console.log(chalk.greenBright.bold('Successfully updated availability report\n'));
         } else {
           console.log(
-            chalk.yellowBright.bold(`Couldn't post availability report ${reportId} to the rescore endpoint\n`)
+            chalk.yellowBright.bold(`Couldn't post availability report ${reportId} to the server\n`)
           );
         }
       } catch (error) {
         console.log(error);
-        console.log(chalk.yellowBright.bold(`Couldn't rescore availability report ${reportId}\n`));
+        console.log(chalk.yellowBright.bold(`Couldn't transform availability report ${reportId}\n`));
       }
     }
     await sleep(500);
@@ -162,7 +96,7 @@ const transform = async (options = {}) => {
         `Total DD reports found: ${stats.total}`,
         `DD reports with attached DA reports: ${stats.found}`,
         `Total reports backed up: ${stats.backedUp}`,
-        `Total reports successfully rescored: ${stats.rescored}`
+        `Total reports successfully transformed: ${stats.transformed}`
       ].join('\n')
     )
   );
