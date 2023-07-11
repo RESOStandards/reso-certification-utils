@@ -32,6 +32,7 @@ program
   .command('transform')
   .option('-u, --url <string>', 'URL of Certification API')
   .option('-r, --rescore', 'Flag to rescore the reports by re-running them through the ETL process.')
+  .option('-e, --runEtl', 'Flag to run the ETL method at the end of all transformations')
   .option('-b, --backup', 'Flag to create backup of a Cert API server in a specified path.')
   .option('-p, --pathToBackup <string>', 'Path where to store the backup of the reports.')
   .description('Error corrects the frequency count of fields and rescored the results')
