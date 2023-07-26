@@ -40,11 +40,16 @@ function validatePayload(json, schema) {
       r => r.toLowerCase() === resource.toLowerCase()
     );
 
-    // extend the generated schema with new info from the specific payload
-    Object.assign(singleValueSchema.properties, definitions[formattedResourceName].properties);
-    multiValueSchema.properties.value.items = {
-      $ref: `#/definitions/${formattedResourceName}`
-    };
+    if (!json.value) {
+      schema.oneOf = [singleValueSchema];
+      // extend the generated schema with new info from the specific payload
+      Object.assign(singleValueSchema.properties, definitions[formattedResourceName].properties);
+    } else {
+      schema.oneOf = [multiValueSchema];
+      multiValueSchema.properties.value.items = {
+        $ref: `#/definitions/${formattedResourceName}`
+      };
+    }
   } catch (error) {
     console.error(chalk.redBright.bold('ERROR: ' + error.message));
     return {
