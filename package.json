@@ -32,7 +32,7 @@
     "dotenv": "^16.0.1",
     "fs-extra": "^10.0.0",
     "mocha": "^9.1.3",
-    "reso-certification-etl": "github:RESOStandards/reso-certification-etl#1b8485ec32ef5ae6340361f853726a17e54ce515",
+    "reso-certification-etl": "github:RESOStandards/reso-certification-etl",
     "yargs": "^16.2.0"
   },
   "devDependencies": {
