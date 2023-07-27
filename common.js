@@ -3,7 +3,7 @@ const path = require('path');
 const fse = require('fs-extra');
 const chalk = require('chalk');
 
-const { getOrgSystemsMap } = require('./data-access/cert-api-client');
+const { getOrgSystemsMap } = require('./lib/misc/data-access/cert-api-client');
 
 /**
  * common.js - Contains programmatically derived constants related to Certification.
