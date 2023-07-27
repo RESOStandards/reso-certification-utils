@@ -1,8 +1,8 @@
 #! /usr/bin/env node
 const { program } = require('commander');
-const { restore } = require('./utils/restore-utils');
-const { runTests } = require('./utils/batch-test-runner');
-const { schema } = require('./utils/schema');
+const { restore } = require('./lib/restore-utils');
+const { runTests } = require('./lib/batch-test-runner');
+const { schema } = require('./lib/schema');
 
 program
   .name('reso-certification-utils')
