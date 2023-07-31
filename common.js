@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const fse = require('fs-extra');
+const unzipper = require('unzipper');
 
 /**
  * common.js - Contains programmatically derived constants related to Certification.
@@ -277,6 +278,19 @@ const createResoScriptClientCredentialsConfig = ({ serviceRootUri, clientCredent
   '  </ClientSettings>' +
   '</OutputScript>';
 
+/**
+ *
+ * @param {object} options
+ * @param {String} options.zipPath Path to the zip file
+ * @param {string} options.outputPath Path to store the extracted files
+ * @returns
+ */
+const extractFilesFromZip = async ({ zipPath, outputPath }) =>
+  fs
+    .createReadStream(zipPath)
+    .pipe(unzipper.Extract({ path: outputPath }))
+    .promise();
+
 module.exports = {
   endorsements,
   availableVersions,
@@ -291,5 +305,6 @@ module.exports = {
   getCurrentVersion,
   getPreviousVersion,
   CURRENT_DATA_DICTIONARY_VERSION,
-  CURRENT_WEB_API_CORE_VERSION
+  CURRENT_WEB_API_CORE_VERSION,
+  extractFilesFromZip
 };

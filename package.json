@@ -36,6 +36,7 @@
     "fs-extra": "^10.0.0",
     "mocha": "^9.1.3",
     "reso-certification-etl": "github:RESOStandards/reso-certification-etl",
+    "unzipper": "^0.10.14",
     "yargs": "^16.2.0"
   },
   "devDependencies": {
