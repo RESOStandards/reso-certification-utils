@@ -4,6 +4,7 @@
 $ reso-certification-utils schema --help
 
 Usage: reso-certification-utils schema [options]
+Usage: reso-certification-utils schema [options]
 
 Generate a schema or validate a payload against a schema
 
@@ -14,9 +15,9 @@ Options:
   -o, --outputPath <string>    Path tho the directory to store the generated schema
   -p, --payloadPath <string>   Path to the payload that needs to be validated
   -s, --schemaPath <string>    Path to the generated JSON schema
-  -e, --errorPath <string>     Path to save error reports in case of failed validation
+  -e, --errorPath <string>     Path to save error reports in case of failed validation. Defaults to "./errors"
   -a, --additionalProperties   Pass this flag to allow additional properties in the schema
-  -r, --resource <string>      The resource for which to generate the schema
+  -z, --zipFilePath <string>   Path to a zip file containing JSON payloads
   -h, --help                   display help for command
 ```
 
@@ -34,4 +35,4 @@ Additional options:
 ```bash
 reso-certification-utils schema -v -p <path to payloads json file> -s <path to the schema json file>
 ```
-AJV errors could be large depending on how many errors are found. To save the errors in a file we can pass the directory where we want to save the errors file with `-e <path to error directory>`.
+AJV errors could be large depending on how many errors are found. To save the errors in a file we can pass the directory where we want to save the errors file with `-e <path to error directory>`. By default they will be saved inside `./errors`.
