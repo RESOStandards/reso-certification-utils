@@ -66,3 +66,15 @@ The following directory structure is assumed:
   + providerUoiN-providerUsiN
 ``` 
 
+## Restore from a server backup
+```bash
+reso-certification-utils  restore -u <server base url> -p <path to the server backup directory> --restoreFromBackup
+```
+
+The `--restoreFromBackup` or `-r` flag tells the tool to restore from the backed-up server data rather than raw reports.
+
+### Example usage: 
+
+```bash
+reso-certification-utils  restore -u http://localhost -p ~/Downloads/reso-server-backup/data_dictionary-1.7 -r
+```

@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const fse = require('fs-extra');
+const chalk = require('chalk');
+
+const { getOrgSystemsMap } = require('./lib/misc/data-access/cert-api-client');
 
 /**
  * common.js - Contains programmatically derived constants related to Certification.
@@ -44,14 +47,10 @@ const availableVersions = {
 };
 
 const getCurrentVersion = endorsementName =>
-  endorsementName &&
-  availableVersions[endorsementName] &&
-  availableVersions[endorsementName].currentVersion;
+  endorsementName && availableVersions[endorsementName] && availableVersions[endorsementName].currentVersion;
 
 const getPreviousVersion = endorsementName =>
-  endorsementName &&
-  availableVersions[endorsementName] &&
-  availableVersions[endorsementName].previousVersion;
+  endorsementName && availableVersions[endorsementName] && availableVersions[endorsementName].previousVersion;
 
 /**
  * Determines whether the given endorsementName is valid.
@@ -60,8 +59,7 @@ const getPreviousVersion = endorsementName =>
  * @returns true if the endorsementName is valid, false otherwise.
  * @throws error if parameters aren't valid
  */
-const isValidEndorsement = endorsementName =>
-  endorsementName && !!availableVersions[endorsementName];
+const isValidEndorsement = endorsementName => endorsementName && !!availableVersions[endorsementName];
 
 /**
  * Determines whether the version is valid for the given endorsement.
@@ -90,9 +88,7 @@ const getEndorsementMetadata = (endorsementName, version) => {
   }
 
   if (!isValidVersion(endorsementName, version)) {
-    throw new Error(
-      `Invalid endorsement version! endorsementKey: ${endorsementName}, version: ${version}`
-    );
+    throw new Error(`Invalid endorsement version! endorsementKey: ${endorsementName}, version: ${version}`);
   }
 
   const ddVersion = version || CURRENT_DATA_DICTIONARY_VERSION,
@@ -104,10 +100,7 @@ const getEndorsementMetadata = (endorsementName, version) => {
       version: `${ddVersion}`,
       /* TODO: add versions to JSON results file names in the Commander */
       jsonResultsFiles: [METADATA_REPORT_JSON, DATA_AVAILABILITY_REPORT_JSON],
-      htmlReportFiles: [
-        `data-dictionary-${ddVersion}.html`,
-        `data-availability.dd-${ddVersion}.html`
-      ],
+      htmlReportFiles: [`data-dictionary-${ddVersion}.html`, `data-availability.dd-${ddVersion}.html`],
       logFileName: COMMANDER_LOG_FILE_NAME
     };
   }
@@ -117,11 +110,7 @@ const getEndorsementMetadata = (endorsementName, version) => {
       directoryName: `${endorsements.DATA_DICTIONARY_WITH_IDX}`,
       version: `${version}`,
       /* TODO: add versions to JSON results file names in the Commander */
-      jsonResultsFiles: [
-        METADATA_REPORT_JSON,
-        DATA_AVAILABILITY_REPORT_JSON,
-        IDX_DIFFERENCE_REPORT_JSON
-      ],
+      jsonResultsFiles: [METADATA_REPORT_JSON, DATA_AVAILABILITY_REPORT_JSON, IDX_DIFFERENCE_REPORT_JSON],
       htmlReportFiles: [
         `data-dictionary-${ddVersion}.html`,
         `data-availability.dd-${ddVersion}.html`,
@@ -191,15 +180,10 @@ const buildRecipientEndorsementPath = ({
   if (!endorsementName) throw Error('endorsementName is required!');
   if (!version) throw Error('version is required!');
 
-  if (!isValidEndorsement(endorsementName))
-    throw new Error(`Invalid endorsementName: ${endorsementName}`);
+  if (!isValidEndorsement(endorsementName)) throw new Error(`Invalid endorsementName: ${endorsementName}`);
   if (!isValidVersion(endorsementName, version)) throw new Error(`Invalid version: ${version}`);
 
-  return path.join(
-    `${providerUoi}-${providerUsi}`,
-    recipientUoi,
-    currentOrArchived
-  );
+  return path.join(`${providerUoi}-${providerUsi}`, recipientUoi, currentOrArchived);
 };
 
 /**
@@ -212,13 +196,7 @@ const buildRecipientEndorsementPath = ({
  * @param {String} providerUsi
  * @param {String} recipientUoi
  */
-const archiveEndorsement = ({
-  providerUoi,
-  providerUsi,
-  recipientUoi,
-  endorsementName,
-  version
-} = {}) => {
+const archiveEndorsement = ({ providerUoi, providerUsi, recipientUoi, endorsementName, version } = {}) => {
   const currentRecipientPath = buildRecipientEndorsementPath({
     providerUoi,
     providerUsi,
@@ -270,12 +248,55 @@ const createResoScriptClientCredentialsConfig = ({ serviceRootUri, clientCredent
   `    <ClientSecret>${clientCredentials.clientSecret}</ClientSecret>` +
   `    <TokenURI>${clientCredentials.tokenUri}</TokenURI>` +
   `    ${
-    clientCredentials.scope
-      ? '<ClientScope>' + clientCredentials.scope + '</ClientScope>'
-      : EMPTY_STRING
+    clientCredentials.scope ? '<ClientScope>' + clientCredentials.scope + '</ClientScope>' : EMPTY_STRING
   }` +
   '  </ClientSettings>' +
   '</OutputScript>';
+
+const isValidUrl = url => {
+  try {
+    new URL(url);
+    return true;
+  } catch (err) {
+    console.log(chalk.redBright.bold(`Error: Cannot parse given url: ${url}`));
+    return false;
+  }
+};
+
+const checkFileExists = async filePath => {
+  try {
+    await fs.promises.access(filePath);
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
+
+const fetchSystemsData = async () => {
+  //fetch system data
+  console.log(chalk.cyanBright.bold('\nFetching system data...'));
+  const orgSystemMap = (await getOrgSystemsMap()) || {};
+  if (!Object.keys(orgSystemMap)?.length) throw new Error('Error: could not fetch systems!');
+  console.log(chalk.cyanBright.bold('Done!'));
+  return orgSystemMap;
+};
+
+const createCachedFunction = asyncFunc => {
+  const cache = new Map();
+
+  return async (...args) => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) {
+      return cache.get(key);
+    }
+
+    const result = await asyncFunc(...args);
+    cache.set(key, result);
+    return result;
+  };
+};
+
+const fetchSystemData = createCachedFunction(fetchSystemsData);
 
 module.exports = {
   endorsements,
@@ -291,5 +312,8 @@ module.exports = {
   getCurrentVersion,
   getPreviousVersion,
   CURRENT_DATA_DICTIONARY_VERSION,
-  CURRENT_WEB_API_CORE_VERSION
+  CURRENT_WEB_API_CORE_VERSION,
+  isValidUrl,
+  checkFileExists,
+  fetchSystemData
 };
