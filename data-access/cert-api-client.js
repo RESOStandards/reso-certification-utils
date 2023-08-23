@@ -1,8 +1,10 @@
 'use strict';
 
 const axios = require('axios');
+const chalk = require('chalk');
 require('dotenv').config();
 const { CERTIFICATION_API_KEY, ORGS_DATA_URL, SYSTEMS_DATA_URL } = process.env;
+const AWS = require('aws-sdk');
 
 const API_DEBOUNCE_SECONDS = 0.1;
 
@@ -107,7 +109,7 @@ const processDataDictionaryResults = async ({
 };
 
 const getOrgsMap = async () => {
-  const { Data: orgs = [] } = (await axios.get(ORGS_DATA_URL)).data;
+  const { Organizations: orgs = [] } = (await axios.get(ORGS_DATA_URL)).data;
 
   if (!orgs?.length) throw new Error('ERROR: could not fetch Org data!');
 
@@ -157,10 +159,58 @@ const getOrgSystemsMap = async () => {
   }, {});
 };
 
+const postToS3 = async ({ metadataReport, dataAvailabilityReport, s3Path, bucketName }) => {
+  if (!s3Path) {
+    throw new Error('Invalid S3 path');
+  }
+  if (!bucketName) {
+    throw new Error('Invalid bucket name');
+  }
+
+  AWS.config.update({
+    accessKeyId: process.env.ACCESS_KEY,
+    secretAccessKey: process.env.YOUR_SECRET_KEY,
+    region: process.env.AWS_REGION
+  });
+
+  const s3 = new AWS.S3();
+
+  const promises = [];
+
+  if (metadataReport) {
+    const params = {
+      Bucket: bucketName,
+      Key: `${s3Path}/metadata-report.json`,
+      Body: metadataReport
+    };
+    promises.push(s3.upload(params).promise());
+  }
+
+  if (dataAvailabilityReport) {
+    const params = {
+      Bucket: bucketName,
+      Key: `${s3Path}/data-availability-report.json`,
+      Body: dataAvailabilityReport
+    };
+    promises.push(s3.upload(params).promise());
+  }
+
+  const response = await Promise.allSettled(promises);
+
+  response.forEach(r => {
+    if (r.status === 'fulfilled') {
+      console.log(chalk.green(`File uploaded successfully. ${r.value.Location}`));
+    } else {
+      console.error(chalk.redBright.bold(`Error uploading file to S3: ${r.reason}`));
+    }
+  });
+};
+
 module.exports = {
   processDataDictionaryResults,
   getOrgsMap,
   getOrgSystemsMap,
   findDataDictionaryReport,
-  sleep
+  sleep,
+  postToS3
 };
