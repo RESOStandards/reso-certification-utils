@@ -12,6 +12,7 @@ program
   .command('restore')
   .option('-p, --pathToResults <string>', 'Path to test results')
   .option('-u, --url <string>', 'URL of Certification API')
+  .option('-b, --bucketName <string>', 'Name of the backup S3 bucket')
   .description('Restores local or S3 results to a RESO Certification API instance')
   .action(restore);
 

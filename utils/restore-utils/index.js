@@ -7,7 +7,8 @@ const { resolve, join } = require('path');
 const {
   getOrgsMap,
   getOrgSystemsMap,
-  processDataDictionaryResults
+  processDataDictionaryResults,
+  postToS3
 } = require('../../data-access/cert-api-client');
 
 const { processLookupResourceMetadataFiles } = require('reso-certification-etl');
@@ -104,7 +105,7 @@ const restore = async (options = {}) => {
     missingResultsFilePaths: []
   };
 
-  const { pathToResults, url } = options;
+  const { pathToResults, url, bucketName = 'reso-backup' } = options;
 
   if (isS3Path(pathToResults)) {
     console.log(
@@ -254,6 +255,18 @@ const restore = async (options = {}) => {
                     metadataReport,
                     dataAvailabilityReport
                   });
+
+                  await postToS3({
+                    metadataReport: Object.keys(metadataReport).length
+                      ? JSON.stringify(metadataReport)
+                      : null,
+                    dataAvailabilityReport: Object.keys(dataAvailabilityReport).length
+                      ? JSON.stringify(dataAvailabilityReport)
+                      : null,
+                    s3Path: `data_dictionary-${metadataReport.version}/${providerUoi}-${providerUsi}/${recipientUoi}`,
+                    bucketName
+                  });
+
                   console.log(chalk.bold(`Done! Result: ${result ? 'Succeeded!' : 'Failed!'}`));
                 } catch (err) {
                   console.log(chalk.bgRed.bold(err));
@@ -283,9 +296,7 @@ const restore = async (options = {}) => {
   console.log(chalk.bold(`Processing complete! Time Taken: ~${timeTaken}s`));
   console.log(chalk.magentaBright.bold('------------------------------------------------------------'));
 
-  console.log(
-    chalk.bold(`\nItems Processed: ${STATS.processed.length} of ${totalItems}`)
-  );
+  console.log(chalk.bold(`\nItems Processed: ${STATS.processed.length} of ${totalItems}`));
   STATS.processed.forEach(item => console.log(chalk.bold(`\t * ${item}`)));
 
   console.log(chalk.bold(`\nProvider UOI Paths Skipped: ${STATS.skippedProviderUoiPaths.length}`));
