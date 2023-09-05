@@ -1,8 +1,8 @@
 #! /usr/bin/env node
 const { program } = require('commander');
-const { restore } = require('./utils/restore-utils/data-dictionary');
-const { runTests } = require('./utils/batch-test-runner');
-const { syncWebApi } = require('./utils/restore-utils/web-api-core');
+const { restore } = require('./lib/restore-utils/data-dictionary');
+const { runTests } = require('./lib/batch-test-runner');
+const { syncWebApi } = require('./lib/restore-utils/web-api-core');
 
 program
   .name('reso-certification-utils')

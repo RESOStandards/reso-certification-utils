@@ -20,12 +20,12 @@ add package `@reso/reso-certification-utils` and yarn install --check-files. Aft
 ## Batch Test Runner
 Runs a batch of tests using a provided configuration file.
 
-[**MORE INFO**](./utils/batch-test-runner/README.md)
+[**MORE INFO**](./lib/batch-test-runner/README.md)
 
 ## Restore Certification Server
 Restores a RESO Certification API Server using a set of existing results in a given directory structure.
 
-[**MORE INFO**](./utils/restore-utils/README.md)
+[**MORE INFO**](./lib/restore-utils/README.md)
 
 ## Tests
 
