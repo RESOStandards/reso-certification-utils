@@ -44,14 +44,10 @@ const availableVersions = {
 };
 
 const getCurrentVersion = endorsementName =>
-  endorsementName &&
-  availableVersions[endorsementName] &&
-  availableVersions[endorsementName].currentVersion;
+  endorsementName && availableVersions[endorsementName] && availableVersions[endorsementName].currentVersion;
 
 const getPreviousVersion = endorsementName =>
-  endorsementName &&
-  availableVersions[endorsementName] &&
-  availableVersions[endorsementName].previousVersion;
+  endorsementName && availableVersions[endorsementName] && availableVersions[endorsementName].previousVersion;
 
 /**
  * Determines whether the given endorsementName is valid.
@@ -60,8 +56,7 @@ const getPreviousVersion = endorsementName =>
  * @returns true if the endorsementName is valid, false otherwise.
  * @throws error if parameters aren't valid
  */
-const isValidEndorsement = endorsementName =>
-  endorsementName && !!availableVersions[endorsementName];
+const isValidEndorsement = endorsementName => endorsementName && !!availableVersions[endorsementName];
 
 /**
  * Determines whether the version is valid for the given endorsement.
@@ -90,9 +85,7 @@ const getEndorsementMetadata = (endorsementName, version) => {
   }
 
   if (!isValidVersion(endorsementName, version)) {
-    throw new Error(
-      `Invalid endorsement version! endorsementKey: ${endorsementName}, version: ${version}`
-    );
+    throw new Error(`Invalid endorsement version! endorsementKey: ${endorsementName}, version: ${version}`);
   }
 
   const ddVersion = version || CURRENT_DATA_DICTIONARY_VERSION,
@@ -104,10 +97,7 @@ const getEndorsementMetadata = (endorsementName, version) => {
       version: `${ddVersion}`,
       /* TODO: add versions to JSON results file names in the Commander */
       jsonResultsFiles: [METADATA_REPORT_JSON, DATA_AVAILABILITY_REPORT_JSON],
-      htmlReportFiles: [
-        `data-dictionary-${ddVersion}.html`,
-        `data-availability.dd-${ddVersion}.html`
-      ],
+      htmlReportFiles: [`data-dictionary-${ddVersion}.html`, `data-availability.dd-${ddVersion}.html`],
       logFileName: COMMANDER_LOG_FILE_NAME
     };
   }
@@ -117,11 +107,7 @@ const getEndorsementMetadata = (endorsementName, version) => {
       directoryName: `${endorsements.DATA_DICTIONARY_WITH_IDX}`,
       version: `${version}`,
       /* TODO: add versions to JSON results file names in the Commander */
-      jsonResultsFiles: [
-        METADATA_REPORT_JSON,
-        DATA_AVAILABILITY_REPORT_JSON,
-        IDX_DIFFERENCE_REPORT_JSON
-      ],
+      jsonResultsFiles: [METADATA_REPORT_JSON, DATA_AVAILABILITY_REPORT_JSON, IDX_DIFFERENCE_REPORT_JSON],
       htmlReportFiles: [
         `data-dictionary-${ddVersion}.html`,
         `data-availability.dd-${ddVersion}.html`,
@@ -191,15 +177,10 @@ const buildRecipientEndorsementPath = ({
   if (!endorsementName) throw Error('endorsementName is required!');
   if (!version) throw Error('version is required!');
 
-  if (!isValidEndorsement(endorsementName))
-    throw new Error(`Invalid endorsementName: ${endorsementName}`);
+  if (!isValidEndorsement(endorsementName)) throw new Error(`Invalid endorsementName: ${endorsementName}`);
   if (!isValidVersion(endorsementName, version)) throw new Error(`Invalid version: ${version}`);
 
-  return path.join(
-    `${providerUoi}-${providerUsi}`,
-    recipientUoi,
-    currentOrArchived
-  );
+  return path.join(`${providerUoi}-${providerUsi}`, recipientUoi, currentOrArchived);
 };
 
 /**
@@ -212,13 +193,7 @@ const buildRecipientEndorsementPath = ({
  * @param {String} providerUsi
  * @param {String} recipientUoi
  */
-const archiveEndorsement = ({
-  providerUoi,
-  providerUsi,
-  recipientUoi,
-  endorsementName,
-  version
-} = {}) => {
+const archiveEndorsement = ({ providerUoi, providerUsi, recipientUoi, endorsementName, version } = {}) => {
   const currentRecipientPath = buildRecipientEndorsementPath({
     providerUoi,
     providerUsi,
@@ -270,12 +245,19 @@ const createResoScriptClientCredentialsConfig = ({ serviceRootUri, clientCredent
   `    <ClientSecret>${clientCredentials.clientSecret}</ClientSecret>` +
   `    <TokenURI>${clientCredentials.tokenUri}</TokenURI>` +
   `    ${
-    clientCredentials.scope
-      ? '<ClientScope>' + clientCredentials.scope + '</ClientScope>'
-      : EMPTY_STRING
+    clientCredentials.scope ? '<ClientScope>' + clientCredentials.scope + '</ClientScope>' : EMPTY_STRING
   }` +
   '  </ClientSettings>' +
   '</OutputScript>';
+
+const checkFileExists = async filePath => {
+  try {
+    await fs.promises.access(filePath);
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
 
 module.exports = {
   endorsements,
@@ -291,5 +273,6 @@ module.exports = {
   getCurrentVersion,
   getPreviousVersion,
   CURRENT_DATA_DICTIONARY_VERSION,
-  CURRENT_WEB_API_CORE_VERSION
+  CURRENT_WEB_API_CORE_VERSION,
+  checkFileExists
 };
