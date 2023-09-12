@@ -11,13 +11,6 @@ if (require?.main === module) {
   program.name('reso-certification-utils').description('Command line batch-testing and restore utils').version('0.0.3');
 
   program
-    .command('runDDTests')
-    .requiredOption('-p, --pathToConfigFile <string>', 'Path to config file')
-    .option('-a, --runAvailability', 'Flag to run data availability tests, otherwise only metadata tests are run')
-    .description('Runs Data Dictionary tests')
-    .action(runTests);
-
-  program
     .command('schema')
     .option('-g, --generate', 'Generate JSON schema from a metadata report')
     .option('-v, --validate', 'Validate a payload against a generated schema')
