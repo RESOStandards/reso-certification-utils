@@ -106,3 +106,4 @@ dist
 config.json
 output
 errors
+.DS_Store
