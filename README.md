@@ -27,6 +27,12 @@ Restores a RESO Certification API Server using a set of existing results in a gi
 
 [**MORE INFO**](./utils/restore-utils/README.md)
 
+## Find Variations
+Uses a number of techniques to find potential variations for local items contained in a Data Dictionary metadata report.
+
+[**MORE INFO**](./utils/find-variations/README.md)
+
+
 ## Tests
 
 To run the tests, clone the repository:
