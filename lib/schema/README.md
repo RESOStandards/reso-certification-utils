@@ -4,7 +4,6 @@
 $ reso-certification-utils schema --help
 
 Usage: reso-certification-utils schema [options]
-Usage: reso-certification-utils schema [options]
 
 Generate a schema or validate a payload against a schema
 
