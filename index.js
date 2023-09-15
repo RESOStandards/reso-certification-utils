@@ -1,6 +1,6 @@
 #! /usr/bin/env node
 
-const { schema } = require('./lib/schema');
+const { generate, validate } = require('./lib/schema');
 const { restore } = require('./lib/restore-utils');
 const { runTests } = require('./lib/batch-test-runner');
 const { findVariations, computeVariations } = require('./lib/find-variations/index.js');
@@ -11,18 +11,24 @@ if (require?.main === module) {
   program.name('reso-certification-utils').description('Command line batch-testing and restore utils').version('0.0.3');
 
   program
-    .command('schema')
-    .option('-g, --generate', 'Generate JSON schema from a metadata report')
-    .option('-v, --validate', 'Validate a payload against a generated schema')
+    .command('generate')
     .option('-m, --metadataPath <string>', 'Path to the metadata report JSON file')
     .option('-o, --outputPath <string>', 'Path tho the directory to store the generated schema')
+    .option('-a, --additionalProperties', 'Pass this flag to allow additional properties in the schema')
+    .description('Generate schema from a given metadata report')
+    .action(generate);
+
+  program
+    .command('validate')
+    .option('-m, --metadataPath <string>', 'Path to the metadata report JSON file')
     .option('-p, --payloadPath <string>', 'Path to the payload that needs to be validated')
     .option('-s, --schemaPath <string>', 'Path to the generated JSON schema')
     .option('-e, --errorPath <string>', 'Path to save error reports in case of failed validation. Defaults to "./errors"')
     .option('-a, --additionalProperties', 'Pass this flag to allow additional properties in the schema')
     .option('-z, --zipFilePath <string>', 'Path to a zip file containing JSON payloads')
-    .description('Generate a schema or validate a payload against a schema')
-    .action(schema);
+    .option('-dv, --version <string>', 'The data dictionary version of the metadata report. Defaults to 1.7')
+    .description('Validate a payload against a schema')
+    .action(validate);
 
   program
     .command('restore')
