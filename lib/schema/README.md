@@ -1,26 +1,40 @@
 ## Schema Generation and Validation
 
+### Generate Schema
+
 ```bash
-$ reso-certification-utils schema --help
+$ reso-certification-utils generate --help
 
-Usage: reso-certification-utils schema [options]
+Usage: reso-certification-utils generate [options]
 
-Generate a schema or validate a payload against a schema
+Generate a schema from a given metadata report
 
 Options:
-  -g, --generate               Generate JSON schema from a metadata report
-  -v, --validate               Validate a payload against a generated schema
   -m, --metadataPath <string>  Path to the metadata report JSON file
   -o, --outputPath <string>    Path tho the directory to store the generated schema
+  -a, --additionalProperties   Pass this flag to allow additional properties in the schema
+  -h, --help                   Display help for command
+```
+
+### Validate payload
+
+```bash
+$ reso-certification-utils validate --help
+
+Usage: reso-certification-utils validate [options]
+
+Validate one or more payloads against a schema
+
+Options:
+  -m, --metadataPath <string>  Path to the metadata report JSON file
   -p, --payloadPath <string>   Path to the payload that needs to be validated
   -s, --schemaPath <string>    Path to the generated JSON schema
   -e, --errorPath <string>     Path to save error reports in case of failed validation. Defaults to "./errors"
   -a, --additionalProperties   Pass this flag to allow additional properties in the schema
   -z, --zipFilePath <string>   Path to a zip file containing JSON payloads
-  -h, --help                   display help for command
+  -dv, --version <string>      The data dictionary version of the metadata report. Defaults to 1.7
+  -h, --help                   Display help for command
 ```
-
-### Generate schema
 
 ```bash
 reso-certification-utils schema -g -m <path to metadata json file> -o <path to output directory>
