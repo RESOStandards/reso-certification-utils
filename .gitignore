@@ -106,3 +106,4 @@ dist
 .DS_Store
 .vscode
 output
+data-availability-report.json
