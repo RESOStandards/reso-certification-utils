@@ -1,41 +1,44 @@
 #! /usr/bin/env node
 const { restore } = require('./lib/restore-utils');
 const { runTests } = require('./lib/batch-test-runner');
-const { findVariations, computeVariations } = require('./lib/find-variations/index.js');
-const { replicate } = require('./lib/replication/index.js');
+const { findVariations, computeVariations } = require('./lib/find-variations');
+const { replicate } = require('./lib/replication');
+const { convertMetadata } = require('./lib/metadata');
 
+//Only load commander interpreter if running from the CLI
 if (require?.main === module) {
   const { program } = require('commander');
 
-  program.name('reso-certification-utils').description('Command line batch-testing and restore utils').version('0.0.3');
+  program.name('reso-certification-utils').description('Command line batch-testing and restore utils').version('0.0.5');
 
   program
     .command('restore')
+    .description('Restores local or S3 results to a RESO Certification API instance')
     .option('-p, --pathToResults <string>', 'Path to test results')
     .option('-u, --url <string>', 'URL of Certification API')
     .option('-c, --console <boolean>', 'Show output to console', true)
-    .description('Restores local or S3 results to a RESO Certification API instance')
     .action(restore);
 
   program
     .command('runDDTests')
+    .description('Runs Data Dictionary tests')
     .requiredOption('-p, --pathToConfigFile <string>', 'Path to config file')
     .option('-a, --runAvailability', 'Flag to run data availability tests, otherwise only metadata tests are run')
     .option('-c, --console <boolean>', 'Show output to console', true)
-    .description('Runs Data Dictionary tests')
     .action(runTests);
 
   program
     .command('findVariations')
+    .description('Finds possible variations in metadata using a number of methods.')
     .requiredOption('-p, --pathToMetadataReportJson <string>', 'Path to metadata-report.json file')
     .option('-f, --fuzziness <float>', 'Set fuzziness to something besides the default')
     .option('-v, --version <string>', 'Data Dictionary version to compare to, i.e. 1.7 or 2.0')
     .option('-c, --console <boolean>', 'Show output to console', true)
-    .description('Finds possible variations in metadata using a number of methods.')
     .action(findVariations);
 
   program
     .command('replicate')
+    .description('Replicates data from a given resource with expansions.')
     .requiredOption('-s, --strategy <string>', 'One of TopAndSkip, ModificationTimestampAsc, ModificationTimestampDesc, or NextLink')
     .option('-u, --url <string>', 'The URL to start replicating from')
     .option('-b, --bearerToken <string>', 'Bearer token to use for authorization')
@@ -43,8 +46,13 @@ if (require?.main === module) {
     .option('-r, --resourceName <string>', 'Resource name to replicate data from')
     .option('-x, --expansions <string>', 'Items to expand during the query process, e.g. Media')
     .option('-m, --metadataReportPath', 'Path to metadata report to use for replication')
-    .description('Replicates data from a given resource with expansions.')
     .action(replicate);
+
+  program
+    .command('metadata')
+    .description('Converts metadata from OData XML to RESO Format.')
+    .requiredOption('-p, --pathToXmlMetadata <string>', 'Path to XML Metadata to parse')
+    .action(convertMetadata);
 
   program.parse();
 }
@@ -54,5 +62,6 @@ module.exports = {
   restore,
   runTests,
   findVariations,
-  computeVariations
+  computeVariations,
+  convertMetadata
 };

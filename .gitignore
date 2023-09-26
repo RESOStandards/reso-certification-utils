@@ -107,3 +107,4 @@ dist
 .vscode
 output
 data-availability-report.json
+metadata-report.json
