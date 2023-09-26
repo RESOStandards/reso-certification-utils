@@ -3,7 +3,7 @@ const { restore } = require('./lib/restore-utils');
 const { runTests } = require('./lib/batch-test-runner');
 const { findVariations, computeVariations } = require('./lib/find-variations');
 const { replicate } = require('./lib/replication');
-const { convertMetadata } = require('./lib/metadata');
+const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
 
 //Only load commander interpreter if running from the CLI
 if (require?.main === module) {
@@ -53,7 +53,7 @@ if (require?.main === module) {
     .command('metadata')
     .description('Converts metadata from OData XML to RESO Format.')
     .requiredOption('-p, --pathToXmlMetadata <string>', 'Path to XML Metadata to parse')
-    .action(convertMetadata);
+    .action(convertAndSaveMetadata);
 
   program.parse();
 }
