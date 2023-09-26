@@ -45,7 +45,8 @@ if (require?.main === module) {
     .option('-p, --pathToConfigFile', 'Path to config containing credentials')
     .option('-r, --resourceName <string>', 'Resource name to replicate data from')
     .option('-x, --expansions <string>', 'Items to expand during the query process, e.g. Media')
-    .option('-m, --metadataReportPath', 'Path to metadata report to use for replication')
+    .option('-m, --metadataReportPath <string>', 'Path to metadata report to use for replication')
+    .option('-o, --outputPath <string>', 'Name of directory for results')
     .action(replicate);
 
   program
