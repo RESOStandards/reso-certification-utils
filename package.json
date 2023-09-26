@@ -33,6 +33,7 @@
     "dotenv": "^16.0.1",
     "fastest-levenshtein": "^1.0.16",
     "fs-extra": "^10.0.0",
+    "humanize-duration": "^3.30.0",
     "mocha": "^9.1.3",
     "pascal-case": "^3.1.2",
     "reso-certification-etl": "github:RESOStandards/reso-certification-etl#1c2fc0bb5ae1e6f71775cd81d7ae3db46da6bf86",

@@ -2,6 +2,7 @@
 const { restore } = require('./lib/restore-utils');
 const { runTests } = require('./lib/batch-test-runner');
 const { findVariations, computeVariations } = require('./lib/find-variations/index.js');
+const { replicate } = require('./lib/replication/index.js');
 
 if (require?.main === module) {
   const { program } = require('commander');
@@ -33,10 +34,23 @@ if (require?.main === module) {
     .description('Finds possible variations in metadata using a number of methods.')
     .action(findVariations);
 
+  program
+    .command('replicate')
+    .requiredOption('-s, --strategy <string>', 'One of TopAndSkip, ModificationTimestampAsc, ModificationTimestampDesc, or NextLink')
+    .option('-u, --url <string>', 'The URL to start replicating from')
+    .option('-b, --bearerToken <string>', 'Bearer token to use for authorization')
+    .option('-p, --pathToConfigFile', 'Path to config containing credentials')
+    .option('-r, --resourceName <string>', 'Resource name to replicate data from')
+    .option('-x, --expansions <string>', 'Items to expand during the query process, e.g. Media')
+    .option('-m, --metadataReportPath', 'Path to metadata report to use for replication')
+    .description('Replicates data from a given resource with expansions.')
+    .action(replicate);
+
   program.parse();
 }
 
 module.exports = {
+  replicate,
   restore,
   runTests,
   findVariations,
