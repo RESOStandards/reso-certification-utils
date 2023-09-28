@@ -44,7 +44,7 @@ if (require?.main === module) {
     .option('-b, --bearerToken <string>', 'Bearer token to use for authorization')
     .option('-p, --pathToConfigFile', 'Path to config containing credentials')
     .option('-r, --resourceName <string>', 'Resource name to replicate data from')
-    .option('-x, --expansions <string>', 'Items to expand during the query process, e.g. Media')
+    .option('-x, --expansions [string...]', 'Items to expand during the query process, e.g. Media')
     .option('-m, --metadataReportPath <string>', 'Path to metadata report to use for replication')
     .option('-o, --outputPath <string>', 'Name of directory for results')
     .option('-l, --limit <number>', 'Limit for total number of records')
