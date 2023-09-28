@@ -47,6 +47,7 @@ if (require?.main === module) {
     .option('-x, --expansions <string>', 'Items to expand during the query process, e.g. Media')
     .option('-m, --metadataReportPath <string>', 'Path to metadata report to use for replication')
     .option('-o, --outputPath <string>', 'Name of directory for results')
+    .option('-l, --limit <number>', 'Limit for total number of records')
     .action(replicate);
 
   program
