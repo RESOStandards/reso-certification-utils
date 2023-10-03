@@ -44,6 +44,7 @@ program
   .option('-p, --pathToBackup <string>', 'Path where to store the backup of the reports.')
   .option('-d, --dataDictionary', 'Flag to only backup the data dictionary and data availability reports.')
   .option('-w, --webApi', 'Flag to only backup the web api reports.')
+  .option('-s, --skip <number>', 'Option to skip first n number of reports')
   .description('Backs up the reports from a Cert API server to a specified path.')
   .action(backup);
 
