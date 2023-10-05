@@ -39,15 +39,17 @@ if (require?.main === module) {
   program
     .command('replicate')
     .description('Replicates data from a given resource with expansions.')
-    .requiredOption('-s, --strategy <string>', 'One of TopAndSkip, ModificationTimestampAsc, ModificationTimestampDesc, or NextLink')
-    .option('-u, --url <string>', 'The URL to start replicating from')
+    .requiredOption('-s, --strategy <string>', 'One of TopAndSkip, TimestampAsc, TimestampDesc, or NextLink')
+    .option('-u, --serviceRootUri <string>', 'OData service root URI (no resource name or query)')
     .option('-b, --bearerToken <string>', 'Bearer token to use for authorization')
-    .option('-p, --pathToConfigFile', 'Path to config containing credentials')
+    .option('-m, --pathToMetadataReportJson <string>', 'Path to metadata report JSON')
     .option('-r, --resourceName <string>', 'Resource name to replicate data from')
     .option('-x, --expansions <items>', 'Comma-separated list of items to expand during the query process, e.g. Media,OpenHouse')
-    .option('-m, --metadataReportPath <string>', 'Path to metadata report to use for replication')
+    .option('-f, --filter <string>', 'OData $filter expression')
+    .option('-t, --top <number>', 'Optional parameter to use for OData $top')
+    .option('-s, --maxPageSize <number>', 'Optional parameter for the odata.maxpagesize header')
     .option('-o, --outputPath <string>', 'Name of directory for results')
-    .option('-l, --limit <number>', 'Limit for total number of records')
+    .option('-l, --limit <number>', 'Limit total number of records at client level')
     .action(replicate);
 
   program
