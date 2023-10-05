@@ -277,7 +277,11 @@ const createResoScriptClientCredentialsConfig = ({ serviceRootUri, clientCredent
   '  </ClientSettings>' +
   '</OutputScript>';
 
+const sleep = async (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));
+
 module.exports = {
+  CURRENT_DATA_DICTIONARY_VERSION,
+  CURRENT_WEB_API_CORE_VERSION,
   endorsements,
   availableVersions,
   isValidEndorsement,
@@ -290,6 +294,5 @@ module.exports = {
   archiveEndorsement,
   getCurrentVersion,
   getPreviousVersion,
-  CURRENT_DATA_DICTIONARY_VERSION,
-  CURRENT_WEB_API_CORE_VERSION
+  sleep
 };
