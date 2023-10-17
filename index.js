@@ -50,7 +50,12 @@ if (require?.main === module) {
     .option('-s, --maxPageSize <number>', 'Optional parameter for the odata.maxpagesize header')
     .option('-o, --outputPath <string>', 'Name of directory for results')
     .option('-l, --limit <number>', 'Limit total number of records at client level')
-    .action(replicate);
+    .action(options => {
+      // TODO: if run from the command line, we don't want to generate additional reports
+      // until we have the ability to understand the type and expansions from the metadata
+      const { pathToMetadataReportJson } = options;
+      replicate({ ...options, shouldGenerateReports: !!pathToMetadataReportJson });
+    });
 
   program
     .command('metadata')
