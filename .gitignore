@@ -106,7 +106,8 @@ dist
 .DS_Store
 .vscode
 output
-data-availability-report.json
-metadata-report.json
+
+# RESO testing stuff
+data-availability*.json
 metadata-report*.json
 reso-replication-output
