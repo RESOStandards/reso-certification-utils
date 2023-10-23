@@ -25,6 +25,7 @@ if (require?.main === module) {
     .requiredOption('-p, --pathToConfigFile <string>', 'Path to config file')
     .option('-a, --runAvailability', 'Flag to run data availability tests, otherwise only metadata tests are run')
     .option('-c, --console <boolean>', 'Show output to console', true)
+    .option('-v, --version <string>', 'Data Dictionary version to use', '1.7')
     .action(runTests);
 
   program
