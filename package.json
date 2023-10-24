@@ -4,7 +4,8 @@
   "description": "NodeJS package with reference artifacts and ETL processes for Certification.",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --timeout 30000"
+    "test": "mocha --timeout 30000",
+    "prepare": "husky install"
   },
   "bin": {
     "reso-certification-utils": "index.js"
@@ -39,5 +40,9 @@
     "pascal-case": "^3.1.2",
     "reso-certification-etl": "github:RESOStandards/reso-certification-etl#1c2fc0bb5ae1e6f71775cd81d7ae3db46da6bf86",
     "yargs": "^16.2.0"
+  },
+  "devDependencies": {
+    "husky": "^8.0.0",
+    "lint-staged": "^15.0.2"
   }
 }
