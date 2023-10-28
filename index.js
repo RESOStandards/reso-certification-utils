@@ -43,21 +43,46 @@ if (require?.main === module) {
     .requiredOption('-s, --strategy <string>', 'One of TopAndSkip, TimestampAsc, TimestampDesc, or NextLink')
     .option('-u, --serviceRootUri <string>', 'OData service root URI (no resource name or query)')
     .option('-b, --bearerToken <string>', 'Bearer token to use for authorization')
+    .option('-c, --clientId <string>', 'OAuth2 client_id parameter, use this OR bearerToken')
+    .option('-i, --clientSecret <string>', 'OAuth2 client_secret parameter, use this OR bearerToken')
+    .option('-k, --tokenUri <string>', 'OAuth2 token_uri parameter, use this OR bearerToken')
+    .option('-e, --scope <string>', 'Optional OAuth2 scopes for client credentials')
     .option('-m, --pathToMetadataReportJson <string>', 'Path to metadata report JSON')
     .option('-r, --resourceName <string>', 'Resource name to replicate data from')
     .option('-x, --expansions <items>', 'Comma-separated list of items to expand during the query process, e.g. Media,OpenHouse')
     .option('-f, --filter <string>', 'OData $filter expression')
     .option('-t, --top <number>', 'Optional parameter to use for OData $top')
-    .option('-s, --maxPageSize <number>', 'Optional parameter for the odata.maxpagesize header')
+    .option('-p, --maxPageSize <number>', 'Optional parameter for the odata.maxpagesize header')
     .option('-o, --outputPath <string>', 'Name of directory for results')
     .option('-l, --limit <number>', 'Limit total number of records at client level')
     .option('-v, --version <string>', 'Data Dictionary version to use', '2.0')
     .option('-j, --jsonSchemaValidation <boolean>', 'Sets whether to use JSON schema validation', false)
     .action(options => {
+
       // TODO: if run from the command line, we don't want to generate additional reports
       // until we have the ability to understand the type and expansions from the metadata
-      const { pathToMetadataReportJson } = options;
-      replicate({ ...options, shouldGenerateReports: !!pathToMetadataReportJson });
+      const { pathToMetadataReportJson, bearerToken, clientId, clientSecret, tokenUri, scope, ...remainingOptions } = options;
+
+      let appOptions = {
+        ...remainingOptions,
+        pathToMetadataReportJson,
+        shouldGenerateReports: !!pathToMetadataReportJson
+      };
+
+      if (bearerToken) {
+        appOptions.bearerToken = bearerToken;
+      } else if (clientId && clientSecret && tokenUri) {
+        appOptions.clientCredentials = {
+          clientId,
+          clientSecret,
+          tokenUri,
+          scope
+        };
+      } else {
+        throw new Error('One of bearerToken or clientId, clientSecret, and tokenUri MUST be specified!');
+      }
+
+      replicate(appOptions);
     });
 
   program
