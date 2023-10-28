@@ -63,7 +63,7 @@ if (require?.main === module) {
       // until we have the ability to understand the type and expansions from the metadata
       const { pathToMetadataReportJson, bearerToken, clientId, clientSecret, tokenUri, scope, ...remainingOptions } = options;
 
-      let appOptions = {
+      const appOptions = {
         ...remainingOptions,
         pathToMetadataReportJson,
         shouldGenerateReports: !!pathToMetadataReportJson
