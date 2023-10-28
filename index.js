@@ -51,6 +51,8 @@ if (require?.main === module) {
     .option('-s, --maxPageSize <number>', 'Optional parameter for the odata.maxpagesize header')
     .option('-o, --outputPath <string>', 'Name of directory for results')
     .option('-l, --limit <number>', 'Limit total number of records at client level')
+    .option('-v, --version <string>', 'Data Dictionary version to use', '2.0')
+    .option('-j, --jsonSchemaValidation <boolean>', 'Sets whether to use JSON schema validation', false)
     .action(options => {
       // TODO: if run from the command line, we don't want to generate additional reports
       // until we have the ability to understand the type and expansions from the metadata
