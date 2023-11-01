@@ -66,7 +66,8 @@ if (require?.main === module) {
       const appOptions = {
         ...remainingOptions,
         pathToMetadataReportJson,
-        shouldGenerateReports: !!pathToMetadataReportJson
+        shouldGenerateReports: !!pathToMetadataReportJson,
+        fromCli: true
       };
 
       if (bearerToken) {
