@@ -6,22 +6,29 @@ Use the following command to view help info:
 
 ```
 $ reso-certification-utils replicate --help
-
 Usage: reso-certification-utils replicate [options]
 
 Replicates data from a given resource with expansions.
 
 Options:
-  -s, --strategy <string>            One of TopAndSkip, ModificationTimestampAsc, ModificationTimestampDesc, or NextLink
-  -u, --url <string>                 The URL to start replicating from
-  -b, --bearerToken <string>         Bearer token to use for authorization
-  -p, --pathToConfigFile             Path to config containing credentials
-  -r, --resourceName <string>        Resource name to replicate data from
-  -x, --expansions <items>           Comma-separated list of items to expand during the query process, e.g. Media,OpenHouse
-  -m, --metadataReportPath <string>  Path to metadata report to use for replication
-  -o, --outputPath <string>          Name of directory for results
-  -l, --limit <number>               Limit for total number of records
-  -h, --help                         display help for command
+  -s, --strategy <string>                  One of TopAndSkip, TimestampAsc, TimestampDesc, or NextLink
+  -u, --serviceRootUri <string>            OData service root URI (no resource name or query)
+  -b, --bearerToken <string>               Bearer token to use for authorization
+  -c, --clientId <string>                  OAuth2 client_id parameter, use this OR bearerToken
+  -i, --clientSecret <string>              OAuth2 client_secret parameter, use this OR bearerToken
+  -k, --tokenUri <string>                  OAuth2 token_uri parameter, use this OR bearerToken
+  -e, --scope <string>                     Optional OAuth2 scopes for client credentials
+  -m, --pathToMetadataReportJson <string>  Path to metadata report JSON
+  -r, --resourceName <string>              Resource name to replicate data from
+  -x, --expansions <items>                 Comma-separated list of items to expand during the query process, e.g. Media,OpenHouse
+  -f, --filter <string>                    OData $filter expression
+  -t, --top <number>                       Optional parameter to use for OData $top
+  -p, --maxPageSize <number>               Optional parameter for the odata.maxpagesize header
+  -o, --outputPath <string>                Name of directory for results
+  -l, --limit <number>                     Limit total number of records at client level
+  -v, --version <string>                   Data Dictionary version to use (default: "2.0")
+  -j, --jsonSchemaValidation <boolean>     Sets whether to use JSON schema validation (default: false)
+  -h, --help                               display help for command
 ```
 
 ## Example: Replicate Data from a URL Using `TopAndSkip`
