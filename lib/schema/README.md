@@ -1,51 +1,64 @@
 ## Schema Generation and Validation
 
-### Generate Schema
+### Schema Generation and Validation
 
 ```bash
-$ reso-certification-utils generate --help
+$ reso-certification-utils schema --help
 
-Usage: reso-certification-utils generate [options]
+Usage: reso-certification-utils schema [options]
 
 Generate a schema from a given metadata report
 
 Options:
+  -g, --generate               Generate a schema for payload validation
+  -v, --validate               Validate one or multiple payloads with a schema
   -m, --metadataPath <string>  Path to the metadata report JSON file
-  -o, --outputPath <string>    Path tho the directory to store the generated schema
-  -a, --additionalProperties   Pass this flag to allow additional properties in the schema
-  -h, --help                   Display help for command
+  -o, --outputPath <string>    Path tho the directory to store the generated schema. Defaults to "./"
+  -a, --additionalProperties   Pass this flag to allow additional properties in the schema. False by default
+  -dv, --ddVersion <string>    The DD version of the metadata report
+  -p, --payloadPath <string>   Path to the payload file OR directory/zip containing files that need to be validated
+  -r, --resourceName <string>  Resource name to validate against. Required if --version is passed when validating.
+  -h, --help                   display help for command
 ```
 
-### Validate payload
+### Generate
 
 ```bash
-$ reso-certification-utils validate --help
-
-Usage: reso-certification-utils validate [options]
-
-Validate one or more payloads against a schema
-
-Options:
-  -m, --metadataPath <string>  Path to the metadata report JSON file
-  -p, --payloadPath <string>   Path to the payload that needs to be validated
-  -s, --schemaPath <string>    Path to the generated JSON schema
-  -e, --errorPath <string>     Path to save error reports in case of failed validation. Defaults to "./errors"
-  -a, --additionalProperties   Pass this flag to allow additional properties in the schema
-  -z, --zipFilePath <string>   Path to a zip file containing JSON payloads
-  -dv, --version <string>      The data dictionary version of the metadata report. Defaults to 1.7
-  -h, --help                   Display help for command
+reso-certification-utils schema -g -a
 ```
+
+### Validate
 
 ```bash
-reso-certification-utils schema -g -m <path to metadata json file> -o <path to output directory>
+reso-certification-utils schema -v -p <path to payloads file, zip, or directory> -a -dv 2.0 -r Property
 ```
-Additional options:
-- `-a` or `--additionalProperties`: Add this flag to allow additional properties.
-- `-r` or `--resource`: Option to specify the resource. Defaults to `property`.
 
-### Validate payload
+## Usage in a library
 
-```bash
-reso-certification-utils schema -v -p <path to payloads json file> -s <path to the schema json file>
+```js
+const { getReferenceMetadata } = require('reso-certification-etl');
+const { generateJsonSchema, validate, combineErrors } = require('./lib/schema');
+const fs = require('fs/promises');
+
+// generate
+const schema = await generateJsonSchema({
+  additionalProperties: true,
+  metadataReportJson: getReferenceMetadata('2.0')
+});
+let errorMap = {};
+
+// validate
+const payload = JSON.parse(await fs.readFile('<path to payloads file>'));
+errorMap = validate({
+  ddVersion: '2.0',
+  jsonPayload: payload,
+  errorMap, // pass the arror map back into the validate input in case of usage inside a loop
+  jsonSchema: schema,
+  resourceName: 'Property'
+});
+
+// The error map will hold the results of multiple validation so to transform it into a single error report we can use `combineErrors`
+const errorReport = combineErrors(errorMap);
+console.log(JSON.stringify(errorReport, null, 2));
+
 ```
-AJV errors could be large depending on how many errors are found. To save the errors in a file we can pass the directory where we want to save the errors file with `-e <path to error directory>`. By default they will be saved inside `./errors`.
