@@ -14,7 +14,9 @@ const CURRENT_DATA_DICTIONARY_VERSION = '1.7',
   METADATA_REPORT_JSON = 'metadata-report.json',
   DATA_AVAILABILITY_REPORT_JSON = 'data-availability-report.json',
   IDX_DIFFERENCE_REPORT_JSON = 'idx-difference-report.json',
-  EMPTY_STRING = '';
+  EMPTY_STRING = '',
+  ANNOTATION_STANDARD_NAME = 'RESO.OData.Metadata.StandardName',
+  ANNOTATION_DD_WIKI_URL = 'RESO.DDWikiUrl';
 
 /**
  * Each key refers to what the given item is called when saved the filesystem.
@@ -44,14 +46,10 @@ const availableVersions = {
 };
 
 const getCurrentVersion = endorsementName =>
-  endorsementName &&
-  availableVersions[endorsementName] &&
-  availableVersions[endorsementName].currentVersion;
+  endorsementName && availableVersions[endorsementName] && availableVersions[endorsementName].currentVersion;
 
 const getPreviousVersion = endorsementName =>
-  endorsementName &&
-  availableVersions[endorsementName] &&
-  availableVersions[endorsementName].previousVersion;
+  endorsementName && availableVersions[endorsementName] && availableVersions[endorsementName].previousVersion;
 
 /**
  * Determines whether the given endorsementName is valid.
@@ -60,8 +58,7 @@ const getPreviousVersion = endorsementName =>
  * @returns true if the endorsementName is valid, false otherwise.
  * @throws error if parameters aren't valid
  */
-const isValidEndorsement = endorsementName =>
-  endorsementName && !!availableVersions[endorsementName];
+const isValidEndorsement = endorsementName => endorsementName && !!availableVersions[endorsementName];
 
 /**
  * Determines whether the version is valid for the given endorsement.
@@ -72,10 +69,7 @@ const isValidEndorsement = endorsementName =>
  * @throws error if parameters aren't valid
  */
 const isValidVersion = (endorsementName, version) =>
-  endorsementName &&
-  version &&
-  availableVersions[endorsementName] &&
-  availableVersions[endorsementName].currentVersion === version;
+  endorsementName && version && availableVersions[endorsementName] && availableVersions[endorsementName].currentVersion === version;
 
 /**
  * Gets the appropriate config for a given endorsement
@@ -90,9 +84,7 @@ const getEndorsementMetadata = (endorsementName, version) => {
   }
 
   if (!isValidVersion(endorsementName, version)) {
-    throw new Error(
-      `Invalid endorsement version! endorsementKey: ${endorsementName}, version: ${version}`
-    );
+    throw new Error(`Invalid endorsement version! endorsementKey: ${endorsementName}, version: ${version}`);
   }
 
   const ddVersion = version || CURRENT_DATA_DICTIONARY_VERSION,
@@ -104,10 +96,7 @@ const getEndorsementMetadata = (endorsementName, version) => {
       version: `${ddVersion}`,
       /* TODO: add versions to JSON results file names in the Commander */
       jsonResultsFiles: [METADATA_REPORT_JSON, DATA_AVAILABILITY_REPORT_JSON],
-      htmlReportFiles: [
-        `data-dictionary-${ddVersion}.html`,
-        `data-availability.dd-${ddVersion}.html`
-      ],
+      htmlReportFiles: [`data-dictionary-${ddVersion}.html`, `data-availability.dd-${ddVersion}.html`],
       logFileName: COMMANDER_LOG_FILE_NAME
     };
   }
@@ -117,11 +106,7 @@ const getEndorsementMetadata = (endorsementName, version) => {
       directoryName: `${endorsements.DATA_DICTIONARY_WITH_IDX}`,
       version: `${version}`,
       /* TODO: add versions to JSON results file names in the Commander */
-      jsonResultsFiles: [
-        METADATA_REPORT_JSON,
-        DATA_AVAILABILITY_REPORT_JSON,
-        IDX_DIFFERENCE_REPORT_JSON
-      ],
+      jsonResultsFiles: [METADATA_REPORT_JSON, DATA_AVAILABILITY_REPORT_JSON, IDX_DIFFERENCE_REPORT_JSON],
       htmlReportFiles: [
         `data-dictionary-${ddVersion}.html`,
         `data-availability.dd-${ddVersion}.html`,
@@ -151,8 +136,7 @@ const getEndorsementMetadata = (endorsementName, version) => {
  * @returns ISO 8601 timestamp without separators
  * @see https://en.wikipedia.org/wiki/ISO_8601
  */
-const getFileSafeIso8601Timestamp = (timestamp = new Date()) =>
-  timestamp.toISOString().replaceAll(/-|:|\./gi, EMPTY_STRING);
+const getFileSafeIso8601Timestamp = (timestamp = new Date()) => timestamp.toISOString().replaceAll(/-|:|\./gi, EMPTY_STRING);
 
 /**
  * Creates a path to the recipient's results using the following structure:
@@ -191,15 +175,10 @@ const buildRecipientEndorsementPath = ({
   if (!endorsementName) throw Error('endorsementName is required!');
   if (!version) throw Error('version is required!');
 
-  if (!isValidEndorsement(endorsementName))
-    throw new Error(`Invalid endorsementName: ${endorsementName}`);
+  if (!isValidEndorsement(endorsementName)) throw new Error(`Invalid endorsementName: ${endorsementName}`);
   if (!isValidVersion(endorsementName, version)) throw new Error(`Invalid version: ${version}`);
 
-  return path.join(
-    `${providerUoi}-${providerUsi}`,
-    recipientUoi,
-    currentOrArchived
-  );
+  return path.join(`${providerUoi}-${providerUsi}`, recipientUoi, currentOrArchived);
 };
 
 /**
@@ -212,13 +191,7 @@ const buildRecipientEndorsementPath = ({
  * @param {String} providerUsi
  * @param {String} recipientUoi
  */
-const archiveEndorsement = ({
-  providerUoi,
-  providerUsi,
-  recipientUoi,
-  endorsementName,
-  version
-} = {}) => {
+const archiveEndorsement = ({ providerUoi, providerUsi, recipientUoi, endorsementName, version } = {}) => {
   const currentRecipientPath = buildRecipientEndorsementPath({
     providerUoi,
     providerUsi,
@@ -269,15 +242,148 @@ const createResoScriptClientCredentialsConfig = ({ serviceRootUri, clientCredent
   `    <ClientIdentification>${clientCredentials.clientId}</ClientIdentification>` +
   `    <ClientSecret>${clientCredentials.clientSecret}</ClientSecret>` +
   `    <TokenURI>${clientCredentials.tokenUri}</TokenURI>` +
-  `    ${
-    clientCredentials.scope
-      ? '<ClientScope>' + clientCredentials.scope + '</ClientScope>'
-      : EMPTY_STRING
-  }` +
+  `    ${clientCredentials.scope ? '<ClientScope>' + clientCredentials.scope + '</ClientScope>' : EMPTY_STRING}` +
   '  </ClientSettings>' +
   '</OutputScript>';
 
+/**
+ * 
+ * Sleeps for the given amount of milliseconds 
+ * 
+ * @param {int} ms Number of milliseconds to sleep 
+ * @returns Promise that resolves in the given time
+ */
+const sleep = async (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));
+
+const parseLookupName = lookupName => lookupName?.substring(lookupName.lastIndexOf('.') + 1);
+
+const isStringEnumeration = type => !!type?.includes('Edm.String');
+
+const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
+  const STATS = {
+    numResources: 0,
+    numFields: 0,
+    numLookups: 0,
+    numExpansions: 0,
+    numComplexTypes: 0
+  };
+
+  const lookupMap = lookups.reduce((acc, { lookupName, lookupValue, type, annotations = [] }) => {
+    if (!acc[lookupName]) {
+      acc[lookupName] = [];
+    }
+
+    const { lookupValue: annotatedLookupValue, ddWikiUrl } =
+      annotations?.reduce((acc, { term, value }) => {
+        if (term === ANNOTATION_STANDARD_NAME) {
+          acc.lookupValue = value;
+        }
+
+        if (term === ANNOTATION_DD_WIKI_URL) {
+          acc.ddWikiUrl = value;
+        }
+        return acc;
+      }, {}) || {};
+
+    if (
+      (lookupValue?.startsWith('Sample') && lookupValue?.endsWith('EnumValue')) ||
+      (annotatedLookupValue?.startsWith('Sample') && annotatedLookupValue.endsWith('EnumValue'))
+    ) {
+      return acc;
+    }
+
+    if (isStringEnumeration(type)) {
+      acc[lookupName].push({ lookupValue, ddWikiUrl, isStringEnumeration: true });
+    } else {
+      acc[lookupName].push({ lookupValue: annotatedLookupValue, legacyODataValue: lookupValue, ddWikiUrl });
+    }
+
+    STATS.numLookups++;
+    return acc;
+  }, {});
+
+  return {
+    metadataMap: {
+      ...fields.reduce((acc, { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations }) => {
+        if (!acc[resourceName]) {
+          acc[resourceName] = {};
+          STATS.numResources++;
+        }
+
+        const isLookupField = !!lookupMap?.[type];
+
+        const { ddWikiUrl } =
+          annotations?.reduce((acc, { term, value }) => {
+            if (term === ANNOTATION_DD_WIKI_URL) {
+              acc.ddWikiUrl = value;
+            }
+            return acc;
+          }, {}) || {};
+
+        //add field to map
+        acc[resourceName][fieldName] = {
+          type,
+          isExpansion,
+          isLookupField,
+          isComplexType: isComplexType || (!isExpansion && !type?.startsWith('Edm.') && !isLookupField),
+          ddWikiUrl
+        };
+
+        if (isLookupField && lookupMap?.[type]) {
+          if (!acc?.[resourceName]?.[fieldName]?.lookupValues) {
+            acc[resourceName][fieldName].lookupValues = {};
+          }
+
+          if (!acc?.[resourceName]?.[fieldName]?.legacyODataValues) {
+            acc[resourceName][fieldName].legacyODataValues = {};
+          }
+
+          Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue, ddWikiUrl, isStringEnumeration }) => {
+            const lookupName = parseLookupName(type);
+
+            //skip legacyOData matching if we're using string enumerations
+            if (!isStringEnumeration && legacyODataValue?.length) {
+              acc[resourceName][fieldName].legacyODataValues[legacyODataValue] = {
+                type,
+                lookupName,
+                lookupValue,
+                legacyODataValue,
+                ddWikiUrl
+              };
+            }
+
+            if (lookupValue?.length) {
+              acc[resourceName][fieldName].lookupValues[lookupValue] = {
+                type,
+                lookupName,
+                lookupValue,
+                legacyODataValue,
+                ddWikiUrl,
+                isStringEnumeration
+              };
+            }
+          });
+        }
+
+        if (isExpansion) {
+          STATS.numExpansions++;
+        }
+
+        if (isComplexType) {
+          STATS.numComplexTypes++;
+        }
+
+        STATS.numFields++;
+        return acc;
+      }, {})
+    },
+    stats: STATS
+  };
+};
+
 module.exports = {
+  CURRENT_DATA_DICTIONARY_VERSION,
+  CURRENT_WEB_API_CORE_VERSION,
   endorsements,
   availableVersions,
   isValidEndorsement,
@@ -290,6 +396,6 @@ module.exports = {
   archiveEndorsement,
   getCurrentVersion,
   getPreviousVersion,
-  CURRENT_DATA_DICTIONARY_VERSION,
-  CURRENT_WEB_API_CORE_VERSION
+  sleep,
+  buildMetadataMap
 };

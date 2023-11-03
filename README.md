@@ -32,6 +32,11 @@ Uses a number of techniques to find potential variations for local items contain
 
 [**MORE INFO**](./lib/find-variations/README.md)
 
+## Replicate and Validate Data
+CLI tools and Node libs to replicate data from a RESO Web API server using bearer tokens or OAuth2 Client Credentials.
+
+[**MORE INFO**](./lib/replication/README.md)
+
 
 ## Tests
 

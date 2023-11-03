@@ -104,3 +104,10 @@ dist
 .tern-port
 
 .DS_Store
+.vscode
+output
+
+# RESO testing stuff
+data-availability*.json
+metadata-report*.json
+reso-replication-output
