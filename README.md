@@ -37,6 +37,12 @@ Generates a schema from a metadata report and validates payload against a given 
 
 [**MORE INFO**](./lib/schema/README.md)
 
+## Replicate and Validate Data
+CLI tools and Node libs to replicate data from a RESO Web API server using bearer tokens or OAuth2 Client Credentials.
+
+[**MORE INFO**](./lib/replication/README.md)
+
+
 ## Tests
 
 To run the tests, clone the repository:

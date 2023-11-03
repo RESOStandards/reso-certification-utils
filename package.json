@@ -4,7 +4,8 @@
   "description": "NodeJS package with reference artifacts and ETL processes for Certification.",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --timeout 30000"
+    "test": "mocha --timeout 30000",
+    "prepare": "husky install"
   },
   "bin": {
     "reso-certification-utils": "index.js"
@@ -17,7 +18,7 @@
     "certification"
   ],
   "author": "Joshua Darnell <josh@reso.org> (@darnjo)",
-  "license": "SEE LICENSE IN ./LICENSE",
+  "license": "SEE LICENSE IN LICENSE",
   "bugs": {
     "url": "https://github.com/RESOStandards/reso-certification-utils/issues"
   },
@@ -35,12 +36,18 @@
     "chalk": "^4.1.2",
     "commander": "^9.4.0",
     "dotenv": "^16.0.1",
+    "fast-xml-parser": "^4.3.1",
     "fastest-levenshtein": "^1.0.16",
     "fs-extra": "^10.0.0",
+    "humanize-duration": "^3.30.0",
     "mocha": "^9.1.3",
     "pascal-case": "^3.1.2",
     "reso-certification-etl": "github:RESOStandards/reso-certification-etl",
     "unzipper": "^0.10.14",
     "yargs": "^16.2.0"
+  },
+  "devDependencies": {
+    "husky": "^8.0.0",
+    "lint-staged": "^15.0.2"
   }
 }
