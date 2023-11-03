@@ -27,6 +27,10 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@reso/reso-certification-etl": "github:RESOStandards/reso-certification-etl",
+    "ajv": "^8.12.0",
+    "ajv-errors": "^3.0.0",
+    "ajv-formats": "^2.1.1",
     "aws-sdk": "^2.1354.0",
     "axios": "^0.24.0",
     "chalk": "^4.1.2",
@@ -38,7 +42,8 @@
     "humanize-duration": "^3.30.0",
     "mocha": "^9.1.3",
     "pascal-case": "^3.1.2",
-    "reso-certification-etl": "github:RESOStandards/reso-certification-etl#1c2fc0bb5ae1e6f71775cd81d7ae3db46da6bf86",
+    "reso-certification-etl": "github:RESOStandards/reso-certification-etl",
+    "unzipper": "^0.10.14",
     "yargs": "^16.2.0"
   },
   "devDependencies": {

@@ -1,4 +1,6 @@
 #! /usr/bin/env node
+
+const { schema } = require('./lib/schema');
 const { restore } = require('./lib/restore-utils');
 const { runTests } = require('./lib/batch-test-runner');
 const { findVariations, computeVariations } = require('./lib/find-variations');
@@ -10,6 +12,19 @@ if (require?.main === module) {
   const { program } = require('commander');
 
   program.name('reso-certification-utils').description('Command line batch-testing and restore utils').version('0.0.5');
+
+  program
+    .command('schema')
+    .option('-g, --generate', 'Generate a schema for payload validation')
+    .option('-v, --validate', 'Validate one or multiple payloads with a schema')
+    .option('-m, --metadataPath <string>', 'Path to the metadata report JSON file')
+    .option('-o, --outputPath <string>', 'Path tho the directory to store the generated schema. Defaults to "./"')
+    .option('-a, --additionalProperties', 'Pass this flag to allow additional properties in the schema. False by default')
+    .option('-dv, --ddVersion <string>', 'The DD version of the metadata report')
+    .option('-p, --payloadPath <string>', 'Path to the payload file OR directory/zip containing files that need to be validated')
+    .option('-r, --resourceName <string>', 'Resource name to validate against. Required if --version is passed when validating.')
+    .description('Generate a schema or validate a payload against a schema')
+    .action(schema);
 
   program
     .command('restore')

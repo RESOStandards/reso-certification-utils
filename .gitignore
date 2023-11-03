@@ -103,6 +103,8 @@ dist
 # TernJS port file
 .tern-port
 
+config.json
+reso-schema-validation-temp
 .DS_Store
 .vscode
 output
