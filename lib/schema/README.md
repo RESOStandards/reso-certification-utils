@@ -52,7 +52,7 @@ const payload = JSON.parse(await fs.readFile('<path to payloads file>'));
 errorMap = validate({
   ddVersion: '2.0',
   jsonPayload: payload,
-  errorMap, // pass the arror map back into the validate input in case of usage inside a loop
+  errorMap, // pass the error map back into the validate input in case of usage inside a loop
   jsonSchema: schema,
   resourceName: 'Property'
 });
