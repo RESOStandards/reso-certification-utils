@@ -39,7 +39,8 @@ describe('computeVariations reference metadata checks', () => {
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: TEST_FUZZINESS,
-        version: DEFAULT_VERSION
+        version: DEFAULT_VERSION,
+        useSuggestions: false
       });
 
       assert.notEqual(description.length, 0);
@@ -72,7 +73,8 @@ describe('computeVariations reference metadata checks', () => {
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: TEST_FUZZINESS,
-        version: DD_1_7
+        version: DD_1_7,
+        useSuggestions: false
       });
 
       assert.notEqual(description.length, 0);
@@ -106,7 +108,8 @@ describe('computeVariations reference metadata checks', () => {
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: 1.0,
-        version: DD_1_7
+        version: DD_1_7,
+        useSuggestions: false
       });
 
       assert.notEqual(description.length, 0);
@@ -146,7 +149,7 @@ describe('computeVariations reference metadata checks', () => {
           ]
         };
 
-        const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_1_7 });
+        const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_1_7, useSuggestions: false });
 
         assert.equal(variations.resources.length, 1, 'Exactly one resource name should have matched!');
         assert.equal(variations.resourceName, testMetadataReportJson.resourceName);
@@ -175,7 +178,7 @@ describe('computeVariations reference metadata checks', () => {
       { fields: [] }
     );
 
-    const { variations = [] } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_1_7 });
+    const { variations = [] } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_1_7, useSuggestions: false });
 
     const { fields: metadataReportFields = [] } = metadataReportJson,
       { fields: fieldVariations = [] } = variations;
@@ -222,7 +225,8 @@ describe('computeVariations reference metadata checks', () => {
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: TEST_FUZZINESS,
-        version: DD_2_0
+        version: DD_2_0,
+        useSuggestions: false
       });
 
       assert.notEqual(description.length, 0);
@@ -256,7 +260,8 @@ describe('computeVariations reference metadata checks', () => {
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: MAX_FUZZINESS,
-        version: DD_2_0
+        version: DD_2_0,
+        useSuggestions: false
       });
 
       assert.notEqual(description.length, 0);
@@ -296,7 +301,7 @@ describe('computeVariations reference metadata checks', () => {
           ]
         };
 
-        const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_2_0 });
+        const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_2_0, useSuggestions: false });
 
         assert.equal(
           variations.resources.length,
@@ -329,7 +334,7 @@ describe('computeVariations reference metadata checks', () => {
       { fields: [] }
     );
 
-    const { variations = [] } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_2_0 });
+    const { variations = [] } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_2_0, useSuggestions: false });
 
     const { fields: metadataReportFields = [] } = metadataReportJson,
       { fields: fieldVariations = [] } = variations;
@@ -393,7 +398,7 @@ describe('computeVariations reference metadata checks', () => {
         ]
       };
 
-      const { variations = [] } = await computeVariations({ metadataReportJson });
+      const { variations = [] } = await computeVariations({ metadataReportJson, useSuggestions: false });
 
       const { fields: fieldVariations = [] } = variations;
 
@@ -426,7 +431,7 @@ describe('computeVariations reference metadata checks', () => {
         ]
       };
 
-      const { variations = [] } = await computeVariations({ metadataReportJson });
+      const { variations = [] } = await computeVariations({ metadataReportJson, useSuggestions: false });
 
       const { fields: fieldVariations = [] } = variations;
 
@@ -461,7 +466,7 @@ describe('computeVariations reference metadata checks', () => {
         ]
       };
 
-      const { variations = [] } = await computeVariations({ metadataReportJson });
+      const { variations = [] } = await computeVariations({ metadataReportJson, useSuggestions: false });
 
       const { fields: fieldVariations = [] } = variations;
 
@@ -493,7 +498,7 @@ describe('computeVariations reference metadata checks', () => {
         ]
       };
 
-      const { variations = [] } = await computeVariations({ metadataReportJson });
+      const { variations = [] } = await computeVariations({ metadataReportJson, useSuggestions: false });
 
       const { fields: fieldVariations = [] } = variations;
 

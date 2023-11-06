@@ -49,6 +49,7 @@ if (require?.main === module) {
     .requiredOption('-p, --pathToMetadataReportJson <string>', 'Path to metadata-report.json file')
     .option('-f, --fuzziness <float>', 'Set fuzziness to something besides the default')
     .option('-v, --version <string>', 'Data Dictionary version to compare to, i.e. 1.7 or 2.0')
+    .option('-s, --useSuggestions <boolean>', 'Use external suggestions in addition to machine-provided ones', true)
     .option('-c, --console <boolean>', 'Show output to console', true)
     .action(findVariations);
 
