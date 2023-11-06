@@ -28,6 +28,7 @@ Options:
   -l, --limit <number>                     Limit total number of records at client level
   -v, --version <string>                   Data Dictionary version to use (default: "2.0")
   -j, --jsonSchemaValidation <boolean>     Sets whether to use JSON schema validation (default: false)
+  -S, --strictMode <boolean>               Fail immediately on schema validation errors if strict mode is true (default: true)
   -h, --help                               display help for command
 ```
 
@@ -48,3 +49,55 @@ You can also use the expand query directly, without the `-x` option. In that cas
 $ reso-certification-utils replicate -s NextLink -u https://some.api.com/Property?\$expand=Media,OpenHouse -b <your test token>
 ```
 Note the `\` before the `$expand`. Shells sometimes require escape sequences for special characters like `$`.
+
+
+# RESO Certification
+
+RESO uses the `replicate` option for Data Dictionary testing, which consists of four parts:
+
+* **Metadata Validation** - Validates XML and OData metadata and produces a `metadata-report.json` file. See [RESO Commander](https://commander.reso.org)
+* **Variations Check** - Finds suggested mappings for resource, fields, and lookups using automated matching techniques and human suggestions
+* **Data Sampling** - Ensures that RESO Web API providers are following the specification and that data can be sampled using the standard
+* **Data Validation** - All sampled data are validated against JSON Schema generated from their metadata
+
+
+The `replicate` utility performs the latter two of the above steps. 
+
+## Replicate Data from a RESO Server
+
+To test replication using DD 2.0 and `NextLink` behavior, use the following command:
+
+```
+$ reso-certification-utils replicate -s NextLink -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -m <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 2.0
+```
+
+In DD 1.7, ModificationTimestamp queries were used for testing instead. For example:
+
+```
+$ reso-certification-utils replicate -s TimestampDesc -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -m <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 1.7
+```
+
+The examples above show the use of the OriginatingSystemName filter. 
+
+The also assume that the user will have access to the `metadata-report.json` or `metadata-report.processed.json` files in order to inform the replication client of the resources and expansions to query.
+
+## Replicate Data from a RESO Server with JSON Schema Validation
+Once replication is working correctly using the commands above, the next step is to add schema validation. 
+
+```
+$ reso-certification-utils replicate -s TimestampDesc -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -m <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 1.7 -j true -S true
+```
+
+In this case, `-j` tells the program to use JSON Schema Validation an `-S` sets strict mode, which will exit on first error. Since the number of JSON Schema validation errors can be potentially large, strict mode is enabled by default.
+
+# Reports and Errors
+If there are errors during sampling they will be displayed on the screen if running as a command-line utility. 
+
+If reports are being saved, they will be saved to the root of the directory. For example, JSON Schema Validation errors will be saved to `data-availability-schema-validation.errors` and data availability reports will be saved to `data-availability-report.json`.
+
+<br />
+
+---
+<br />
+
+Questions? Contact [**dev@reso.org**](mailto:dev@reso.org)
