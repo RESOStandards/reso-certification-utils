@@ -72,17 +72,31 @@ if (require?.main === module) {
     .option('-l, --limit <number>', 'Limit total number of records at client level')
     .option('-v, --version <string>', 'Data Dictionary version to use', '2.0')
     .option('-j, --jsonSchemaValidation <boolean>', 'Sets whether to use JSON schema validation', false)
+    .option('-S, --strictMode <boolean>', 'Fail immediately on schema validation errors if strict mode is true', true)
     .action(options => {
-
       // TODO: if run from the command line, we don't want to generate additional reports
       // until we have the ability to understand the type and expansions from the metadata
-      const { pathToMetadataReportJson, bearerToken, clientId, clientSecret, tokenUri, scope, ...remainingOptions } = options;
+      const {
+        pathToMetadataReportJson,
+        bearerToken,
+        clientId,
+        clientSecret,
+        tokenUri,
+        scope,
+        strictMode = true,
+        jsonSchemaValidation = false,
+        ...remainingOptions
+      } = options;
+
+      const getBoolValue = item => (item && item === 'true') || (typeof item === 'boolean' && item);
 
       const appOptions = {
         ...remainingOptions,
         pathToMetadataReportJson,
         shouldGenerateReports: !!pathToMetadataReportJson,
-        fromCli: true
+        fromCli: true,
+        jsonSchemaValidation: getBoolValue(jsonSchemaValidation),
+        strictMode: getBoolValue(strictMode)
       };
 
       if (bearerToken) {
