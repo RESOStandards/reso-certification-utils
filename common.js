@@ -394,6 +394,26 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
   };
 };
 
+/**
+ * @param {string} urn
+ * @returns resource and version parsed from a valid URN. Returns empty strings in case of invalid URN.
+ */
+const parseResoUrn = (urn = '') => {
+  const parts = urn?.split?.(':') || '';
+
+  if (parts.length < 6 || parts[0] !== 'urn' || parts[1] !== 'reso' || parts[2] !== 'metadata') {
+    return {
+      version: '',
+      resource: ''
+    };
+  }
+
+  return {
+    version: parts[3],
+    resource: parts.slice(5)[0]
+  };
+};
+
 module.exports = {
   CURRENT_DATA_DICTIONARY_VERSION,
   CURRENT_WEB_API_CORE_VERSION,
@@ -411,5 +431,6 @@ module.exports = {
   getPreviousVersion,
   extractFilesFromZip,
   sleep,
-  buildMetadataMap
+  buildMetadataMap,
+  parseResoUrn
 };
