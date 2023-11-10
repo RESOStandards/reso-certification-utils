@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const fse = require('fs-extra');
 const unzipper = require('unzipper');
+const chalk = require('chalk');
 
 /**
  * common.js - Contains programmatically derived constants related to Certification.
@@ -399,6 +400,26 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
   };
 };
 
+/**
+ * Creates loggers
+ * @param {Boolean} fromCli true if using the console, false otherwise (default)
+ * @returns a pair of loggers, one for normal messages and another for errors
+ */
+const getLoggers = (fromCli = false) => {
+  const noop = () => {};
+  if (fromCli) {
+    return {
+      LOG: message => console.log(message),
+      LOG_ERROR: message => console.error(chalk.redBright.bold(message))
+    };
+  } else {
+    return {
+      LOG: noop,
+      LOG_ERROR: noop
+    };
+  }
+};
+
 module.exports = {
   CURRENT_DATA_DICTIONARY_VERSION,
   CURRENT_WEB_API_CORE_VERSION,
@@ -416,5 +437,6 @@ module.exports = {
   getPreviousVersion,
   extractFilesFromZip,
   sleep,
-  buildMetadataMap
+  buildMetadataMap,
+  getLoggers
 };

@@ -18,7 +18,7 @@
     "certification"
   ],
   "author": "Joshua Darnell <josh@reso.org> (@darnjo)",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "SEE LICENSE IN ./LICENSE",
   "bugs": {
     "url": "https://github.com/RESOStandards/reso-certification-utils/issues"
   },
