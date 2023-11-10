@@ -26,11 +26,6 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged && yarn run test:unit"
-    }
-  },
   "dependencies": {
     "@reso/reso-certification-etl": "github:RESOStandards/reso-certification-etl",
     "ajv": "^8.12.0",
