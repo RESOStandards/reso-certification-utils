@@ -272,6 +272,11 @@ const parseLookupName = lookupName => lookupName?.substring(lookupName.lastIndex
 
 const isStringEnumeration = type => !!type?.includes('Edm.String');
 
+/**
+ * Creates a metadata map for lookups from metadata report JSON
+ * @param {Object} metadataReportJson to build map with
+ * @returns Object containing a metadata map and accompanying stats
+ */
 const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
   const STATS = {
     numResources: 0,

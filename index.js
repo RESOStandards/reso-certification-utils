@@ -11,7 +11,7 @@ const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
 if (require?.main === module) {
   const { program } = require('commander');
 
-  program.name('reso-certification-utils').description('Command line batch-testing and restore utils').version('0.0.5');
+  program.name('RESO Certification Utils').description('Command line batch-testing and restore utils').version('1.0.0');
 
   program
     .command('schema')
@@ -24,15 +24,14 @@ if (require?.main === module) {
     .option('-p, --payloadPath <string>', 'Path to the payload file OR directory/zip containing files that need to be validated')
     .option('-r, --resourceName <string>', 'Resource name to validate against. Required if --version is passed when validating.')
     .description('Generate a schema or validate a payload against a schema')
-    .action(schema);
+    .action(options => schema({ fromCli: true, ...options }));
 
   program
     .command('restore')
     .description('Restores local or S3 results to a RESO Certification API instance')
     .option('-p, --pathToResults <string>', 'Path to test results')
     .option('-u, --url <string>', 'URL of Certification API')
-    .option('-c, --console <boolean>', 'Show output to console', true)
-    .action(restore);
+    .action(options => restore({ fromCli: true, ...options }));
 
   program
     .command('runDDTests')
@@ -41,7 +40,7 @@ if (require?.main === module) {
     .option('-a, --runAvailability', 'Flag to run data availability tests, otherwise only metadata tests are run')
     .option('-c, --console <boolean>', 'Show output to console', true)
     .option('-v, --version <string>', 'Data Dictionary version to use', '1.7')
-    .action(runTests);
+    .action(options => runTests({ fromCli: true, ...options }));
 
   program
     .command('findVariations')
@@ -50,8 +49,7 @@ if (require?.main === module) {
     .option('-f, --fuzziness <float>', 'Set fuzziness to something besides the default')
     .option('-v, --version <string>', 'Data Dictionary version to compare to, i.e. 1.7 or 2.0')
     .option('-s, --useSuggestions <boolean>', 'Use external suggestions in addition to machine-provided ones', true)
-    .option('-c, --console <boolean>', 'Show output to console', true)
-    .action(findVariations);
+    .action(options => findVariations({ fromCli: true, ...options }));
 
   program
     .command('replicate')
@@ -120,7 +118,7 @@ if (require?.main === module) {
     .command('metadata')
     .description('Converts metadata from OData XML to RESO Format.')
     .requiredOption('-p, --pathToXmlMetadata <string>', 'Path to XML Metadata to parse')
-    .action(convertAndSaveMetadata);
+    .action(options => convertAndSaveMetadata({ fromCli: true, ...options }));
 
   program.parse();
 }
