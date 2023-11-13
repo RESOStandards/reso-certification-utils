@@ -14,15 +14,17 @@ if (require?.main === module) {
   const getBoolValue = item => {
     if (!item) return false;
 
-    if (item?.toLowerCase() === 'true') {
-      return true;
-    } else if (item?.toLowerCase() === 'false') {
-      return false;
+    if (typeof item === 'string') {
+      if (item.toLowerCase() === 'true') {
+        return true;
+      } else if (item.toLowerCase() === 'false') {
+        return false;
+      }
     } else if (typeof item === 'boolean') {
       return item;
-    } else {
-      return false;
     }
+
+    return false;
   };
 
   program.name('RESO Certification Utils').description('Command line batch-testing and restore utils').version('1.0.0');
