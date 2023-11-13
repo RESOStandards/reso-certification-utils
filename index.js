@@ -11,6 +11,20 @@ const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
 if (require?.main === module) {
   const { program } = require('commander');
 
+  const getBoolValue = item => {
+    if (!item) return false;
+
+    if (item?.toLowerCase() === 'true') {
+      return true;
+    } else if (item?.toLowerCase() === 'false') {
+      return false;
+    } else if (typeof item === 'boolean') {
+      return item;
+    } else {
+      return false;
+    }
+  };
+
   program.name('RESO Certification Utils').description('Command line batch-testing and restore utils').version('1.0.0');
 
   program
@@ -49,7 +63,7 @@ if (require?.main === module) {
     .option('-f, --fuzziness <float>', 'Set fuzziness to something besides the default')
     .option('-v, --version <string>', 'Data Dictionary version to compare to, i.e. 1.7 or 2.0')
     .option('-s, --useSuggestions <boolean>', 'Use external suggestions in addition to machine-provided ones', true)
-    .action(options => findVariations({ fromCli: true, ...options }));
+    .action(options => findVariations({ fromCli: true, ...options, useSuggestions: getBoolValue(options?.useSuggestions) }));
 
   program
     .command('replicate')
@@ -86,8 +100,6 @@ if (require?.main === module) {
         jsonSchemaValidation = false,
         ...remainingOptions
       } = options;
-
-      const getBoolValue = item => (item && item === 'true') || (typeof item === 'boolean' && item);
 
       const appOptions = {
         ...remainingOptions,
