@@ -1,10 +1,4 @@
 {
-  "*.js": [
-    "prettier --write",
-    "eslint"
-  ],
-  "*.mjs": [
-    "eslint",
-    "prettier --write"
-  ]
+  "*.js": ["npx prettier --write", "npx eslint . --fix"],
+  "*.mjs": ["npx prettier --write", "npx eslint . --fix"]
 }
