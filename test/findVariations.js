@@ -39,8 +39,7 @@ describe('computeVariations reference metadata checks', () => {
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: TEST_FUZZINESS,
-        version: DEFAULT_VERSION,
-        useSuggestions: false
+        version: DEFAULT_VERSION
       });
 
       assert.notEqual(description.length, 0);
@@ -73,8 +72,7 @@ describe('computeVariations reference metadata checks', () => {
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: TEST_FUZZINESS,
-        version: DD_1_7,
-        useSuggestions: false
+        version: DD_1_7
       });
 
       assert.notEqual(description.length, 0);
@@ -108,8 +106,7 @@ describe('computeVariations reference metadata checks', () => {
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: 1.0,
-        version: DD_1_7,
-        useSuggestions: false
+        version: DD_1_7
       });
 
       assert.notEqual(description.length, 0);
@@ -149,7 +146,7 @@ describe('computeVariations reference metadata checks', () => {
           ]
         };
 
-        const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_1_7, useSuggestions: false });
+        const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_1_7 });
 
         assert.equal(variations.resources.length, 1, 'Exactly one resource name should have matched!');
         assert.equal(variations.resourceName, testMetadataReportJson.resourceName);
@@ -178,7 +175,7 @@ describe('computeVariations reference metadata checks', () => {
       { fields: [] }
     );
 
-    const { variations = [] } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_1_7, useSuggestions: false });
+    const { variations = [] } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_1_7 });
 
     const { fields: metadataReportFields = [] } = metadataReportJson,
       { fields: fieldVariations = [] } = variations;
@@ -225,8 +222,7 @@ describe('computeVariations reference metadata checks', () => {
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: TEST_FUZZINESS,
-        version: DD_2_0,
-        useSuggestions: false
+        version: DD_2_0
       });
 
       assert.notEqual(description.length, 0);
@@ -260,8 +256,7 @@ describe('computeVariations reference metadata checks', () => {
       const { description, version, generatedOn, fuzziness, variations } = await computeVariations({
         metadataReportJson,
         fuzziness: MAX_FUZZINESS,
-        version: DD_2_0,
-        useSuggestions: false
+        version: DD_2_0
       });
 
       assert.notEqual(description.length, 0);
@@ -301,7 +296,7 @@ describe('computeVariations reference metadata checks', () => {
           ]
         };
 
-        const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_2_0, useSuggestions: false });
+        const { variations } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_2_0 });
 
         assert.equal(
           variations.resources.length,
@@ -334,7 +329,7 @@ describe('computeVariations reference metadata checks', () => {
       { fields: [] }
     );
 
-    const { variations = [] } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_2_0, useSuggestions: false });
+    const { variations = [] } = await computeVariations({ metadataReportJson: testMetadataReportJson, version: DD_2_0 });
 
     const { fields: metadataReportFields = [] } = metadataReportJson,
       { fields: fieldVariations = [] } = variations;
@@ -398,7 +393,7 @@ describe('computeVariations reference metadata checks', () => {
         ]
       };
 
-      const { variations = [] } = await computeVariations({ metadataReportJson, useSuggestions: false });
+      const { variations = [] } = await computeVariations({ metadataReportJson });
 
       const { fields: fieldVariations = [] } = variations;
 
@@ -431,7 +426,7 @@ describe('computeVariations reference metadata checks', () => {
         ]
       };
 
-      const { variations = [] } = await computeVariations({ metadataReportJson, useSuggestions: false });
+      const { variations = [] } = await computeVariations({ metadataReportJson });
 
       const { fields: fieldVariations = [] } = variations;
 
@@ -466,7 +461,7 @@ describe('computeVariations reference metadata checks', () => {
         ]
       };
 
-      const { variations = [] } = await computeVariations({ metadataReportJson, useSuggestions: false });
+      const { variations = [] } = await computeVariations({ metadataReportJson });
 
       const { fields: fieldVariations = [] } = variations;
 
@@ -498,7 +493,7 @@ describe('computeVariations reference metadata checks', () => {
         ]
       };
 
-      const { variations = [] } = await computeVariations({ metadataReportJson, useSuggestions: false });
+      const { variations = [] } = await computeVariations({ metadataReportJson });
 
       const { fields: fieldVariations = [] } = variations;
 
@@ -519,5 +514,384 @@ describe('computeVariations reference metadata checks', () => {
         `Suggestions should not contain the test standard field name '${standardTestFieldName}'`
       );
     });
+  });
+});
+
+describe('computeVariations suggestions checks', () => {
+  it('Should flag resource suggestions when they are found in the metadata', async () => {
+    const suggestionsMap = {
+      LocalProperty: {
+        suggestions: [
+          {
+            suggestedResourceName: 'Property'
+          }
+        ]
+      }
+    };
+
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'LocalProperty',
+          fieldName: 'ohai'
+        }
+      ]
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources.length, 1, 'There should be exactly one resource suggestion');
+    assert.equal(fields?.length, 0, 'No fields should be flagged when there are no suggestions');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged when there are no suggestions');
+
+    const [{ resourceName, suggestions }, ...rest] = resources;
+
+    assert.equal(rest?.length, 0, 'There should only be one resource');
+    assert.equal(resourceName, 'LocalProperty', '"LocalProperty" Resource should be flagged');
+    assert.equal(suggestions?.length, 1, 'There should be exactly one suggestion');
+
+    const [{ suggestedResourceName, strategy }, ...remainingSuggestions] = suggestions;
+
+    assert.equal(suggestedResourceName, 'Property', '"LocalProperty" should be a suggestion for "Property"');
+    assert.equal(strategy, 'Suggestion', 'Strategy should be "Suggestion"');
+    assert.equal(remainingSuggestions?.length, 0, 'There should be no remaining suggestions');
+  });
+
+  it('Should not flag resource suggestions when they are found in the metadata and the standard resource exists', async () => {
+    const suggestionsMap = {
+      LocalProperty: {
+        suggestions: [
+          {
+            suggestedResourceName: 'Property'
+          }
+        ]
+      }
+    };
+
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ohai'
+        },
+        {
+          resourceName: 'LocalProperty',
+          fieldName: 'ohai'
+        }
+      ]
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources.length, 0, 'There should be no resource suggestions');
+    assert.equal(fields?.length, 0, 'No fields should be flagged when there are no suggestions');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged when there are no suggestions');
+  });
+
+  it('Should flag field suggestions when they are found in the metadata', async () => {
+    const suggestionsMap = {
+      Property: {
+        Price: {
+          suggestions: [
+            {
+              suggestedResourceName: 'Property',
+              suggestedFieldName: 'ListPrice'
+            }
+          ]
+        }
+      }
+    };
+
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'Price'
+        }
+      ]
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged when there are no suggestions');
+    assert.equal(fields?.length, 1, 'There should be exactly one field suggestion');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged when there are no suggestions');
+
+    const [{ resourceName, fieldName, suggestions }, ...rest] = fields;
+
+    assert.equal(resourceName, 'Property', 'The field should be flagged in the "Property" Resource');
+    assert.equal(fieldName, 'Price', 'The flagged field name should be "Price"');
+    assert.equal(rest?.length, 0, 'There should be no other field suggestions');
+
+    const [{ suggestedResourceName, suggestedFieldName, strategy }, ...remainingSuggestions] = suggestions;
+
+    assert.equal(suggestedResourceName, 'Property', 'The suggested resource name should be "Property"');
+    assert.equal(suggestedFieldName, 'ListPrice', '"ListPrice" should be suggested for "Price"');
+    assert.equal(strategy, 'Suggestion', 'Strategy should be "Suggestion"');
+    assert.equal(remainingSuggestions?.length, 0, 'There should be no remaining suggestions');
+  });
+
+  it('Should not flag field suggestions when they are found in the metadata and the standard field exists', async () => {
+    const suggestionsMap = {
+      Property: {
+        Price: {
+          suggestions: [
+            {
+              suggestedResourceName: 'Property',
+              suggestedFieldName: 'ListPrice'
+            }
+          ]
+        }
+      }
+    };
+
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'Price'
+        },
+        {
+          resourceName: 'Property',
+          fieldName: 'ListPrice'
+        }
+      ]
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged when there are no suggestions');
+    assert.equal(fields?.length, 0, 'No fields should be flagged when there are suggestions for an existing item');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged when there are no suggestions');
+  });
+
+  it('Should flag lookup value suggestions when they are found in the metadata', async () => {
+    const suggestionsMap = {
+      Property: {
+        StandardStatus: {
+          'Active UC': {
+            suggestions: [
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'StandardStatus',
+                suggestedLookupValue: 'Active Under Contract'
+              }
+            ]
+          }
+        }
+      }
+    };
+
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'StandardStatus',
+          type: 'StandardStatusLookups'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'StandardStatusLookups',
+          type: 'Edm.String',
+          lookupValue: 'Active UC'
+        }
+      ]
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged when there are no suggestions');
+    assert.equal(fields?.length, 0, 'No field should be flagged when there are no suggestions');
+    assert.equal(lookups?.length, 1, 'There should be exactly one lookup suggestion');
+
+    const [{ resourceName, fieldName, legacyODataValue, lookupValue, suggestions }, ...rest] = lookups;
+
+    assert.equal(resourceName, 'Property', 'The field should be flagged in the "Property" Resource');
+    assert.equal(fieldName, 'StandardStatus', 'The flagged field name should be "StandardStatus"');
+    assert.equal(lookupValue, 'Active UC', 'The flagged field name should be "Active UC"');
+    assert.equal(!legacyODataValue, true, 'There should be no legacyODataValue');
+    assert.equal(rest?.length, 0, 'There should be no other lookup suggestions');
+
+    const [
+      { suggestedResourceName, suggestedFieldName, suggestedLookupValue, suggestedLegacyODataValue, strategy },
+      ...remainingSuggestions
+    ] = suggestions;
+
+    assert.equal(suggestedResourceName, 'Property', 'The suggested resource name should be "Property"');
+    assert.equal(suggestedFieldName, 'StandardStatus', 'The suggested field name should be "StandardStatus"');
+    assert.equal(suggestedLookupValue, 'Active Under Contract', 'The suggested lookup value should be "Active Under Contract"');
+    assert.equal(!suggestedLegacyODataValue, true, 'There should be no suggested legacy OData value');
+    assert.equal(strategy, 'Suggestion', 'Strategy should be "Suggestion"');
+    assert.equal(remainingSuggestions?.length, 0, 'There should be no remaining suggestions');
+  });
+
+  it('Should not flag lookup value suggestions when they are found in the metadata and the standard lookup value exists', async () => {
+    const suggestionsMap = {
+      Property: {
+        ExteriorFeatures: {
+          Grill: {
+            suggestions: [
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'ExteriorFeatures',
+                suggestedLookupValue: 'Gas Grill'
+              }
+            ]
+          }
+        }
+      }
+    };
+
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ExteriorFeatures',
+          type: 'ExteriorFeatures'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'ExteriorFeatures',
+          type: 'Edm.String',
+          lookupValue: 'Gas Grill'
+        },
+        {
+          lookupName: 'ExteriorFeatures',
+          type: 'Edm.String',
+          lookupValue: 'Grill'
+        }
+      ]
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged when there are no suggestions');
+    assert.equal(fields?.length, 0, 'No fields should be flagged when there are no suggestions');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged when there are suggestions but the standard lookup value exists');
+  });
+
+  it('Should flag legacyODataValue suggestions when they are found in the metadata', async () => {
+    const suggestionsMap = {
+      Property: {
+        ExteriorFeatures: {
+          Grill: {
+            suggestions: [
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'ExteriorFeatures',
+                suggestedLegacyODataValue: 'GasGrill'
+              }
+            ]
+          }
+        }
+      }
+    };
+
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ExteriorFeatures',
+          type: 'ExteriorFeaturesLookups.ExteriorFeatures'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'ExteriorFeaturesLookups.ExteriorFeatures',
+          type: 'Edm.Int64',
+          lookupValue: 'Grill'
+        }
+      ]
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged when there are no suggestions');
+    assert.equal(fields?.length, 0, 'No field should be flagged when there are no suggestions');
+    assert.equal(lookups?.length, 1, 'There should be exactly one lookup suggestion');
+
+    const [{ resourceName, fieldName, legacyODataValue, lookupValue, suggestions }, ...rest] = lookups;
+
+    assert.equal(resourceName, 'Property', 'The field should be flagged in the "Property" Resource');
+    assert.equal(fieldName, 'ExteriorFeatures', 'The flagged field name should be "StandardStatus"');
+    assert.equal(legacyODataValue, 'Grill', 'The flagged legacyODataValue should be "Grill"');
+    assert.equal(!lookupValue, true, 'There should be no legacyODataValue');
+    assert.equal(rest?.length, 0, 'There should be no other lookup suggestions');
+
+    const [
+      { suggestedResourceName, suggestedFieldName, suggestedLookupValue, suggestedLegacyODataValue, strategy },
+      ...remainingSuggestions
+    ] = suggestions;
+
+    assert.equal(suggestedResourceName, 'Property', 'The suggested resource name should be "Property"');
+    assert.equal(suggestedFieldName, 'ExteriorFeatures', 'The suggested field name should be "StandardStatus"');
+    assert.equal(suggestedLegacyODataValue, 'GasGrill', 'The suggested lookup value should be "GasGrill"');
+    assert.equal(!suggestedLookupValue, true, 'There should be no suggested lookup value');
+    assert.equal(strategy, 'Suggestion', 'Strategy should be "Suggestion"');
+    assert.equal(remainingSuggestions?.length, 0, 'There should be no remaining suggestions');
+  });
+
+  it('Should not flag lookup value suggestions when they are found in the metadata and the standard lookup value exists', async () => {
+    const suggestionsMap = {
+      Property: {
+        ExteriorFeatures: {
+          Grill: {
+            suggestions: [
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'ExteriorFeatures',
+                suggestedLookupValue: 'Gas Grill'
+              }
+            ]
+          }
+        }
+      }
+    };
+
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ExteriorFeatures',
+          type: 'ExteriorFeatures'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'ExteriorFeatures',
+          type: 'Edm.String',
+          lookupValue: 'Gas Grill'
+        },
+        {
+          lookupName: 'ExteriorFeatures',
+          type: 'Edm.String',
+          lookupValue: 'Grill'
+        }
+      ]
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged when there are no suggestions');
+    assert.equal(fields?.length, 0, 'No fields should be flagged when there are no suggestions');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged when there are suggestions but the standard lookup value exists');
   });
 });
