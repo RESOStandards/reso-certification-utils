@@ -53,8 +53,7 @@ if (require?.main === module) {
     .command('runDDTests')
     .description('Runs Data Dictionary tests')
     .requiredOption('-p, --pathToConfigFile <string>', 'Path to config file')
-    .option('-a, --runAvailability', 'Flag to run data availability tests, otherwise only metadata tests are run')
-    .option('-c, --console <boolean>', 'Show output to console', true)
+    .option('-a, --runAllTests', 'Flag to run all tests')
     .option('-v, --version <string>', 'Data Dictionary version to use', '1.7')
     .action(options => runTests({ fromCli: true, ...options }));
 
@@ -73,8 +72,8 @@ if (require?.main === module) {
     .requiredOption('-s, --strategy <string>', 'One of TopAndSkip, TimestampAsc, TimestampDesc, or NextLink')
     .option('-u, --serviceRootUri <string>', 'OData service root URI (no resource name or query)')
     .option('-b, --bearerToken <string>', 'Bearer token to use for authorization')
-    .option('-c, --clientId <string>', 'OAuth2 client_id parameter, use this OR bearerToken')
-    .option('-i, --clientSecret <string>', 'OAuth2 client_secret parameter, use this OR bearerToken')
+    .option('-i, --clientId <string>', 'OAuth2 client_id parameter, use this OR bearerToken')
+    .option('-c, --clientSecret <string>', 'OAuth2 client_secret parameter, use this OR bearerToken')
     .option('-k, --tokenUri <string>', 'OAuth2 token_uri parameter, use this OR bearerToken')
     .option('-e, --scope <string>', 'Optional OAuth2 scopes for client credentials')
     .option('-p, --pathToMetadataReportJson <string>', 'Path to metadata report JSON')
