@@ -1,6 +1,6 @@
 #! /usr/bin/env node
 
-const { schema } = require('./lib/schema');
+const { schema, combineErrors, generateJsonSchema, validate } = require('./lib/schema');
 const { restore } = require('./lib/restore-utils');
 const { runTests } = require('./lib/batch-test-runner');
 const { findVariations, computeVariations } = require('./lib/find-variations');
@@ -143,5 +143,8 @@ module.exports = {
   runTests,
   findVariations,
   computeVariations,
-  convertMetadata
+  convertMetadata,
+  combineErrors,
+  generateJsonSchema,
+  validate
 };
