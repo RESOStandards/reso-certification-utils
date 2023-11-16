@@ -1,4 +1,4 @@
-## Schema Generation and Validation
+# Schema Utilities
 
 ### Schema Generation and Validation
 
@@ -10,12 +10,12 @@ Usage: reso-certification-utils schema [options]
 Generate a schema from a given metadata report
 
 Options:
-  -g, --generate               Generate a schema for payload validation
-  -v, --validate               Validate one or multiple payloads with a schema
+  -G, --generate               Generate a schema for payload validation
+  -V, --validate               Validate one or multiple payloads with a schema
   -m, --metadataPath <string>  Path to the metadata report JSON file
   -o, --outputPath <string>    Path tho the directory to store the generated schema. Defaults to "./"
   -a, --additionalProperties   Pass this flag to allow additional properties in the schema. False by default
-  -V, --version <string>       The Data Dictionary version of the metadata report
+  -v, --version <string>       The Data Dictionary version of the metadata report
   -p, --payloadPath <string>   Path to the payload file OR directory/zip containing files that need to be validated
   -r, --resourceName <string>  Resource name to validate against. Required if --version is passed when validating.
   -h, --help                   display help for command
@@ -24,16 +24,16 @@ Options:
 ### Generate
 
 ```bash
-reso-certification-utils schema -g -a
+reso-certification-utils schema -G -a
 ```
 
 ### Validate
 
 ```bash
-reso-certification-utils schema -v -p <path to payloads file, zip, or directory> -a -dv 2.0 -r Property
+reso-certification-utils schema -V -p <path to payloads file, zip, or directory> -a -v 2.0 -r Property
 ```
 
-## Usage in a library
+# Usage in a library
 
 ```js
 const { getReferenceMetadata } = require('reso-certification-etl');
@@ -50,7 +50,7 @@ let errorMap = {};
 // validate
 const payload = JSON.parse(await fs.readFile('<path to payloads file>'));
 errorMap = validate({
-  ddVersion: '2.0',
+  version: '2.0',
   jsonPayload: payload,
   errorMap, // pass the error map back into the validate input in case of usage inside a loop
   jsonSchema: schema,
