@@ -30,7 +30,7 @@ Restores a RESO Certification API Server using a set of existing results in a gi
 ## Find Variations
 Uses a number of techniques to find potential variations for local items contained in a Data Dictionary metadata report.
 
-[**MORE INFO**](./lib/find-variations/README.md)
+[**MORE INFO**](./lib/variations/README.md)
 
 ## Schema Generation and Validation
 Generates a schema from a metadata report and validates payload against a given schema.

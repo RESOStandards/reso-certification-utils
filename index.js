@@ -1,9 +1,9 @@
 #! /usr/bin/env node
 
-const { schema, combineErrors, generateJsonSchema, validate } = require('./lib/schema');
+const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore-utils');
-const { runTests } = require('./lib/batch-test-runner');
-const { findVariations, computeVariations } = require('./lib/find-variations');
+const { runDDTests } = require('./lib/batch-test-runner');
+const { findVariations, computeVariations } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
 
@@ -55,7 +55,7 @@ if (require?.main === module) {
     .requiredOption('-p, --pathToConfigFile <string>', 'Path to config file')
     .option('-a, --runAllTests', 'Flag to run all tests')
     .option('-v, --version <string>', 'Data Dictionary version to use', '1.7')
-    .action(options => runTests({ fromCli: true, ...options }));
+    .action(options => runDDTests({ fromCli: true, ...options }));
 
   program
     .command('findVariations')
@@ -139,11 +139,12 @@ if (require?.main === module) {
 module.exports = {
   replicate,
   restore,
-  runTests,
+  runDDTests,
   findVariations,
   computeVariations,
   convertMetadata,
   combineErrors,
   generateJsonSchema,
-  validate
+  validate,
+  VALIDATION_ERROR_MESSAGES
 };

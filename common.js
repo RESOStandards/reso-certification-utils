@@ -8,14 +8,37 @@ const chalk = require('chalk');
  * common.js - Contains programmatically derived constants related to Certification.
  */
 
-const CURRENT_DATA_DICTIONARY_VERSION = '1.7',
-  PREVIOUS_DATA_DICTIONARY_VERSION = null,
-  CURRENT_WEB_API_CORE_VERSION = '2.0.0',
-  PREVIOUS_WEB_API_CORE_VERSION = null,
-  COMMANDER_LOG_FILE_NAME = 'commander.log',
-  METADATA_REPORT_JSON = 'metadata-report.json',
-  DATA_AVAILABILITY_REPORT_JSON = 'data-availability-report.json',
-  EMPTY_STRING = '',
+/**
+ * Data Dictionary Versions
+ */
+const DATA_DICTIONARY_VERSIONS = Object.freeze({
+  v1_7: '1.7',
+  v2_0: '2.0'
+});
+
+/**
+ * Web API Core versions
+ */
+const WEB_API_CORE_VERSIONS = Object.freeze({
+  v2_0_0: '2.0.0',
+  v2_1_0: '2.1.0'
+});
+
+const CERTIFICATION_FILES = {
+  METADATA_REPORT: 'metadata-report.json',
+  DATA_AVAILABILITY_REPORT: 'data-availability-report.json',
+  LOOKUP_RESOURCE_LOOKUP_METADATA: 'lookup-resource-lookup-metadata.json',
+  PROCESSED_METADATA_REPORT: 'metadata-report.processed.json'
+};
+
+const CURRENT_DATA_DICTIONARY_VERSION = DATA_DICTIONARY_VERSIONS.v2_0,
+  PREVIOUS_DATA_DICTIONARY_VERSION = DATA_DICTIONARY_VERSIONS.v1_7,
+  CURRENT_WEB_API_CORE_VERSION = WEB_API_CORE_VERSIONS.v2_1_0,
+  PREVIOUS_WEB_API_CORE_VERSION = WEB_API_CORE_VERSIONS.v2_0_0;
+
+const COMMANDER_LOG_FILE_NAME = 'commander.log';
+
+const EMPTY_STRING = '',
   ANNOTATION_STANDARD_NAME = 'RESO.OData.Metadata.StandardName',
   ANNOTATION_DD_WIKI_URL = 'RESO.DDWikiUrl';
 
@@ -30,7 +53,7 @@ const ENDORSEMENTS = {
 /**
  * Defines the currently supported versions for each endorsement.
  */
-const AVAILABLE_VERSIONS = {
+const AVAILABLE_VERSIONS = Object.freeze({
   [`${ENDORSEMENTS.DATA_DICTIONARY}`]: {
     currentVersion: CURRENT_DATA_DICTIONARY_VERSION,
     previousVersion: PREVIOUS_DATA_DICTIONARY_VERSION
@@ -39,7 +62,7 @@ const AVAILABLE_VERSIONS = {
     currentVersion: CURRENT_WEB_API_CORE_VERSION,
     previousVersion: PREVIOUS_WEB_API_CORE_VERSION
   }
-};
+});
 
 const getCurrentVersion = endorsementName =>
   endorsementName && AVAILABLE_VERSIONS?.[endorsementName] && AVAILABLE_VERSIONS?.[endorsementName]?.currentVersion;
@@ -94,7 +117,7 @@ const getEndorsementMetadata = (endorsementName, version) => {
       directoryName: `${ENDORSEMENTS.DATA_DICTIONARY}`,
       version: `${ddVersion}`,
       /* TODO: add versions to JSON results file names in the Commander */
-      jsonResultsFiles: [METADATA_REPORT_JSON, DATA_AVAILABILITY_REPORT_JSON],
+      jsonResultsFiles: [CERTIFICATION_FILES.METADATA_REPORT_JSON, CERTIFICATION_FILES.DATA_AVAILABILITY_REPORT_JSON],
       htmlReportFiles: [`data-dictionary-${ddVersion}.html`, `data-availability.dd-${ddVersion}.html`],
       logFileName: COMMANDER_LOG_FILE_NAME
     };
@@ -447,14 +470,24 @@ const getLoggers = (fromCli = false) => {
   }
 };
 
+const createReplicationStateServiceInstance = () => {
+  const replicationStateService = require('./lib/replication/services/replication-state');
+  replicationStateService.init();
+  return replicationStateService;
+};
+
 module.exports = {
+  DATA_DICTIONARY_VERSIONS,
+  WEB_API_CORE_VERSIONS,
   CURRENT_DATA_DICTIONARY_VERSION,
   CURRENT_WEB_API_CORE_VERSION,
   ENDORSEMENTS,
   AVAILABLE_VERSIONS,
+  CERTIFICATION_FILES,
   isValidEndorsement,
   isValidVersion,
   getEndorsementMetadata,
+  createReplicationStateServiceInstance,
   createResoScriptBearerTokenConfig,
   createResoScriptClientCredentialsConfig,
   getFileSafeIso8601Timestamp,
