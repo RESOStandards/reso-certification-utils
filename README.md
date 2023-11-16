@@ -3,6 +3,37 @@
 # RESO Certification Utils
 NodeJS package with reference artifacts and ETL processes for Certification.
 
+Can either be used from the command line or as a library.
+
+## Command Line Usage
+Clone repository into current directory:
+
+```
+// clone repo locally
+$ git clone https://github.com/RESOStandards/reso-certification-utils
+Cloning into 'reso-certification-utils'...
+remote: Enumerating objects: 691, done.
+remote: Counting objects: 100% (192/192), done.
+remote: Compressing objects: 100% (127/127), done.
+remote: Total 691 (delta 101), reused 97 (delta 65), pack-reused 499
+Receiving objects: 100% (691/691), 436.98 KiB | 3.24 MiB/s, done.
+Resolving deltas: 100% (320/320), done.
+
+// change to source directory
+$ cd reso-certification-utils
+
+// install locally
+$ npm i . 
+
+// show help
+$ reso-certification-utils --help
+
+```
+
+**Note**: _If you want to use a different directory besides the current one, please create and change to it before cloning (or pass it as an argument)._
+
+## Library Usage
+
 To install from GitHub:
 
 ```
@@ -17,8 +48,10 @@ add package `@reso/reso-certification-utils` and yarn install --check-files. Aft
 "@reso/reso-certification-utils": "https://github.com/RESOStandards/reso-certification-utils"
 ```
 
-## Batch Test Runner
-Runs a batch of tests using a provided configuration file.
+---
+
+## RESO Certification
+Runs one or more Data Dictionary tests using a provided configuration file.
 
 [**MORE INFO**](./lib/certification/README.md)
 

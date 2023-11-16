@@ -3,9 +3,10 @@
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore-utils');
 const { runDDTests } = require('./lib/certification');
-const { findVariations, computeVariations } = require('./lib/variations');
+const { findVariations, computeVariations, DEFAULT_FUZZINESS } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
+const { DEFAULT_DD_VERSION } = require('./common');
 
 //Only load commander interpreter if running from the CLI
 if (require?.main === module) {
@@ -27,6 +28,11 @@ if (require?.main === module) {
     return false;
   };
 
+  /**
+   * Ensure fromCli is true for anything run from the command line
+   */
+  const FROM_CLI = true;
+
   program.name('RESO Certification Utils').description('Command line batch-testing and restore utils').version('1.0.0');
 
   program
@@ -40,31 +46,31 @@ if (require?.main === module) {
     .option('-p, --payloadPath <string>', 'Path to the payload file OR directory/zip containing files that need to be validated')
     .option('-r, --resourceName <string>', 'Resource name to validate against. Required if --version is passed when validating.')
     .description('Generate a schema or validate a payload against a schema')
-    .action(options => schema({ fromCli: true, ...options }));
+    .action(options => schema({ ...options, fromCli: FROM_CLI }));
 
   program
     .command('restore')
     .description('Restores local or S3 results to a RESO Certification API instance')
     .option('-p, --pathToResults <string>', 'Path to test results')
     .option('-u, --url <string>', 'URL of Certification API')
-    .action(options => restore({ fromCli: true, ...options }));
+    .action(options => restore({ ...options, fromCli: FROM_CLI }));
 
   program
     .command('runDDTests')
     .description('Runs Data Dictionary tests')
     .requiredOption('-p, --pathToConfigFile <string>', 'Path to config file')
     .option('-a, --runAllTests <boolean>', 'Flag to run all tests', false)
-    .option('-v, --version <string>', 'Data Dictionary version to use', '1.7')
-    .action(options => runDDTests({ fromCli: true, ...options, runAllTests: getBoolValue(options?.runAllTests) }));
+    .option('-v, --version <string>', 'Data Dictionary version to use', DEFAULT_DD_VERSION)
+    .action(options => runDDTests({ ...options, fromCli: FROM_CLI, runAllTests: getBoolValue(options?.runAllTests) }));
 
   program
     .command('findVariations')
     .description('Finds possible variations in metadata using a number of methods.')
     .requiredOption('-p, --pathToMetadataReportJson <string>', 'Path to metadata-report.json file')
-    .option('-f, --fuzziness <float>', 'Set fuzziness to something besides the default')
-    .option('-v, --version <string>', 'Data Dictionary version to compare to, i.e. 1.7 or 2.0')
+    .option('-f, --fuzziness <float>', 'Set fuzziness to something besides the default', DEFAULT_FUZZINESS)
+    .option('-v, --version <string>', 'Data Dictionary version to compare to, i.e. 1.7 or 2.0', DEFAULT_DD_VERSION)
     .option('-s, --useSuggestions <boolean>', 'Use external suggestions in addition to machine-provided ones', true)
-    .action(options => findVariations({ fromCli: true, ...options, useSuggestions: getBoolValue(options?.useSuggestions) }));
+    .action(options => findVariations({ ...options, fromCli: FROM_CLI, useSuggestions: getBoolValue(options?.useSuggestions) }));
 
   program
     .command('replicate')
@@ -84,8 +90,10 @@ if (require?.main === module) {
     .option('-m, --maxPageSize <number>', 'Optional parameter for the odata.maxpagesize header')
     .option('-o, --outputPath <string>', 'Name of directory for results')
     .option('-l, --limit <number>', 'Limit total number of records at client level')
-    .option('-v, --version <string>', 'Data Dictionary version to use', '2.0')
+    .option('-v, --version <string>', 'Data Dictionary version to use', DEFAULT_DD_VERSION)
     .option('-j, --jsonSchemaValidation <boolean>', 'Sets whether to use JSON schema validation', false)
+    .option('-N, --originatingSystemName <string>', 'Used when additional filters are needed for OriginatingSystemName')
+    .option('-I, --originatingSystemId <string>', 'Used when additional filters are needed for OriginatingSystemID')
     .option('-S, --strictMode <boolean>', 'Fail immediately on schema validation errors if strict mode is true', true)
     .action(options => {
       // TODO: if run from the command line, we don't want to generate additional reports
@@ -106,7 +114,7 @@ if (require?.main === module) {
         ...remainingOptions,
         pathToMetadataReportJson,
         shouldGenerateReports: !!pathToMetadataReportJson,
-        fromCli: true,
+        fromCli: FROM_CLI,
         jsonSchemaValidation: getBoolValue(jsonSchemaValidation),
         strictMode: getBoolValue(strictMode)
       };
@@ -131,12 +139,14 @@ if (require?.main === module) {
     .command('metadata')
     .description('Converts metadata from OData XML to RESO Format.')
     .requiredOption('-p, --pathToXmlMetadata <string>', 'Path to XML Metadata to parse')
-    .action(options => convertAndSaveMetadata({ fromCli: true, ...options }));
+    .action(options => convertAndSaveMetadata({ ...options, fromCli: FROM_CLI }));
 
   program.parse();
 }
 
 module.exports = {
+  VALIDATION_ERROR_MESSAGES,
+  DEFAULT_DD_VERSION,
   replicate,
   restore,
   runDDTests,
@@ -145,6 +155,5 @@ module.exports = {
   convertMetadata,
   combineErrors,
   generateJsonSchema,
-  validate,
-  VALIDATION_ERROR_MESSAGES
+  validate
 };
