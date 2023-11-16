@@ -31,12 +31,12 @@ if (require?.main === module) {
 
   program
     .command('schema')
-    .option('-g, --generate', 'Generate a schema for payload validation')
-    .option('-v, --validate', 'Validate one or multiple payloads with a schema')
+    .option('-G, --generate', 'Generate a schema for payload validation')
+    .option('-V, --validate', 'Validate one or multiple payloads with a schema')
     .option('-m, --metadataPath <string>', 'Path to the metadata report JSON file')
     .option('-o, --outputPath <string>', 'Path tho the directory to store the generated schema. Defaults to "./"')
     .option('-a, --additionalProperties', 'Pass this flag to allow additional properties in the schema. False by default')
-    .option('-dv, --ddVersion <string>', 'The DD version of the metadata report')
+    .option('-v, --version <string>', 'The DD version of the metadata report')
     .option('-p, --payloadPath <string>', 'Path to the payload file OR directory/zip containing files that need to be validated')
     .option('-r, --resourceName <string>', 'Resource name to validate against. Required if --version is passed when validating.')
     .description('Generate a schema or validate a payload against a schema')
