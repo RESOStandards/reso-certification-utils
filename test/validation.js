@@ -122,10 +122,6 @@ describe('Schema Validation checks', () => {
     } catch (err) {
       assert.equal(err.message, VALIDATION_ERROR_MESSAGES.NO_CONTEXT_PROPERTY);
     }
-
-    // const report = combineErrors(errorMap);
-    // assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    // assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'Invalid context property error message did not match');
   });
 
   it('Should properly parse and validate valid string list lookup values', () => {
