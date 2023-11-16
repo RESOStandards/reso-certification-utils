@@ -2,7 +2,7 @@
 
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore-utils');
-const { runDDTests } = require('./lib/batch-test-runner');
+const { runDDTests } = require('./lib/certification');
 const { findVariations, computeVariations } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
@@ -53,9 +53,9 @@ if (require?.main === module) {
     .command('runDDTests')
     .description('Runs Data Dictionary tests')
     .requiredOption('-p, --pathToConfigFile <string>', 'Path to config file')
-    .option('-a, --runAllTests', 'Flag to run all tests')
+    .option('-a, --runAllTests <boolean>', 'Flag to run all tests', false)
     .option('-v, --version <string>', 'Data Dictionary version to use', '1.7')
-    .action(options => runDDTests({ fromCli: true, ...options }));
+    .action(options => runDDTests({ fromCli: true, ...options, runAllTests: getBoolValue(options?.runAllTests) }));
 
   program
     .command('findVariations')
