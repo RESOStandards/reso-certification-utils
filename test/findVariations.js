@@ -31,7 +31,7 @@ const TEST_FUZZINESS = 0.25,
   DD_2_0 = '2.0',
   DEFAULT_VERSION = DD_1_7;
 
-describe('computeVariations reference metadata checks', () => {
+describe('Variations Service reference metadata tests', () => {
   it('Should have required properties when the metadata report is empty', async () => {
     const metadataReportJson = {};
 
@@ -369,7 +369,7 @@ describe('computeVariations reference metadata checks', () => {
     assert.equal(noExactMatches.length, 0, 'Every item in the reference set should have matched exactly to one item in the suggestions!');
   });
 
-  describe('computeVariations special test cases - fields', async () => {
+  describe('Variations Service special test cases - fields', async () => {
     it('Should identify known fields as a close match when an item is one character different', async () => {
       //close matches
       const metadataReportJson = {
@@ -517,7 +517,7 @@ describe('computeVariations reference metadata checks', () => {
   });
 });
 
-describe('computeVariations suggestions checks', () => {
+describe('Variations Service suggestion tests', () => {
   it('Should flag resource suggestions when they are found in the metadata', async () => {
     const suggestionsMap = {
       LocalProperty: {

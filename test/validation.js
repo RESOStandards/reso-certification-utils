@@ -19,7 +19,7 @@ const {
 
 const { beforeEach } = require('mocha');
 
-describe('Schema Validation checks', () => {
+describe('Schema validation tests', () => {
   const metadata = getReferenceMetadata('2.0');
   let schema;
   beforeEach(async () => {

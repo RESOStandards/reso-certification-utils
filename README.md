@@ -55,11 +55,6 @@ Runs one or more Data Dictionary tests using a provided configuration file.
 
 [**MORE INFO**](./lib/certification/README.md)
 
-## Restore Certification Server
-Restores a RESO Certification API Server using a set of existing results in a given directory structure.
-
-[**MORE INFO**](./lib/restore-utils/README.md)
-
 ## Find Variations
 Uses a number of techniques to find potential variations for local items contained in a Data Dictionary metadata report.
 
@@ -74,6 +69,11 @@ Generates a schema from a metadata report and validates payload against a given 
 CLI tools and Node libs to replicate data from a RESO Web API server using bearer tokens or OAuth2 Client Credentials.
 
 [**MORE INFO**](./lib/replication/README.md)
+
+## Restore Results
+Utils for restoring results to a RESO Certification API server.
+
+[**MORE INFO**](./lib/restore/README.md)
 
 
 ## Tests

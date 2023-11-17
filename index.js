@@ -1,7 +1,7 @@
 #! /usr/bin/env node
 
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
-const { restore } = require('./lib/restore-utils');
+const { restore } = require('./lib/restore');
 const { runDDTests } = require('./lib/certification');
 const { findVariations, computeVariations, DEFAULT_FUZZINESS } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
@@ -129,7 +129,7 @@ if (require?.main === module) {
           scope
         };
       } else {
-        throw new Error('One of bearerToken or clientId, clientSecret, and tokenUri MUST be specified!');
+        throw new Error('One of bearerToken OR clientId, clientSecret, and tokenUri MUST be specified!');
       }
 
       replicate(appOptions);
