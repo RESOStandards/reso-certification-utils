@@ -27,8 +27,11 @@ const WEB_API_CORE_VERSIONS = Object.freeze({
 const CERTIFICATION_FILES = {
   METADATA_REPORT: 'metadata-report.json',
   DATA_AVAILABILITY_REPORT: 'data-availability-report.json',
+  DATA_AVAILABILITY_RESPONSES: 'data-availability-responses.json',
   LOOKUP_RESOURCE_LOOKUP_METADATA: 'lookup-resource-lookup-metadata.json',
-  PROCESSED_METADATA_REPORT: 'metadata-report.processed.json'
+  PROCESSED_METADATA_REPORT: 'metadata-report.processed.json',
+  VARIATIONS_REPORT: 'data-dictionary-variations.json',
+  SCHEMA_VALIDATION_ERROR_REPORT: 'data-availability-schema-validation-errors.json'
 };
 
 const CURRENT_DATA_DICTIONARY_VERSION = DATA_DICTIONARY_VERSIONS.v2_0,

@@ -1,5 +1,7 @@
 #! /usr/bin/env node
 
+require('dotenv').config();
+
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
 const { runDDTests } = require('./lib/certification');
@@ -59,9 +61,17 @@ if (require?.main === module) {
     .command('runDDTests')
     .description('Runs Data Dictionary tests')
     .requiredOption('-p, --pathToConfigFile <string>', 'Path to config file')
-    .option('-a, --runAllTests <boolean>', 'Flag to run all tests', false)
+    .option('-a, --runAllTests', 'Flag to run all tests')
     .option('-v, --version <string>', 'Data Dictionary version to use', DEFAULT_DD_VERSION)
-    .action(options => runDDTests({ ...options, fromCli: FROM_CLI, runAllTests: getBoolValue(options?.runAllTests) }));
+    .option('-S, --strictMode <boolean>', 'Use strict mode', true)
+    .action(options =>
+      runDDTests({
+        ...options,
+        fromCli: FROM_CLI,
+        runAllTests: getBoolValue(options?.runAllTests),
+        strictMode: getBoolValue(options?.strictMode)
+      })
+    );
 
   program
     .command('findVariations')
