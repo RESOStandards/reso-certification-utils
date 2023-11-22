@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
-const { runDDTests } = require('./lib/certification');
+const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification');
 const { findVariations, computeVariations, DEFAULT_FUZZINESS } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
@@ -63,6 +63,7 @@ if (require?.main === module) {
     .requiredOption('-p, --pathToConfigFile <string>', 'Path to config file')
     .option('-a, --runAllTests', 'Flag to run all tests')
     .option('-v, --version <string>', 'Data Dictionary version to use', DEFAULT_DD_VERSION)
+    .option('-l, --limit <int>', 'Number of records to sample per strategy, resource, and expansion', DEFAULT_LIMIT)
     .option('-S, --strictMode <boolean>', 'Use strict mode', true)
     .action(options =>
       runDDTests({
