@@ -58,7 +58,7 @@ const schemaWithImplicitNullable = {
   }
 };
 
-const nonNullableschema = {
+const nonNullableSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',
   oneOf: [
@@ -170,7 +170,7 @@ module.exports = {
   simpleNonEnumSchema,
   schemaWithMaxLength,
   schemaWithImplicitNullable,
-  nonNullableschema,
+  nonNullableSchema,
   enumFieldsAndLookupsSchema,
   collectionFieldsSchema,
   expansionFieldsSchema,

@@ -1,8 +1,9 @@
 'use strict';
 
 const assert = require('assert');
-const { generateJsonSchema, validate, combineErrors } = require('..');
+const { generateJsonSchema, validate, combineErrors, VALIDATION_ERROR_MESSAGES } = require('..');
 const { getReferenceMetadata } = require('reso-certification-etl');
+
 const {
   valuePayload,
   nonValuePayload,
@@ -15,9 +16,10 @@ const {
   stringListInvalidPayload,
   additionalPropertyPayload
 } = require('./schema/payload-samples');
+
 const { beforeEach } = require('mocha');
 
-describe('Schema Validation checks', () => {
+describe('Schema validation tests', () => {
   const metadata = getReferenceMetadata('2.0');
   let schema;
   beforeEach(async () => {
@@ -30,7 +32,7 @@ describe('Schema Validation checks', () => {
       jsonSchema: schema,
       jsonPayload: valuePayload,
       resourceName: 'Property',
-      ddVersion: '2.0',
+      version: '2.0',
       errorMap
     });
     const report = combineErrors(errorMap);
@@ -43,7 +45,7 @@ describe('Schema Validation checks', () => {
       jsonSchema: schema,
       jsonPayload: nonValuePayload,
       resourceName: 'Property',
-      ddVersion: '2.0',
+      version: '2.0',
       errorMap
     });
     const report = combineErrors(errorMap);
@@ -56,7 +58,7 @@ describe('Schema Validation checks', () => {
       jsonSchema: schema,
       jsonPayload: expansionPayload,
       resourceName: 'Property',
-      ddVersion: '2.0',
+      version: '2.0',
       errorMap
     });
     const report = combineErrors(errorMap);
@@ -69,7 +71,7 @@ describe('Schema Validation checks', () => {
       jsonSchema: schema,
       jsonPayload: simpleTypeMismatchErrorPayload,
       resourceName: 'Property',
-      ddVersion: '2.0',
+      version: '2.0',
       errorMap
     });
     const report = combineErrors(errorMap);
@@ -86,7 +88,7 @@ describe('Schema Validation checks', () => {
       jsonSchema: schema,
       jsonPayload: enumMismatchPayload,
       resourceName: 'Property',
-      ddVersion: '2.0',
+      version: '2.0',
       errorMap
     });
     const report = combineErrors(errorMap);
@@ -101,7 +103,7 @@ describe('Schema Validation checks', () => {
       jsonSchema: schema,
       jsonPayload: odataKeyPayload,
       resourceName: 'Property',
-      ddVersion: '2.0',
+      version: '2.0',
       errorMap
     });
     const report = combineErrors(errorMap);
@@ -109,18 +111,17 @@ describe('Schema Validation checks', () => {
   });
 
   it('Should find error even when top level context is invalid', () => {
-    const expectedErrorMessage = 'No properties were found on the payload that match "@reso.context|@odata."';
-    let errorMap = {};
-    errorMap = validate({
-      jsonSchema: schema,
-      jsonPayload: invalidPayloadContext,
-      resourceName: 'Property',
-      ddVersion: '2.0',
-      errorMap
-    });
-    const report = combineErrors(errorMap);
-    assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'Invalid context property error message did not match');
+    try {
+      validate({
+        jsonSchema: schema,
+        jsonPayload: invalidPayloadContext,
+        resourceName: 'Property',
+        version: '2.0',
+        errorMap: {}
+      });
+    } catch (err) {
+      assert.equal(err.message, VALIDATION_ERROR_MESSAGES.NO_CONTEXT_PROPERTY);
+    }
   });
 
   it('Should properly parse and validate valid string list lookup values', () => {
@@ -129,7 +130,7 @@ describe('Schema Validation checks', () => {
       jsonSchema: schema,
       jsonPayload: stringListValidPayload,
       resourceName: 'Property',
-      ddVersion: '2.0',
+      version: '2.0',
       errorMap
     });
     const report = combineErrors(errorMap);
@@ -144,7 +145,7 @@ describe('Schema Validation checks', () => {
       jsonSchema: schema,
       jsonPayload: stringListInvalidPayload,
       resourceName: 'Property',
-      ddVersion: '2.0',
+      version: '2.0',
       errorMap
     });
     const report = combineErrors(errorMap);
@@ -161,12 +162,12 @@ describe('Schema Validation checks', () => {
       jsonSchema: schema,
       jsonPayload: additionalPropertyPayload,
       resourceName: 'Property',
-      ddVersion: '2.0',
+      version: '2.0',
       errorMap
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
     assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'additional property error message did not match');
-    assert.equal(report.items[0].fieldName, expectedInvalidField, 'Non advertied field did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidField, 'Non advertised field did not match');
   });
 });

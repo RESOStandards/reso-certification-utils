@@ -17,14 +17,14 @@ const {
   collectionFieldsSchema,
   enumFieldsAndLookupsSchema,
   expansionFieldsSchema,
-  nonNullableschema,
+  nonNullableSchema,
   nullableCollectionFieldsSchema,
   schemaWithImplicitNullable,
   schemaWithMaxLength,
   simpleNonEnumSchema
 } = require('./schema/schema-samples');
 
-describe('Schema generations checks', () => {
+describe('Schema generation tests', () => {
   it('Should generate valid schema for simple non enum fields', async () => {
     const generatedSchema = await generateJsonSchema({ metadataReportJson: simpleNonEnumFields });
     assert.deepEqual(generatedSchema, simpleNonEnumSchema);
@@ -57,7 +57,7 @@ describe('Schema generations checks', () => {
 
   it('Should generate valid schema for non-nullable field', async () => {
     const generatedSchema = await generateJsonSchema({ metadataReportJson: nonNullableField });
-    assert.deepEqual(generatedSchema, nonNullableschema);
+    assert.deepEqual(generatedSchema, nonNullableSchema);
   });
 
   it('Should generate valid schema for nullable collection fields', async () => {

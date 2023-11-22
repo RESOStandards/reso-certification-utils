@@ -8,76 +8,101 @@ const chalk = require('chalk');
  * common.js - Contains programmatically derived constants related to Certification.
  */
 
-const CURRENT_DATA_DICTIONARY_VERSION = '1.7',
-  PREVIOUS_DATA_DICTIONARY_VERSION = null,
-  CURRENT_WEB_API_CORE_VERSION = '2.0.0',
-  PREVIOUS_WEB_API_CORE_VERSION = null,
-  COMMANDER_LOG_FILE_NAME = 'commander.log',
-  METADATA_REPORT_JSON = 'metadata-report.json',
-  DATA_AVAILABILITY_REPORT_JSON = 'data-availability-report.json',
-  IDX_DIFFERENCE_REPORT_JSON = 'idx-difference-report.json',
-  EMPTY_STRING = '',
+/**
+ * Data Dictionary Versions
+ */
+const DATA_DICTIONARY_VERSIONS = Object.freeze({
+  v1_7: '1.7',
+  v2_0: '2.0'
+});
+
+/**
+ * Web API Core versions
+ */
+const WEB_API_CORE_VERSIONS = Object.freeze({
+  v2_0_0: '2.0.0',
+  v2_1_0: '2.1.0'
+});
+
+const CERTIFICATION_FILES = {
+  METADATA_REPORT: 'metadata-report.json',
+  DATA_AVAILABILITY_REPORT: 'data-availability-report.json',
+  DATA_AVAILABILITY_RESPONSES: 'data-availability-responses.json',
+  LOOKUP_RESOURCE_LOOKUP_METADATA: 'lookup-resource-lookup-metadata.json',
+  PROCESSED_METADATA_REPORT: 'metadata-report.processed.json',
+  VARIATIONS_REPORT: 'data-dictionary-variations.json',
+  SCHEMA_VALIDATION_ERROR_REPORT: 'data-availability-schema-validation-errors.json'
+};
+
+const CURRENT_DATA_DICTIONARY_VERSION = DATA_DICTIONARY_VERSIONS.v2_0,
+  DEFAULT_DD_VERSION = DATA_DICTIONARY_VERSIONS.v2_0,
+  PREVIOUS_DATA_DICTIONARY_VERSION = DATA_DICTIONARY_VERSIONS.v1_7,
+  CURRENT_WEB_API_CORE_VERSION = WEB_API_CORE_VERSIONS.v2_1_0,
+  PREVIOUS_WEB_API_CORE_VERSION = WEB_API_CORE_VERSIONS.v2_0_0,
+  DEFAULT_WEB_API_CORE_VERSION = WEB_API_CORE_VERSIONS.v2_0_0;
+
+const COMMANDER_LOG_FILE_NAME = 'commander.log';
+
+const EMPTY_STRING = '',
   ANNOTATION_STANDARD_NAME = 'RESO.OData.Metadata.StandardName',
   ANNOTATION_DD_WIKI_URL = 'RESO.DDWikiUrl';
 
 /**
  * Each key refers to what the given item is called when saved the filesystem.
  */
-const endorsements = {
+const ENDORSEMENTS = {
   DATA_DICTIONARY: 'data-dictionary',
-  DATA_DICTIONARY_WITH_IDX: 'data-dictionary-idx',
   WEB_API_CORE: 'web-api-server.core'
 };
 
 /**
  * Defines the currently supported versions for each endorsement.
  */
-const availableVersions = {
-  [`${endorsements.DATA_DICTIONARY}`]: {
+const AVAILABLE_VERSIONS = Object.freeze({
+  [`${ENDORSEMENTS.DATA_DICTIONARY}`]: {
     currentVersion: CURRENT_DATA_DICTIONARY_VERSION,
     previousVersion: PREVIOUS_DATA_DICTIONARY_VERSION
   },
-  [`${endorsements.DATA_DICTIONARY_WITH_IDX}`]: {
-    currentVersion: CURRENT_DATA_DICTIONARY_VERSION,
-    previousVersion: PREVIOUS_DATA_DICTIONARY_VERSION
-  },
-  [`${endorsements.WEB_API_CORE}`]: {
+  [`${ENDORSEMENTS.WEB_API_CORE}`]: {
     currentVersion: CURRENT_WEB_API_CORE_VERSION,
     previousVersion: PREVIOUS_WEB_API_CORE_VERSION
   }
-};
+});
 
 const getCurrentVersion = endorsementName =>
-  endorsementName && availableVersions[endorsementName] && availableVersions[endorsementName].currentVersion;
+  endorsementName && AVAILABLE_VERSIONS?.[endorsementName] && AVAILABLE_VERSIONS?.[endorsementName]?.currentVersion;
 
 const getPreviousVersion = endorsementName =>
-  endorsementName && availableVersions[endorsementName] && availableVersions[endorsementName].previousVersion;
+  endorsementName && AVAILABLE_VERSIONS?.[endorsementName] && AVAILABLE_VERSIONS?.[endorsementName]?.previousVersion;
 
 /**
  * Determines whether the given endorsementName is valid.
  *
- * @param {String} endorsementName the key to get the config for. @see {endorsements}
+ * @param {String} endorsementName the key to get the config for. @see {ENDORSEMENTS}
  * @returns true if the endorsementName is valid, false otherwise.
  * @throws error if parameters aren't valid
  */
-const isValidEndorsement = endorsementName => endorsementName && !!availableVersions[endorsementName];
+const isValidEndorsement = endorsementName => endorsementName && !!AVAILABLE_VERSIONS?.[endorsementName];
 
 /**
  * Determines whether the version is valid for the given endorsement.
  *
- * @param {String} endorsementName the key to get the config for. @see {endorsements}
- * @param {String} version the version for the given key. @see {availableVersions}
+ * @param {String} endorsementName the key to get the config for. @see {ENDORSEMENTS}
+ * @param {String} version the version for the given key. @see {AVAILABLE_VERSIONS}
  * @returns true if the version is valid, false otherwise.
  * @throws error if parameters aren't valid
  */
 const isValidVersion = (endorsementName, version) =>
-  endorsementName && version && availableVersions[endorsementName] && availableVersions[endorsementName].currentVersion === version;
+  endorsementName &&
+  version &&
+  AVAILABLE_VERSIONS?.[endorsementName] &&
+  (AVAILABLE_VERSIONS?.[endorsementName]?.currentVersion === version || AVAILABLE_VERSIONS?.[endorsementName]?.previousVersion === version);
 
 /**
  * Gets the appropriate config for a given endorsement
  *
- * @param {String} endorsementName the key to get the config for. @see {endorsements}
- * @param {String} version the version for the given key. @see {availableVersions}
+ * @param {String} endorsementName the key to get the config for. @see {ENDORSEMENTS}
+ * @param {String} version the version for the given key. @see {AVAILABLE_VERSIONS}
  * @returns a config consisting of constants relevant for the given endorsement.
  */
 const getEndorsementMetadata = (endorsementName, version) => {
@@ -92,37 +117,22 @@ const getEndorsementMetadata = (endorsementName, version) => {
   const ddVersion = version || CURRENT_DATA_DICTIONARY_VERSION,
     webApiVersion = version || CURRENT_WEB_API_CORE_VERSION;
 
-  if (endorsementName === endorsements.DATA_DICTIONARY) {
+  if (endorsementName === ENDORSEMENTS.DATA_DICTIONARY) {
     return {
-      directoryName: `${endorsements.DATA_DICTIONARY}`,
+      directoryName: `${ENDORSEMENTS.DATA_DICTIONARY}`,
       version: `${ddVersion}`,
       /* TODO: add versions to JSON results file names in the Commander */
-      jsonResultsFiles: [METADATA_REPORT_JSON, DATA_AVAILABILITY_REPORT_JSON],
+      jsonResultsFiles: [CERTIFICATION_FILES.METADATA_REPORT_JSON, CERTIFICATION_FILES.DATA_AVAILABILITY_REPORT_JSON],
       htmlReportFiles: [`data-dictionary-${ddVersion}.html`, `data-availability.dd-${ddVersion}.html`],
       logFileName: COMMANDER_LOG_FILE_NAME
     };
   }
 
-  if (endorsementName === endorsements.DATA_DICTIONARY_WITH_IDX) {
+  if (endorsementName === ENDORSEMENTS.WEB_API_CORE) {
     return {
-      directoryName: `${endorsements.DATA_DICTIONARY_WITH_IDX}`,
-      version: `${version}`,
-      /* TODO: add versions to JSON results file names in the Commander */
-      jsonResultsFiles: [METADATA_REPORT_JSON, DATA_AVAILABILITY_REPORT_JSON, IDX_DIFFERENCE_REPORT_JSON],
-      htmlReportFiles: [
-        `data-dictionary-${ddVersion}.html`,
-        `data-availability.dd-${ddVersion}.html`,
-        `idx-difference-report.dd-${ddVersion}.html`
-      ],
-      logFileName: COMMANDER_LOG_FILE_NAME
-    };
-  }
-
-  if (endorsementName === endorsements.WEB_API_CORE) {
-    return {
-      directoryName: `${endorsements.WEB_API_CORE}.${webApiVersion}`,
-      jsonResultsFiles: [`${endorsements.WEB_API_CORE}.${webApiVersion}.json`],
-      htmlReportFiles: [`${endorsements.WEB_API_CORE}.${webApiVersion}.html`],
+      directoryName: `${ENDORSEMENTS.WEB_API_CORE}.${webApiVersion}`,
+      jsonResultsFiles: [`${ENDORSEMENTS.WEB_API_CORE}.${webApiVersion}.json`],
+      htmlReportFiles: [`${ENDORSEMENTS.WEB_API_CORE}.${webApiVersion}.html`],
       logFileName: COMMANDER_LOG_FILE_NAME
     };
   }
@@ -225,6 +235,11 @@ const archiveEndorsement = ({ providerUoi, providerUsi, recipientUoi, endorsemen
   }
 };
 
+/**
+ * Creates a legacy RESOScript configuration bearer tokens
+ * @param {Object} options service root and token
+ * @returns XML config for token based auth
+ */
 const createResoScriptBearerTokenConfig = ({ serviceRootUri, token }) =>
   '<?xml version="1.0" encoding="utf-8" ?>' +
   '<OutputScript>' +
@@ -235,6 +250,11 @@ const createResoScriptBearerTokenConfig = ({ serviceRootUri, token }) =>
   '  </ClientSettings>' +
   '</OutputScript>';
 
+/**
+ * Creates a legacy RESOScript configuration for client credentials
+ * @param {Object} options service root and client credentials
+ * @returns XML config for client credentials
+ */
 const createResoScriptClientCredentialsConfig = ({ serviceRootUri, clientCredentials }) =>
   '<?xml version="1.0" encoding="utf-8" ?>' +
   '<OutputScript>' +
@@ -249,17 +269,18 @@ const createResoScriptClientCredentialsConfig = ({ serviceRootUri, clientCredent
   '</OutputScript>';
 
 /**
- *
- * @param {object} options
+ * Extracts files from a zip archive
+ * @param {Object} options
  * @param {String} options.zipPath Path to the zip file
- * @param {string} options.outputPath Path to store the extracted files
- * @returns
+ * @param {String} options.outputPath Path to store the extracted files
+ * @returns promise that resolves to the unzipped file
  */
 const extractFilesFromZip = async ({ zipPath, outputPath }) =>
   fs
     .createReadStream(zipPath)
     .pipe(unzipper.Extract({ path: outputPath }))
     .promise();
+
 /**
  *
  * Sleeps for the given amount of milliseconds
@@ -269,9 +290,19 @@ const extractFilesFromZip = async ({ zipPath, outputPath }) =>
  */
 const sleep = async (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));
 
+/**
+ * Parses a lookup name from a fully qualified path
+ * @param {String} lookupName name of the lookup to parse
+ * @returns name of the lookup without any scope operators (.)
+ */
 const parseLookupName = lookupName => lookupName?.substring(lookupName.lastIndexOf('.') + 1);
 
-const isStringEnumeration = type => !!type?.includes('Edm.String');
+/**
+ * Determines whether a given type is a string enumeration
+ * @param {String} type the type name
+ * @returns true if the type is for a string enumeration, false otherwise
+ */
+const isStringEnumeration = type => type && type?.includes('Edm.String');
 
 /**
  * Creates a metadata map for lookups from metadata report JSON
@@ -401,7 +432,11 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
 };
 
 /**
- * @param {string} urn
+ * Parses a URN with the form:
+ *
+ *  urn:reso:metadata:<version>:resourceName
+ *
+ * @param {String} urn
  * @returns resource and version parsed from a valid URN. Returns empty strings in case of invalid URN.
  */
 const parseResoUrn = (urn = '') => {
@@ -440,14 +475,26 @@ const getLoggers = (fromCli = false) => {
   }
 };
 
+const createReplicationStateServiceInstance = () => {
+  const replicationStateService = require('./lib/replication/services/replication-state');
+  replicationStateService.init();
+  return replicationStateService;
+};
+
 module.exports = {
+  DEFAULT_DD_VERSION,
+  DEFAULT_WEB_API_CORE_VERSION,
+  DATA_DICTIONARY_VERSIONS,
+  WEB_API_CORE_VERSIONS,
   CURRENT_DATA_DICTIONARY_VERSION,
   CURRENT_WEB_API_CORE_VERSION,
-  endorsements,
-  availableVersions,
+  ENDORSEMENTS,
+  AVAILABLE_VERSIONS,
+  CERTIFICATION_FILES,
   isValidEndorsement,
   isValidVersion,
   getEndorsementMetadata,
+  createReplicationStateServiceInstance,
   createResoScriptBearerTokenConfig,
   createResoScriptClientCredentialsConfig,
   getFileSafeIso8601Timestamp,
