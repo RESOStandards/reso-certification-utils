@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha --timeout 30000",
-    "prepare": "husky install"
+    "lint": "eslint . --fix",
+    "precommit": "npm run lint && npm test"
   },
   "bin": {
     "reso-certification-utils": "index.js"
@@ -25,6 +26,11 @@
   "homepage": "https://github.com/RESOStandards/reso-certification-utils#readme",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run precommit"
+    }
   },
   "dependencies": {
     "@reso/reso-certification-etl": "github:RESOStandards/reso-certification-etl",
