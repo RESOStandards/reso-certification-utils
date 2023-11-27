@@ -23,7 +23,8 @@ Resolving deltas: 100% (320/320), done.
 $ cd reso-certification-utils
 
 // install locally
-$ npm i . 
+$ npm i 
+$ npm i . -g 
 
 // show help
 $ reso-certification-utils --help
@@ -75,8 +76,12 @@ Utils for restoring results to a RESO Certification API server.
 
 [**MORE INFO**](./lib/restore/README.md)
 
+# Docker
+Instructions for using Docker.
 
-## Tests
+[**MORE INFO**](./doc/DOCKER.md)
+
+# Tests
 
 To run the tests, clone the repository:
 
