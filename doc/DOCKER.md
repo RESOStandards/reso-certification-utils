@@ -96,7 +96,8 @@ Depending on the task, you will also need to mount the appropriate volumes in th
 
 ## RESO Certification
 
-For example, to run the Data Dictionary tests, use the following command:
+## Data Dictionary Testing
+To run the Data Dictionary tests, use the following command once the container has been built: 
 
 ```
 $ docker run -v ./results:/results -v ./config.json:/config.json -it reso-certification-utils runDDTests -v 1.7 -p /config.json -l 200 -a 
@@ -110,10 +111,33 @@ Where:
 * `reso-certification-utils` is the name of the container to run
 * `-v 1.7` uses Data Dictionary 1.7 tests and references
 * `-p /config.json` is the path to the config file within the container
-* `-l 200` sets the limit to 200 records per resource / expansion / strategy
+* `-l 200` sets the limit to 200 records per resource / expansion / strategy (default: 100,000)
 * `-a` is the option to run all tests - without it, only metadata tests are run
 
 Results will be outputted in a directory called `results`.
+
+### Variations Service
+
+In order to use the Variations Service, the Data Dictionary 2.0 tests will need an environment variable with a token. 
+
+This can either be passed as an environment variable: 
+
+```
+$ docker run -v ./results:/results -v ./config.json:/config.json -it -e <provider token> reso-certification-utils runDDTests -v 2.0 -p /config.json -l 200 -a 
+```
+
+Or you can use an environment file (preferred): 
+
+```
+$ docker run -v ./results:/results -v ./config.json:/config.json -it --env-file .env reso-certification-utils runDDTests -v 2.0 -p /config.json -l 200 -a 
+```
+
+Where `.env` file would be a file in the current directory containing a variable called `PROVIDER_TOKEN` with a value. See [`sample.env`](../sample.env) for more information.
+
+To obtain a provider token, contact [dev@reso.org](mailto:dev@reso.org).
+
+If no provider token is specified, then only machine-based matching techniques will be used.
+
 
 ## Other Tasks
 See the [RESO Certification](#reso-certification) example for how to mount files and directories. 
