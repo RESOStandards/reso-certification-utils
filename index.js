@@ -5,7 +5,7 @@ require('dotenv').config();
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
 const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification');
-const { findVariations, computeVariations, DEFAULT_FUZZINESS } = require('./lib/variations');
+const { findVariations, updateVariations, computeVariations, DEFAULT_FUZZINESS } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
 const { DEFAULT_DD_VERSION } = require('./common');
@@ -82,6 +82,12 @@ if (require?.main === module) {
     .option('-v, --version <string>', 'Data Dictionary version to compare to, i.e. 1.7 or 2.0', DEFAULT_DD_VERSION)
     .option('-s, --useSuggestions <boolean>', 'Use external suggestions in addition to machine-provided ones', true)
     .action(options => findVariations({ ...options, fromCli: FROM_CLI, useSuggestions: getBoolValue(options?.useSuggestions) }));
+
+  program
+    .command('updateVariations')
+    .description('Updates suggestions in the Variations Service.')
+    .requiredOption('-p, --pathToCsvSuggestions <string>', 'Suggestions CSV file name')
+    .action(options => updateVariations({ ...options, fromCli: FROM_CLI }));
 
   program
     .command('replicate')
