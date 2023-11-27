@@ -174,6 +174,7 @@ const getFileSafeIso8601Timestamp = (timestamp = new Date()) => timestamp.toISOS
  * @returns Unix path for recipient
  */
 const buildRecipientEndorsementPath = ({
+  resultsPath,
   providerUoi,
   providerUsi,
   recipientUoi,
@@ -181,6 +182,8 @@ const buildRecipientEndorsementPath = ({
   version,
   currentOrArchived = 'current'
 } = {}) => {
+  //TODO: clean up
+  if (!resultsPath) throw Error('resultsPath is required!');
   if (!providerUoi) throw Error('providerUoi is required!');
   if (!providerUsi) throw Error('providerUsi is required!');
   if (!recipientUoi) throw Error('recipientUoi is required!');
@@ -190,7 +193,14 @@ const buildRecipientEndorsementPath = ({
   if (!isValidEndorsement(endorsementName)) throw new Error(`Invalid endorsementName: ${endorsementName}`);
   if (!isValidVersion(endorsementName, version)) throw new Error(`Invalid version: ${version}`);
 
-  return path.join(`${providerUoi}-${providerUsi}`, recipientUoi, currentOrArchived);
+  return path.join(
+    process.cwd(),
+    resultsPath,
+    `${endorsementName}-${version}`,
+    `${providerUoi}-${providerUsi}`,
+    recipientUoi,
+    currentOrArchived
+  );
 };
 
 /**
@@ -203,34 +213,35 @@ const buildRecipientEndorsementPath = ({
  * @param {String} providerUsi
  * @param {String} recipientUoi
  */
-const archiveEndorsement = ({ providerUoi, providerUsi, recipientUoi, endorsementName, version } = {}) => {
-  const currentRecipientPath = buildRecipientEndorsementPath({
-    providerUoi,
-    providerUsi,
-    recipientUoi,
-    endorsementName,
-    version
-  });
+const archiveEndorsement = ({ resultsPath, providerUoi, providerUsi, recipientUoi, endorsementName, version } = {}) => {
+  const srcPath = path.join(
+      buildRecipientEndorsementPath({
+        resultsPath,
+        providerUoi,
+        providerUsi,
+        recipientUoi,
+        endorsementName,
+        version
+      })
+    ),
+    destPath = path.join(
+      buildRecipientEndorsementPath({
+        resultsPath,
+        providerUoi,
+        providerUsi,
+        recipientUoi,
+        endorsementName,
+        version,
+        currentOrArchived: 'archived'
+      }),
+      getFileSafeIso8601Timestamp()
+    );
 
-  if (fs.existsSync(currentRecipientPath)) {
+  if (fs.existsSync(srcPath)) {
     try {
-      fse.moveSync(
-        currentRecipientPath,
-        path.join(
-          buildRecipientEndorsementPath({
-            providerUoi,
-            providerUsi,
-            recipientUoi,
-            endorsementName,
-            version,
-            currentOrArchived: 'archived'
-          }),
-          getFileSafeIso8601Timestamp()
-        )
-      );
+      fse.moveSync(srcPath, destPath);
     } catch (err) {
-      console.error(err);
-      throw new Error('Could not move directory! Exiting!');
+      console.error(`Could not archive path '${resultsPath}'...Skipping. \nError: ${err}`);
     }
   }
 };

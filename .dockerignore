@@ -1,0 +1,9 @@
+.git
+.github
+.vscode
+
+node_modules
+.env
+config.json
+
+results/
