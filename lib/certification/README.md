@@ -96,28 +96,31 @@ See:
 * [`sample-dd-config.json`](./sample-dd-config.json)
 * [RESO UOI Google Sheet](https://docs.google.com/spreadsheets/d/13azRbctJ3V2yTibmFYLSfJZsdHc8v3r2NEgEmoHviRc/edit#gid=1039531884)
 
-If each step is run individually, as outlined in the preceding sections, then the files are placed in the current directory. 
+If each step is run individually, as outlined in the preceding sections, then the files are placed in the `results` directory. 
 
-The file structure, with respect to the current directory, is as follows:
+The directory structure is as follows:
+
 ```
-- <Provider UOI>-<Provider USI>
-  - <Recipient UOI 1>
-    - archived
-      + 20231121T171951462Z
+- results
+  - data-dictionary-<version>
+    - <Provider UOI>-<Provider USI>
+      - <Recipient UOI 1>
+        - archived
+          + 20231121T171951462Z
+          + ...
+        - current
+          data-availability-report.json
+          data-availability-responses.json
+          data-dictionary-2.0.html
+          data-dictionary-2.0.json
+          data-dictionary-variations.json
+          lookup-resource-lookup-metadata.json
+          metadata-report.json
+          metadata-report.processed.json
+          metadata.xml
+      + <Recipient UOI 2>
       + ...
-    - current
-      data-availability-report.json
-      data-availability-responses.json
-      data-dictionary-2.0.html
-      data-dictionary-2.0.json
-      data-dictionary-variations.json
-      lookup-resource-lookup-metadata.json
-      metadata-report.json
-      metadata-report.processed.json
-      metadata.xml
-  + <Recipient UOI 2>
-  + ...
-+ ...
+    + ...
 ```
 
 ## Metadata Testing

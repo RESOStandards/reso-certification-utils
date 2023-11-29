@@ -5,30 +5,14 @@ require('dotenv').config();
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
 const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification');
-const { findVariations, computeVariations, DEFAULT_FUZZINESS } = require('./lib/variations');
+const { findVariations, updateVariations, computeVariations, DEFAULT_FUZZINESS } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
-const { DEFAULT_DD_VERSION } = require('./common');
+const { DEFAULT_DD_VERSION, parseBooleanValue } = require('./common');
 
 //Only load commander interpreter if running from the CLI
 if (require?.main === module) {
   const { program } = require('commander');
-
-  const getBoolValue = item => {
-    if (!item) return false;
-
-    if (typeof item === 'string') {
-      if (item.toLowerCase() === 'true') {
-        return true;
-      } else if (item.toLowerCase() === 'false') {
-        return false;
-      }
-    } else if (typeof item === 'boolean') {
-      return item;
-    }
-
-    return false;
-  };
 
   /**
    * Ensure fromCli is true for anything run from the command line
@@ -36,26 +20,6 @@ if (require?.main === module) {
   const FROM_CLI = true;
 
   program.name('RESO Certification Utils').description('Command line batch-testing and restore utils').version('1.0.0');
-
-  program
-    .command('schema')
-    .option('-G, --generate', 'Generate a schema for payload validation')
-    .option('-V, --validate', 'Validate one or multiple payloads with a schema')
-    .option('-m, --metadataPath <string>', 'Path to the metadata report JSON file')
-    .option('-o, --outputPath <string>', 'Path tho the directory to store the generated schema. Defaults to "./"')
-    .option('-a, --additionalProperties', 'Pass this flag to allow additional properties in the schema. False by default')
-    .option('-v, --version <string>', 'The DD version of the metadata report')
-    .option('-p, --payloadPath <string>', 'Path to the payload file OR directory/zip containing files that need to be validated')
-    .option('-r, --resourceName <string>', 'Resource name to validate against. Required if --version is passed when validating.')
-    .description('Generate a schema or validate a payload against a schema')
-    .action(options => schema({ ...options, fromCli: FROM_CLI }));
-
-  program
-    .command('restore')
-    .description('Restores local or S3 results to a RESO Certification API instance')
-    .option('-p, --pathToResults <string>', 'Path to test results')
-    .option('-u, --url <string>', 'URL of Certification API')
-    .action(options => restore({ ...options, fromCli: FROM_CLI }));
 
   program
     .command('runDDTests')
@@ -69,23 +33,23 @@ if (require?.main === module) {
       runDDTests({
         ...options,
         fromCli: FROM_CLI,
-        runAllTests: getBoolValue(options?.runAllTests),
-        strictMode: getBoolValue(options?.strictMode)
+        runAllTests: parseBooleanValue(options?.runAllTests),
+        strictMode: parseBooleanValue(options?.strictMode)
       })
     );
 
   program
     .command('findVariations')
-    .description('Finds possible variations in metadata using a number of methods.')
+    .description('Finds possible variations in metadata using a number of methods')
     .requiredOption('-p, --pathToMetadataReportJson <string>', 'Path to metadata-report.json file')
     .option('-f, --fuzziness <float>', 'Set fuzziness to something besides the default', DEFAULT_FUZZINESS)
     .option('-v, --version <string>', 'Data Dictionary version to compare to, i.e. 1.7 or 2.0', DEFAULT_DD_VERSION)
     .option('-s, --useSuggestions <boolean>', 'Use external suggestions in addition to machine-provided ones', true)
-    .action(options => findVariations({ ...options, fromCli: FROM_CLI, useSuggestions: getBoolValue(options?.useSuggestions) }));
+    .action(options => findVariations({ ...options, fromCli: FROM_CLI, useSuggestions: parseBooleanValue(options?.useSuggestions) }));
 
   program
     .command('replicate')
-    .description('Replicates data from a given resource with expansions.')
+    .description('Replicates data from a given resource with expansions')
     .requiredOption('-s, --strategy <string>', 'One of TopAndSkip, TimestampAsc, TimestampDesc, or NextLink')
     .option('-u, --serviceRootUri <string>', 'OData service root URI (no resource name or query)')
     .option('-b, --bearerToken <string>', 'Bearer token to use for authorization')
@@ -126,8 +90,8 @@ if (require?.main === module) {
         pathToMetadataReportJson,
         shouldGenerateReports: !!pathToMetadataReportJson,
         fromCli: FROM_CLI,
-        jsonSchemaValidation: getBoolValue(jsonSchemaValidation),
-        strictMode: getBoolValue(strictMode)
+        jsonSchemaValidation: parseBooleanValue(jsonSchemaValidation),
+        strictMode: parseBooleanValue(strictMode)
       };
 
       if (bearerToken) {
@@ -147,10 +111,36 @@ if (require?.main === module) {
     });
 
   program
+    .command('schema')
+    .option('-G, --generate', 'Generate a schema for payload validation')
+    .option('-V, --validate', 'Validate one or multiple payloads with a schema')
+    .option('-m, --metadataPath <string>', 'Path to the metadata report JSON file')
+    .option('-o, --outputPath <string>', 'Path tho the directory to store the generated schema. Defaults to "./"')
+    .option('-a, --additionalProperties', 'Pass this flag to allow additional properties in the schema. False by default')
+    .option('-v, --version <string>', 'The DD version of the metadata report')
+    .option('-p, --payloadPath <string>', 'Path to the payload file OR directory/zip containing files that need to be validated')
+    .option('-r, --resourceName <string>', 'Resource name to validate against. Required if --version is passed when validating.')
+    .description('Generate a schema or validate a payload against a schema')
+    .action(options => schema({ ...options, fromCli: FROM_CLI }));
+
+  program
     .command('metadata')
-    .description('Converts metadata from OData XML to RESO Format.')
+    .description('Converts metadata from OData XML to RESO Format')
     .requiredOption('-p, --pathToXmlMetadata <string>', 'Path to XML Metadata to parse')
     .action(options => convertAndSaveMetadata({ ...options, fromCli: FROM_CLI }));
+
+  program
+    .command('updateVariations')
+    .description('(Admin) Updates suggestions in the Variations Service')
+    .requiredOption('-p, --pathToCsvSuggestions <string>', 'Suggestions CSV file name')
+    .action(options => updateVariations({ ...options, fromCli: FROM_CLI }));
+
+  program
+    .command('restore')
+    .description('(Admin) Restores local or S3 results to a RESO Certification API instance')
+    .option('-p, --pathToResults <string>', 'Path to test results')
+    .option('-u, --url <string>', 'URL of Certification API')
+    .action(options => restore({ ...options, fromCli: FROM_CLI }));
 
   program.parse();
 }

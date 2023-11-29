@@ -486,6 +486,27 @@ const getLoggers = (fromCli = false) => {
   }
 };
 
+/**
+ * Tries to parse the given item as a boolean value
+ * @param {*} item truthy or falsy value to be converted 
+ * @returns true or false, accordingly
+ */
+const parseBooleanValue = item => {
+  if (!item) return false;
+
+  if (typeof item === 'string') {
+    if (item.toLowerCase() === 'true') {
+      return true;
+    } else if (item.toLowerCase() === 'false') {
+      return false;
+    }
+  } else if (typeof item === 'boolean') {
+    return item;
+  }
+
+  return false;
+};
+
 const createReplicationStateServiceInstance = () => {
   const replicationStateService = require('./lib/replication/services/replication-state');
   replicationStateService.init();
@@ -517,5 +538,6 @@ module.exports = {
   sleep,
   buildMetadataMap,
   getLoggers,
-  parseResoUrn
+  parseResoUrn,
+  parseBooleanValue
 };
