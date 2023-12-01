@@ -6,6 +6,8 @@ NodeJS package with reference artifacts and ETL processes for Certification.
 Can either be used from the command line or as a library.
 
 ## Command Line Usage
+Ensure that [Node](https://nodejs.org/en/download) and [Git](https://git-scm.com/downloads) are installed.
+
 Clone repository into current directory:
 
 ```
