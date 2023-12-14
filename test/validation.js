@@ -2,7 +2,7 @@
 
 const assert = require('assert');
 const { generateJsonSchema, validate, combineErrors, VALIDATION_ERROR_MESSAGES } = require('..');
-const { getReferenceMetadata } = require('reso-certification-etl');
+const { getReferenceMetadata } = require('@reso/reso-certification-etl');
 
 const {
   valuePayload,
