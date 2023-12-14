@@ -9,6 +9,7 @@ const { findVariations, updateVariations, computeVariations, DEFAULT_FUZZINESS }
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
 const { DEFAULT_DD_VERSION, parseBooleanValue } = require('./common');
+const { DEFAULT_PAGE_SIZE } = require('./lib/replication/utils');
 
 //Only load commander interpreter if running from the CLI
 if (require?.main === module) {
@@ -62,11 +63,11 @@ if (require?.main === module) {
     .option('-x, --expansions <items>', 'Comma-separated list of items to expand during the query process, e.g. Media,OpenHouse')
     .option('-f, --filter <string>', 'OData $filter expression')
     .option('-t, --top <number>', 'Optional parameter to use for OData $top')
-    .option('-m, --maxPageSize <number>', 'Optional parameter for the odata.maxpagesize header')
+    .option('-m, --maxPageSize <number>', 'Optional parameter for the odata.maxpagesize header', DEFAULT_PAGE_SIZE)
     .option('-o, --outputPath <string>', 'Name of directory for results')
     .option('-l, --limit <number>', 'Limit total number of records at client level')
     .option('-v, --version <string>', 'Data Dictionary version to use', DEFAULT_DD_VERSION)
-    .option('-j, --jsonSchemaValidation <boolean>', 'Sets whether to use JSON schema validation', false)
+    .option('-j, --jsonSchemaValidation', 'Use JSON schema validation')
     .option('-N, --originatingSystemName <string>', 'Used when additional filters are needed for OriginatingSystemName')
     .option('-I, --originatingSystemId <string>', 'Used when additional filters are needed for OriginatingSystemID')
     .option('-S, --strictMode <boolean>', 'Fail immediately on schema validation errors if strict mode is true', true)
@@ -82,6 +83,8 @@ if (require?.main === module) {
         scope,
         strictMode = true,
         jsonSchemaValidation = false,
+        maxPageSize,
+        top,
         ...remainingOptions
       } = options;
 
@@ -91,7 +94,9 @@ if (require?.main === module) {
         shouldGenerateReports: !!pathToMetadataReportJson,
         fromCli: FROM_CLI,
         jsonSchemaValidation: parseBooleanValue(jsonSchemaValidation),
-        strictMode: parseBooleanValue(strictMode)
+        strictMode: parseBooleanValue(strictMode),
+        maxPageSize: parseInt(maxPageSize) ?? undefined,
+        top: parseInt(top) ?? undefined
       };
 
       if (bearerToken) {
