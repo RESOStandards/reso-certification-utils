@@ -116,3 +116,4 @@ data-dictionary*.json
 reso-replication-output
 *.swp
 results/
+*.resoscript
