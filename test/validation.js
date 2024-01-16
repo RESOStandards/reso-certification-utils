@@ -14,7 +14,8 @@ const {
   invalidPayloadContext,
   stringListValidPayload,
   stringListInvalidPayload,
-  additionalPropertyPayload
+  additionalPropertyPayload,
+  integerOverflowPayload
 } = require('./schema/payload-samples');
 
 const { beforeEach } = require('mocha');
@@ -169,5 +170,47 @@ describe('Schema validation tests', () => {
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
     assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'additional property error message did not match');
     assert.equal(report.items[0].fieldName, expectedInvalidField, 'Non advertised field did not match');
+  });
+
+  it('Should not find errors in case where maxLength is present on non-string types', async () => {
+    let errorMap = {};
+    metadata.fields.find(f => f.type === 'Edm.Int64').maxLength = 5;
+    const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
+    // eslint-disable-next-line no-unused-vars
+    const { AdditionalProperty, ...payload } = additionalPropertyPayload;
+    errorMap = validate({
+      jsonSchema: modifiedSchema,
+      jsonPayload: payload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 0, 'Error counts did not match - Found a non-zero count');
+    delete metadata.fields.find(f => f.type === 'Edm.Int64').maxLength;
+  });
+
+  it('should find errors when Integer field exceeds its limit', async () => {
+    let errorMap = {};
+    metadata.fields.push({
+      resourceName: 'Property',
+      fieldName: 'Foo',
+      nullable: false,
+      annotations: [],
+      type: 'Edm.Int32'
+    });
+    const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
+    const expectedErrorMessage = `MUST be <= ${2 ** 32 - 1}`;
+    errorMap = validate({
+      jsonSchema: modifiedSchema,
+      jsonPayload: integerOverflowPayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'integer overflow error message did not match');
+    metadata.fields.pop();
   });
 });
