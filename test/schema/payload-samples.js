@@ -161,6 +161,18 @@ const additionalPropertyPayload = {
   AdditionalProperty: 'foo'
 };
 
+const integerOverflowPayload = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  Country: 'CA',
+  StateOrProvince: 'ON',
+  City: 'SampleCityEnumValue',
+  PostalCode: 'K2G 1Y9',
+  StreetName: 'Starwood Rd',
+  StreetNumber: '39',
+  AboveGradeFinishedAreaSource: 'Appraiser',
+  Foo: 2 ** 32 + 1
+};
+
 module.exports = {
   valuePayload,
   nonValuePayload,
@@ -171,5 +183,6 @@ module.exports = {
   invalidPayloadContext,
   stringListValidPayload,
   stringListInvalidPayload,
-  additionalPropertyPayload
+  additionalPropertyPayload,
+  integerOverflowPayload
 };
