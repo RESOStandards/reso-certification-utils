@@ -1,7 +1,7 @@
 [![Run Code Checks](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml) &nbsp; [![CodeQL](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql.yml)
 
 # RESO Certification Utils
-NodeJS package with reference artifacts and ETL processes for Certification.
+Node package with reference artifacts and ETL processes for Certification.
 
 Can either be used from the command line or as a library.
 
@@ -45,11 +45,13 @@ npm i RESOStandards/reso-certification-utils
 
 To install from Github via yarn:
 
-add package `@reso/reso-certification-utils` and yarn install --check-files. After that build the docker container.
+add package `@reso/reso-certification-utils`
 
 ```
 "@reso/reso-certification-utils": "https://github.com/RESOStandards/reso-certification-utils"
 ```
+
+Then use `yarn install --check-files` to install.
 
 ---
 

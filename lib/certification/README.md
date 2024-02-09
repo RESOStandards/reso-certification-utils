@@ -8,6 +8,8 @@ First, clone the RESO Commander into a local directory of your choosing:
 $ git clone https://github.com/RESOStandards/web-api-commander.git
 ```
 
+JDK 11 or later is required. The recommendation is to use [OpenJDK 17](https://openjdk.org/projects/jdk/17/) or later. You may also use [Oracle JDKs](https://www.oracle.com/java/technologies/downloads/) but they may be subject to additional licensing requirements.
+
 Create a `.env` file (if you don't have one already) and add `WEB_API_COMMANDER_PATH`, pointing to the path where you downloaded the Commander. 
 See: [sample.env](../../sample.env) for an example.
 
@@ -40,7 +42,7 @@ For Data Dictionary 1.7, the following tests are run:
 1. **Metadata Validation** (RESO Commander) - Includes type, synonym checking, and Lookup Resource validation
 2. **Data Availability Report** (RESO Cert Utils) - Data Availability sampling using the [`replicate` option](../replication/README.md) and the TimestampDesc strategy
 
-```sh
+```
 $ reso-certification-utils runDDTests -v 1.7 -p your-config.json -a
 ```
 
@@ -48,9 +50,10 @@ $ reso-certification-utils runDDTests -v 1.7 -p your-config.json -a
 For Data Dictionary 2.0, the following tests are run:
 1. **Metadata Validation** (RESO Commander) - Includes type, synonym checking, and Lookup Resource validation
 2. **Variations Report** (RESO Cert Utils) - Uses the [`findVariations` option](../variations/README.md) with the output of step (1)
-  * Note: You will need a provider token in your `.env` file to access the Variations Service for mappings
-  * Without a provider token, machine based techniques alone will be used 
-  * Please contact [dev@reso.org](dev@reso.org) for more information
+  * Note: You will need auth info in your `.env` file to access the Variations Service for mappings
+  * Without auth info, machine based techniques alone will be used
+  * See [sample.env](../../sample.env) for more information
+  * Please contact [dev@reso.org](dev@reso.org) with any questions
 3. **Data Availability Report** (RESO Cert Utils) - Data Availability sampling using the [`replicate` option](../replication/README.md) and the following strategies:
   * TimestampDesc
   * NextLink
@@ -61,13 +64,13 @@ For Data Dictionary 2.0, the following tests are run:
   * This step is actually done in conjunction with step (3) but is listed for clarity
  
 
-```sh
+```
 $ reso-certification-utils runDDTests -v 2.0 -p your-config.json -a
 ```
 
 # Sampling
 
-In all cases, up to 100,000 records per resource / strategy / expansion will be run for Certification.
+In all cases, up to 100,000 records per resource / strategy / expansion will be run for Certification by default.
 
 This means that for Data Dictionary 2.0, if the Property Resource has a Media and OpenHouse expansion, sampling will be as follows:
 * Property Resource with TimestampDesc
@@ -76,9 +79,9 @@ This means that for Data Dictionary 2.0, if the Property Resource has a Media an
 * Property Resource with NextLink
 * Property + Media with NextLink
 * Property + OpenHouse with NextLink
-* Property Resource with NextLink and ModificationTimestamp greater than two years ago
-* Property + Media with NextLink and ModificationTimestamp greater than two years ago
-* Property + OpenHouse with NextLink and ModificationTimestamp greater two years ago
+* Property Resource with NextLink and ModificationTimestamp greater than three years ago
+* Property + Media with NextLink and ModificationTimestamp greater than three years ago
+* Property + OpenHouse with NextLink and ModificationTimestamp greater three years ago
 
 Records are deduplicated, but assuming 100,000 distinct Property records were fetched in each pass above, that would mean 900,000 records. for DD 1.7 there would be up to 300,000 unique Property records.
 

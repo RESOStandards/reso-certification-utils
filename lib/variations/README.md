@@ -17,7 +17,9 @@ Options:
   -h, --help                               display help for command
 ```
 
-Note that if `useSuggestions` is true, the `.env` file must contain a provider token.
+Note that if `useSuggestions` is true, the `.env` file must contain auth information. See [sample.env](../../sample.env) for more information.
+
+For information on how to obtain auth info, please contact [dev@reso.org](mailto:dev@reso.org).
 
 # Update Variations (Admin)
 There's also an admin function to update variations, but this isn't available for normal users. 
