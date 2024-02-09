@@ -8,6 +8,8 @@ const chalk = require('chalk');
  * common.js - Contains programmatically derived constants related to Certification.
  */
 
+const NOT_OK = 1;
+
 /**
  * Data Dictionary Versions
  */
@@ -514,6 +516,7 @@ const createReplicationStateServiceInstance = () => {
 };
 
 module.exports = {
+  NOT_OK,
   DEFAULT_DD_VERSION,
   DEFAULT_WEB_API_CORE_VERSION,
   DATA_DICTIONARY_VERSIONS,

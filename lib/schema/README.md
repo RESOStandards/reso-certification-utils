@@ -2,7 +2,7 @@
 
 ### Schema Generation and Validation
 
-```bash
+```
 $ reso-certification-utils schema --help
 
 Usage: reso-certification-utils schema [options]
@@ -23,14 +23,14 @@ Options:
 
 ### Generate
 
-```bash
-reso-certification-utils schema -G -a
+```
+$ reso-certification-utils schema -G -a
 ```
 
 ### Validate
 
-```bash
-reso-certification-utils schema -V -p <path to payloads file, zip, or directory> -a -v 2.0 -r Property
+```
+$ reso-certification-utils schema -V -p <path to payloads file, zip, or directory> -a -v 2.0 -r Property
 ```
 
 # Usage in a library
