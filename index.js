@@ -10,7 +10,6 @@ const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
 const { DEFAULT_DD_VERSION, parseBooleanValue } = require('./common');
 const { DEFAULT_PAGE_SIZE } = require('./lib/replication/utils');
-const { version } = require('./package.json');
 
 //Only load commander interpreter if running from the CLI
 if (require?.main === module) {
@@ -23,8 +22,7 @@ if (require?.main === module) {
 
   program
     .name('RESO Certification Utils')
-    .description('Command line batch-testing and restore utils')
-    .version(version, '--vers', 'Output the current version');
+    .description('Command line batch-testing and restore utils');
 
   program
     .command('runDDTests')

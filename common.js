@@ -511,6 +511,28 @@ const createReplicationStateServiceInstance = () => {
   return replicationStateService;
 };
 
+/**
+ * Creates context-sensitive error handler function that logs to
+ * the console or throws errors depending on whether the caller is using the CLI
+ *
+ * @param {Boolean} fromCli true if coming from the CLI, false otherwise (default)
+ * @returns Error handler function
+ */
+const getErrorHandler = (fromCli = false) => {
+  return (message, { terminate = true } = {}) => {
+    if (fromCli) {
+      console.error(`${message}`);
+      if (terminate) {
+        process.exit(NOT_OK);
+      } else {
+        process.exitCode = NOT_OK;
+      }
+    } else {
+      throw new Error(message);
+    }
+  };
+};
+
 module.exports = {
   NOT_OK,
   DEFAULT_DD_VERSION,
@@ -538,5 +560,6 @@ module.exports = {
   buildMetadataMap,
   getLoggers,
   parseResoUrn,
-  parseBooleanValue
+  parseBooleanValue,
+  getErrorHandler
 };
