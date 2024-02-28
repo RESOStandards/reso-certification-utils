@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const fse = require('fs-extra');
-const unzipper = require('unzipper');
 const chalk = require('chalk');
+const extract = require('extract-zip');
 
 /**
  * common.js - Contains programmatically derived constants related to Certification.
@@ -288,11 +288,7 @@ const createResoScriptClientCredentialsConfig = ({ serviceRootUri, clientCredent
  * @param {String} options.outputPath Path to store the extracted files
  * @returns promise that resolves to the unzipped file
  */
-const extractFilesFromZip = async ({ zipPath, outputPath }) =>
-  fs
-    .createReadStream(zipPath)
-    .pipe(unzipper.Extract({ path: outputPath }))
-    .promise();
+const extractFilesFromZip = async ({ zipPath, outputPath }) => extract(zipPath, { dir: outputPath });
 
 /**
  *
@@ -490,7 +486,7 @@ const getLoggers = (fromCli = false) => {
 
 /**
  * Tries to parse the given item as a boolean value
- * @param {*} item truthy or falsy value to be converted 
+ * @param {*} item truthy or falsy value to be converted
  * @returns true or false, accordingly
  */
 const parseBooleanValue = item => {
