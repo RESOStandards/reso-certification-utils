@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const fse = require('fs-extra');
 const chalk = require('chalk');
-const extract = require('extract-zip');
 const yauzl = require('yauzl');
 
 /**
@@ -281,15 +280,6 @@ const createResoScriptClientCredentialsConfig = ({ serviceRootUri, clientCredent
   `    ${clientCredentials.scope ? '<ClientScope>' + clientCredentials.scope + '</ClientScope>' : EMPTY_STRING}` +
   '  </ClientSettings>' +
   '</OutputScript>';
-
-/**
- * Extracts files from a zip archive
- * @param {Object} options
- * @param {String} options.zipPath Path to the zip file
- * @param {String} options.outputPath Path to store the extracted files
- * @returns promise that resolves to the unzipped file
- */
-const extractFilesFromZip = async ({ zipPath, outputPath }) => extract(zipPath, { dir: outputPath });
 
 /**
  *
@@ -605,7 +595,6 @@ module.exports = {
   archiveEndorsement,
   getCurrentVersion,
   getPreviousVersion,
-  extractFilesFromZip,
   sleep,
   buildMetadataMap,
   getLoggers,
