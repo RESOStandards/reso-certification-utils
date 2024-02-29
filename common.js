@@ -3,6 +3,7 @@ const path = require('path');
 const fse = require('fs-extra');
 const chalk = require('chalk');
 const extract = require('extract-zip');
+const yauzl = require('yauzl');
 
 /**
  * common.js - Contains programmatically derived constants related to Certification.
@@ -533,6 +534,55 @@ const getErrorHandler = (fromCli = false) => {
   };
 };
 
+/**
+ * Reads the contents of a zip file and return an object with key being the filename and value being the contents
+ * @param {string} path zip file path
+ * @returns {Promise<Record<string, string>>}
+ */
+const readZipFileContents = path => {
+  return new Promise((res, rej) => {
+    const result = {};
+    yauzl.open(path, { lazyEntries: true }, function (err, zipfile) {
+      if (err) throw err;
+
+      zipfile.readEntry(); // Start reading.
+
+      zipfile.on('entry', function (entry) {
+        if (entry.fileName.includes('__MACOSX')) {
+          // These are temp files injected by macos. So we skip them.
+          zipfile.readEntry();
+        } else if (/\/$/.test(entry.fileName)) {
+          // It's a directory, we move to the next entry.
+          zipfile.readEntry();
+        } else {
+          // It's a file, we process it.
+          zipfile.openReadStream(entry, function (err, readStream) {
+            if (err) throw err;
+            const chunks = [];
+
+            readStream.on('data', function (chunk) {
+              chunks.push(chunk);
+            });
+
+            readStream.on('end', function () {
+              const contents = Buffer.concat(chunks).toString('utf8');
+              result[entry.fileName.slice(entry.fileName.lastIndexOf('/') + 1, entry.fileName.length)] = contents;
+              // Move to the next entry.
+              zipfile.readEntry();
+            });
+          });
+        }
+      });
+
+      zipfile.on('end', () => {
+        res(result);
+      });
+
+      zipfile.on('error', rej);
+    });
+  });
+};
+
 module.exports = {
   NOT_OK,
   DEFAULT_DD_VERSION,
@@ -561,5 +611,6 @@ module.exports = {
   getLoggers,
   parseResoUrn,
   parseBooleanValue,
-  getErrorHandler
+  getErrorHandler,
+  readZipFileContents
 };
