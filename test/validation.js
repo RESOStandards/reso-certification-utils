@@ -157,14 +157,16 @@ describe('Schema validation tests', () => {
 
   it('Should find errors in case of additional properties not advertised in the metadata', () => {
     let errorMap = {};
-    const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
+    const version = '2.0';
+    const expectedErrorMessage = `ADDITIONAL fields found that are not part of Data Dictionary ${version}`;
     const expectedInvalidField = 'AdditionalProperty';
     errorMap = validate({
       jsonSchema: schema,
       jsonPayload: additionalPropertyPayload,
       resourceName: 'Property',
       version: '2.0',
-      errorMap
+      errorMap,
+      isResoDataDictionarySchema: true
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');

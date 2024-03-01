@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const fse = require('fs-extra');
-const unzipper = require('unzipper');
 const chalk = require('chalk');
+const yauzl = require('yauzl');
 
 /**
  * common.js - Contains programmatically derived constants related to Certification.
@@ -282,19 +282,6 @@ const createResoScriptClientCredentialsConfig = ({ serviceRootUri, clientCredent
   '</OutputScript>';
 
 /**
- * Extracts files from a zip archive
- * @param {Object} options
- * @param {String} options.zipPath Path to the zip file
- * @param {String} options.outputPath Path to store the extracted files
- * @returns promise that resolves to the unzipped file
- */
-const extractFilesFromZip = async ({ zipPath, outputPath }) =>
-  fs
-    .createReadStream(zipPath)
-    .pipe(unzipper.Extract({ path: outputPath }))
-    .promise();
-
-/**
  *
  * Sleeps for the given amount of milliseconds
  *
@@ -490,7 +477,7 @@ const getLoggers = (fromCli = false) => {
 
 /**
  * Tries to parse the given item as a boolean value
- * @param {*} item truthy or falsy value to be converted 
+ * @param {*} item truthy or falsy value to be converted
  * @returns true or false, accordingly
  */
 const parseBooleanValue = item => {
@@ -515,6 +502,77 @@ const createReplicationStateServiceInstance = () => {
   return replicationStateService;
 };
 
+/**
+ * Creates context-sensitive error handler function that logs to
+ * the console or throws errors depending on whether the caller is using the CLI
+ *
+ * @param {Boolean} fromCli true if coming from the CLI, false otherwise (default)
+ * @returns Error handler function
+ */
+const getErrorHandler = (fromCli = false) => {
+  return (message, { terminate = true } = {}) => {
+    if (fromCli) {
+      console.error(`${message}`);
+      if (terminate) {
+        process.exit(NOT_OK);
+      } else {
+        process.exitCode = NOT_OK;
+      }
+    } else {
+      throw new Error(message);
+    }
+  };
+};
+
+/**
+ * Reads the contents of a zip file and return an object with key being the filename and value being the contents
+ * @param {string} path zip file path
+ * @returns {Promise<Record<string, string>>}
+ */
+const readZipFileContents = path => {
+  return new Promise((res, rej) => {
+    const result = {};
+    yauzl.open(path, { lazyEntries: true }, function (err, zipfile) {
+      if (err) throw err;
+
+      zipfile.readEntry(); // Start reading.
+
+      zipfile.on('entry', function (entry) {
+        if (entry.fileName.includes('__MACOSX')) {
+          // These are temp files injected by macos. So we skip them.
+          zipfile.readEntry();
+        } else if (/\/$/.test(entry.fileName)) {
+          // It's a directory, we move to the next entry.
+          zipfile.readEntry();
+        } else {
+          // It's a file, we process it.
+          zipfile.openReadStream(entry, function (err, readStream) {
+            if (err) throw err;
+            const chunks = [];
+
+            readStream.on('data', function (chunk) {
+              chunks.push(chunk);
+            });
+
+            readStream.on('end', function () {
+              const contents = Buffer.concat(chunks).toString('utf8');
+              result[entry.fileName.slice(entry.fileName.lastIndexOf('/') + 1, entry.fileName.length)] = contents;
+              // Move to the next entry.
+              zipfile.readEntry();
+            });
+          });
+        }
+      });
+
+      zipfile.on('end', () => {
+        res(result);
+      });
+
+      zipfile.on('error', rej);
+    });
+  });
+};
+
 module.exports = {
   NOT_OK,
   DEFAULT_DD_VERSION,
@@ -537,10 +595,11 @@ module.exports = {
   archiveEndorsement,
   getCurrentVersion,
   getPreviousVersion,
-  extractFilesFromZip,
   sleep,
   buildMetadataMap,
   getLoggers,
   parseResoUrn,
-  parseBooleanValue
+  parseBooleanValue,
+  getErrorHandler,
+  readZipFileContents
 };

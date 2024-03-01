@@ -20,7 +20,9 @@ if (require?.main === module) {
    */
   const FROM_CLI = true;
 
-  program.name('RESO Certification Utils').description('Command line batch-testing and restore utils').version('1.0.0');
+  program
+    .name('RESO Certification Utils')
+    .description('Command line batch-testing and restore utils');
 
   program
     .command('runDDTests')
