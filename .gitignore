@@ -114,6 +114,7 @@ data-availability*.json
 metadata-report*.json
 data-dictionary*.json
 reso-replication-output
+schema-validation-report.json
 *.swp
 results/
 *.resoscript
