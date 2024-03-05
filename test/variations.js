@@ -894,4 +894,31 @@ describe('Variations Service suggestion tests', () => {
     assert.equal(fields?.length, 0, 'No fields should be flagged when there are no suggestions');
     assert.equal(lookups?.length, 0, 'No lookups should be flagged when there are suggestions but the standard lookup value exists');
   });
+
+  it('Should not suggest lookup values that are less than the minimum matching length when using machine matching', async () => {
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'StateOrProvince',
+          type: 'StateOrProvince'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'StateOrProvince',
+          type: 'Edm.String',
+          lookupValue: 'California'
+        }
+      ]
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+    assert.equal(fields?.length, 0, 'No fields should be flagged');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged');
+  });
 });
