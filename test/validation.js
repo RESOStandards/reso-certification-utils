@@ -15,7 +15,9 @@ const {
   stringListValidPayload,
   stringListInvalidPayload,
   additionalPropertyPayload,
-  integerOverflowPayload
+  integerOverflowPayload,
+  stringListWithSpacesAfterCommaValidPayload,
+  stringListWithSpacesAfterCommaInvalidPayload
 } = require('./schema/payload-samples');
 
 const { beforeEach } = require('mocha');
@@ -145,6 +147,49 @@ describe('Schema validation tests', () => {
     errorMap = validate({
       jsonSchema: schema,
       jsonPayload: stringListInvalidPayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'enum error message did not match');
+    assert.equal(report.items[0].errors[0].occurrences[0].lookupValue, expectedInvalidEnum, 'enum lookup value did not match');
+  });
+
+  it('Should not find errors in case of valid enums containing space after comma', async () => {
+    let errorMap = {};
+    metadata.fields.push({
+      resourceName: 'Property',
+      fieldName: 'StringListTestField',
+      nullable: false,
+      annotations: [],
+      type: 'TestEnumType'
+    });
+    metadata.lookups.push({
+      lookupName: 'TestEnumType',
+      lookupValue: 'My Company, LLC',
+      type: 'Edm.Int32'
+    });
+    const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
+    errorMap = validate({
+      jsonSchema: modifiedSchema,
+      jsonPayload: stringListWithSpacesAfterCommaValidPayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 0, 'Error counts did not match');
+  });
+
+  it('Should find errors in case of invalid enums containing space after comma', async () => {
+    let errorMap = {};
+    const expectedErrorMessage = 'MUST be equal to one of the allowed values';
+    const expectedInvalidEnum = 'My Company, SCORP';
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: stringListWithSpacesAfterCommaInvalidPayload,
       resourceName: 'Property',
       version: '2.0',
       errorMap
