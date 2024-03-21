@@ -140,6 +140,9 @@ if (require?.main === module) {
     .command('updateVariations')
     .description('(Admin) Updates suggestions in the Variations Service')
     .requiredOption('-p, --pathToCsvSuggestions <string>', 'Suggestions CSV file name')
+    .option('-f, --isFastTrack', 'Present if Fast Track suggestions' )
+    .option('-a, --isAdminReview', 'Present if suggestions are from Admin Review')
+    .option('-o, --overwrite', 'Required to overwrite any existing Fast Track suggestions')
     .action(options => updateVariations({ ...options, fromCli: FROM_CLI }));
 
   program
