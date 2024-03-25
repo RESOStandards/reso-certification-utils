@@ -31,6 +31,7 @@ const TEST_FUZZINESS = 0.25,
   DD_2_0 = '2.0',
   DEFAULT_VERSION = DD_1_7;
 
+
 describe('Variations Service reference metadata tests', () => {
   it('Should have required properties when the metadata report is empty', async () => {
     const metadataReportJson = {};
@@ -555,7 +556,7 @@ describe('Variations Service suggestion tests', () => {
     const [{ suggestedResourceName, strategy }, ...remainingSuggestions] = suggestions;
 
     assert.equal(suggestedResourceName, 'Property', '"LocalProperty" should be a suggestion for "Property"');
-    assert.equal(strategy, 'Suggestion', 'Strategy should be "Suggestion"');
+    assert.equal(strategy, 'Suggestion', `Strategy should be "Suggestion" but found "${strategy}"`);
     assert.equal(remainingSuggestions?.length, 0, 'There should be no remaining suggestions');
   });
 
@@ -916,6 +917,42 @@ describe('Variations Service suggestion tests', () => {
     const {
       variations: { resources = [], fields = [], lookups = [] }
     } = await computeVariations({ metadataReportJson });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+    assert.equal(fields?.length, 0, 'No fields should be flagged');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged');
+  });
+
+  it('Should ignore lookup values when suggestions flag them', async () => {
+    const metadataReportJson = {
+      fields: [{
+        resourceName: 'Property',
+        fieldName: 'ArchitecturalStyle',
+        type: 'ArchitecturalStyles'
+      }],
+      lookups: [{
+        lookupName: 'ArchitecturalStyles',
+        lookupValue: 'Ranch/1 Story',
+        type: 'Edm.String'
+      }, {
+        lookupName: 'ArchitecturalStyles',
+        lookupValue: 'BsmtRanch',
+        type: 'Edm.String'
+      }]
+    };
+
+    const suggestionsMap = {
+      Property: {
+        ArchitecturalStyle: {
+          'Ranch/1 Story': { ignored: true },
+          BsmtRanch: { ignored: true }
+        }
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
 
     assert.equal(resources?.length, 0, 'No resources should be flagged');
     assert.equal(fields?.length, 0, 'No fields should be flagged');
