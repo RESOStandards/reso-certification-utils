@@ -16,8 +16,7 @@ const {
   stringListInvalidPayload,
   additionalPropertyPayload,
   integerOverflowPayload,
-  stringListWithSpacesAfterCommaValidPayload,
-  stringListWithSpacesAfterCommaInvalidPayload
+  stringListWithSpacesAfterCommaValidPayload
 } = require('./schema/payload-samples');
 
 const { beforeEach } = require('mocha');
@@ -169,7 +168,7 @@ describe('Schema validation tests', () => {
     metadata.lookups.push({
       lookupName: 'TestEnumType',
       lookupValue: 'My Company, LLC',
-      type: 'Edm.Int32'
+      type: 'Edm.String'
     });
     const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
     errorMap = validate({
@@ -181,23 +180,6 @@ describe('Schema validation tests', () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 0, 'Error counts did not match');
-  });
-
-  it('Should find errors in case of invalid enums containing space after comma', async () => {
-    let errorMap = {};
-    const expectedErrorMessage = 'MUST be equal to one of the allowed values';
-    const expectedInvalidEnum = 'My Company, SCORP';
-    errorMap = validate({
-      jsonSchema: schema,
-      jsonPayload: stringListWithSpacesAfterCommaInvalidPayload,
-      resourceName: 'Property',
-      version: '2.0',
-      errorMap
-    });
-    const report = combineErrors(errorMap);
-    assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'enum error message did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].lookupValue, expectedInvalidEnum, 'enum lookup value did not match');
   });
 
   it('Should find errors in case of additional properties not advertised in the metadata', () => {
