@@ -6,28 +6,30 @@ Use the following command to view help info:
 
 ```
 $ reso-certification-utils replicate --help
-Usage: reso-certification-utils replicate [options]
+Usage: RESO Certification Utils replicate [options]
 
-Replicates data from a given resource with expansions.
+Replicates data from a given resource with expansions
 
 Options:
   -s, --strategy <string>                  One of TopAndSkip, TimestampAsc, TimestampDesc, or NextLink
   -u, --serviceRootUri <string>            OData service root URI (no resource name or query)
   -b, --bearerToken <string>               Bearer token to use for authorization
-  -c, --clientId <string>                  OAuth2 client_id parameter, use this OR bearerToken
-  -i, --clientSecret <string>              OAuth2 client_secret parameter, use this OR bearerToken
+  -i, --clientId <string>                  OAuth2 client_id parameter, use this OR bearerToken
+  -c, --clientSecret <string>              OAuth2 client_secret parameter, use this OR bearerToken
   -k, --tokenUri <string>                  OAuth2 token_uri parameter, use this OR bearerToken
   -e, --scope <string>                     Optional OAuth2 scopes for client credentials
-  -m, --pathToMetadataReportJson <string>  Path to metadata report JSON
+  -p, --pathToMetadataReportJson <string>  Path to metadata report JSON
   -r, --resourceName <string>              Resource name to replicate data from
   -x, --expansions <items>                 Comma-separated list of items to expand during the query process, e.g. Media,OpenHouse
   -f, --filter <string>                    OData $filter expression
   -t, --top <number>                       Optional parameter to use for OData $top
-  -p, --maxPageSize <number>               Optional parameter for the odata.maxpagesize header
+  -m, --maxPageSize <number>               Optional parameter for the odata.maxpagesize header (default: 100)
   -o, --outputPath <string>                Name of directory for results
   -l, --limit <number>                     Limit total number of records at client level
   -v, --version <string>                   Data Dictionary version to use (default: "2.0")
-  -j, --jsonSchemaValidation <boolean>     Sets whether to use JSON schema validation (default: false)
+  -j, --jsonSchemaValidation               Use JSON schema validation
+  -N, --originatingSystemName <string>     Used when additional filters are needed for OriginatingSystemName
+  -I, --originatingSystemId <string>       Used when additional filters are needed for OriginatingSystemID
   -S, --strictMode <boolean>               Fail immediately on schema validation errors if strict mode is true (default: true)
   -h, --help                               display help for command
 ```
@@ -61,6 +63,8 @@ RESO uses the `replicate` option for Data Dictionary testing, which consists of 
 * **Data Validation** - All sampled data are validated against JSON Schema generated from their metadata
 
 
+For more information about RESO Certification, see the [README](../certification/README.md).
+
 The `replicate` utility performs the latter two of the above steps. 
 
 ## Replicate Data from a RESO Server
@@ -68,13 +72,13 @@ The `replicate` utility performs the latter two of the above steps.
 To test replication using DD 2.0 and `NextLink` behavior, use the following command:
 
 ```
-$ reso-certification-utils replicate -s NextLink -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -m <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 2.0
+$ reso-certification-utils replicate -s NextLink -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -p <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 2.0
 ```
 
 In DD 1.7, ModificationTimestamp queries were used for testing instead. For example:
 
 ```
-$ reso-certification-utils replicate -s TimestampDesc -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -m <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 1.7
+$ reso-certification-utils replicate -s TimestampDesc -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -p <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 1.7
 ```
 
 The examples above show the use of the OriginatingSystemName filter. 
@@ -85,7 +89,7 @@ The also assume that the user will have access to the `metadata-report.json` or 
 Once replication is working correctly using the commands above, the next step is to add schema validation. 
 
 ```
-$ reso-certification-utils replicate -s TimestampDesc -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -m <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 1.7 -j true -S true
+$ reso-certification-utils replicate -s TimestampDesc -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -p <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 1.7 -j true
 ```
 
 In this case, `-j` tells the program to use JSON Schema Validation an `-S` sets strict mode, which will exit on first error. Since the number of JSON Schema validation errors can be potentially large, strict mode is enabled by default.

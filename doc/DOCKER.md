@@ -120,23 +120,19 @@ Results will be outputted in a directory called `results`.
 
 In order to use the Variations Service, the Data Dictionary 2.0 tests will need an environment variable with a token. 
 
-This can either be passed as an environment variable: 
+The required parameters can be passed into the container using an environment variable file as follows:
 
 ```
-$ docker run -v ./results:/results -v ./config.json:/config.json -it -e <provider token> reso-certification-utils runDDTests -v 2.0 -p /config.json -l 200 -a 
+$ docker run -v ./results:/results -v ./config.json:/config.json -it --env-file .env reso-certification-utils runDDTests -p /config.json -l 200 -a 
 ```
 
-Or you can use an environment file (preferred): 
+See [`sample.env`](../sample.env) for a sample `.env` file. 
 
-```
-$ docker run -v ./results:/results -v ./config.json:/config.json -it --env-file .env reso-certification-utils runDDTests -v 2.0 -p /config.json -l 200 -a 
-```
+In this case, you will need additional information to use the Variations Service. Please contact [dev@reso.org](mailto:dev@reso.org) for more information. 
 
-Where `.env` file would be a file in the current directory containing a variable called `PROVIDER_TOKEN` with a value. See [`sample.env`](../sample.env) for more information.
+If the auth info isn't present, only machine-matching will be used. This is still enough to get started with DD 2.0 testing.
 
-To obtain a provider token, contact [dev@reso.org](mailto:dev@reso.org).
-
-If no provider token is specified, then only machine-based matching techniques will be used.
+You can also pass the environment variables in the file directly to the container with the `-e` flag, but using a file is preferred since it avoids sensitive information being exposed in the command history.
 
 
 ## Other Tasks
