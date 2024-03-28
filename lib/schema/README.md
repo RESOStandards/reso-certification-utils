@@ -5,9 +5,9 @@
 ```
 $ reso-certification-utils schema --help
 
-Usage: reso-certification-utils schema [options]
+Usage: RESO Certification Utils schema [options]
 
-Generate a schema from a given metadata report
+Generate a schema or validate a payload against a schema
 
 Options:
   -G, --generate               Generate a schema for payload validation
@@ -15,7 +15,7 @@ Options:
   -m, --metadataPath <string>  Path to the metadata report JSON file
   -o, --outputPath <string>    Path tho the directory to store the generated schema. Defaults to "./"
   -a, --additionalProperties   Pass this flag to allow additional properties in the schema. False by default
-  -v, --version <string>       The Data Dictionary version of the metadata report
+  -v, --version <string>       The DD version of the metadata report
   -p, --payloadPath <string>   Path to the payload file OR directory/zip containing files that need to be validated
   -r, --resourceName <string>  Resource name to validate against. Required if --version is passed when validating.
   -h, --help                   display help for command
