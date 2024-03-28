@@ -3,6 +3,7 @@
 const assert = require('assert');
 const { computeVariations } = require('../index.js');
 const { getReferenceMetadata } = require('../lib/misc/index.js');
+const { MATCHING_STRATEGIES } = require('../lib/variations/index.js');
 
 const getRandomNonAlphaNumericCharacter = () => {
   const chars = ['_', '&', '-', ' ', ', '];
@@ -923,7 +924,59 @@ describe('Variations Service suggestion tests', () => {
     assert.equal(lookups?.length, 0, 'No lookups should be flagged');
   });
 
-  it('Should ignore lookup values when suggestions flag them', async () => {
+  it('Should not flag ignored resources', async () => {
+    const metadataReportJson = {
+      fields: [{
+        resourceName: 'Offices',
+        fieldName: 'ModificationTimestamp',
+        type: 'Edm.DateTimeOffset'
+      }],
+      lookups: []
+    };
+
+    const suggestionsMap = {
+      Offices: {
+        ignored: true
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+    assert.equal(fields?.length, 0, 'No fields should be flagged');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged');
+  });
+
+  it('Should not flag ignored fields', async () => {
+    const metadataReportJson = {
+      fields: [{
+        resourceName: 'Property',
+        fieldName: 'ListPrices',
+        type: 'Edm.Decimal'
+      }],
+      lookups: []
+    };
+
+    const suggestionsMap = {
+      Property: {
+        ListPrices: {
+          ignored: true
+        }
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+    assert.equal(fields?.length, 0, 'No fields should be flagged');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged');
+  });
+
+  it('Should not flag ignored enumerations', async () => {
     const metadataReportJson = {
       fields: [{
         resourceName: 'Property',
@@ -957,5 +1010,205 @@ describe('Variations Service suggestion tests', () => {
     assert.equal(resources?.length, 0, 'No resources should be flagged');
     assert.equal(fields?.length, 0, 'No fields should be flagged');
     assert.equal(lookups?.length, 0, 'No lookups should be flagged');
+  });
+
+  it('Should flag Fast Track resource suggestions when present', async () => {
+    const metadataReportJson = {
+      fields: [{
+        resourceName: 'Offices',
+        fieldName: 'ModificationTimestamp',
+        type: 'Edm.DateTimeOffset'
+      }],
+      lookups: []
+    };
+
+    const suggestionsMap = {
+      Offices: {
+        suggestions: [{
+          suggestedResourceName: 'Office',
+          isFastTrack: true
+        }]
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 1, 'Exactly one resource should be flagged');
+    assert.equal(resources?.[0]?.suggestions?.[0].strategy, MATCHING_STRATEGIES.FAST_TRACK, 'Matching strategy should be Fast Track');
+    assert.equal(fields?.length, 0, 'No fields should be flagged');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged');
+  });
+
+  it('Should flag Fast Track field suggestions when present', async () => {
+    const metadataReportJson = {
+      fields: [{
+        resourceName: 'Property',
+        fieldName: 'ListPrices',
+        type: 'Edm.Decimal'
+      }],
+      lookups: []
+    };
+
+    const suggestionsMap = {
+      Property: {
+        ListPrices: {
+          suggestions: [{
+            suggestedResourceName: 'Property',
+            suggestedFieldName: 'ListPrice',
+            isFastTrack: true
+          }]
+        }
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+    assert.equal(fields?.length, 1, 'Exactly one field should be flagged');
+    assert.equal(fields?.[0]?.suggestions?.[0].strategy, MATCHING_STRATEGIES.FAST_TRACK, 'Matching strategy should be Fast Track');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged');
+  });
+
+  it('Should flag Fast Track enumerations when present', async () => {
+    const metadataReportJson = {
+      fields: [{
+        resourceName: 'Property',
+        fieldName: 'ArchitecturalStyle',
+        type: 'ArchitecturalStyles'
+      }],
+      lookups: [{
+        lookupName: 'ArchitecturalStyles',
+        lookupValue: 'Ranch/1 Story',
+        type: 'Edm.String'
+      }]
+    };
+
+    const suggestionsMap = {
+      Property: {
+        ArchitecturalStyle: {
+          'Ranch/1 Story': {
+            suggestions: [{
+              suggestedResourceName: 'Property',
+              suggestedFieldName: 'ArchitecturalStyle',
+              suggestedLookupValue: 'Ranch',
+              isFastTrack: true
+            }]
+          }
+        }
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+    assert.equal(fields?.length, 0, 'No fields should be flagged');
+    assert.equal(lookups?.length, 1, 'Exactly one lookup should be flagged');
+    assert.equal(lookups?.[0]?.suggestions?.[0].strategy, MATCHING_STRATEGIES.FAST_TRACK, 'Matching strategy should be Fast Track');
+  });
+
+  it('Should flag Admin resource suggestions when present', async () => {
+    const metadataReportJson = {
+      fields: [{
+        resourceName: 'Offices',
+        fieldName: 'ModificationTimestamp',
+        type: 'Edm.DateTimeOffset'
+      }],
+      lookups: []
+    };
+
+    const suggestionsMap = {
+      Offices: {
+        suggestions: [{
+          suggestedResourceName: 'Office',
+          isAdminReview: true
+        }]
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 1, 'Exactly one resource should be flagged');
+    assert.equal(resources?.[0]?.suggestions?.[0].strategy, MATCHING_STRATEGIES.ADMIN_REVIEW, 'Matching strategy should be Fast Track');
+    assert.equal(fields?.length, 0, 'No fields should be flagged');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged');
+  });
+
+  it('Should flag Admin field suggestions when present', async () => {
+    const metadataReportJson = {
+      fields: [{
+        resourceName: 'Property',
+        fieldName: 'ListPrices',
+        type: 'Edm.Decimal'
+      }],
+      lookups: []
+    };
+
+    const suggestionsMap = {
+      Property: {
+        ListPrices: {
+          suggestions: [{
+            suggestedResourceName: 'Property',
+            suggestedFieldName: 'ListPrice',
+            isAdminReview: true
+          }]
+        }
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+    assert.equal(fields?.length, 1, 'Exactly one field should be flagged');
+    assert.equal(fields?.[0]?.suggestions?.[0].strategy, MATCHING_STRATEGIES.ADMIN_REVIEW, 'Matching strategy should be Fast Track');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged');
+  });
+
+  it('Should flag Admin lookup suggestions when present', async () => {
+    const metadataReportJson = {
+      fields: [{
+        resourceName: 'Property',
+        fieldName: 'ArchitecturalStyle',
+        type: 'ArchitecturalStyles'
+      }],
+      lookups: [{
+        lookupName: 'ArchitecturalStyles',
+        lookupValue: 'Ranch/1 Story',
+        type: 'Edm.String'
+      }]
+    };
+
+    const suggestionsMap = {
+      Property: {
+        ArchitecturalStyle: {
+          'Ranch/1 Story': {
+            suggestions: [{
+              suggestedResourceName: 'Property',
+              suggestedFieldName: 'ArchitecturalStyle',
+              suggestedLookupValue: 'Ranch',
+              isAdminReview: true
+            }]
+          }
+        }
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+    assert.equal(fields?.length, 0, 'No fields should be flagged');
+    assert.equal(lookups?.length, 1, 'Exactly one lookup should be flagged');
+    assert.equal(lookups?.[0]?.suggestions?.[0].strategy, MATCHING_STRATEGIES.ADMIN_REVIEW, 'Matching strategy should be Fast Track');
   });
 });
