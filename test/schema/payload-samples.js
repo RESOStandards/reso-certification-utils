@@ -164,6 +164,21 @@ const stringListInvalidPayload = {
   ]
 };
 
+const stringListWithSpacesAfterCommaValidPayload = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39',
+      StringListTestField: 'My Company, LLC'
+    }
+  ]
+};
+
 const additionalPropertyPayload = {
   '@reso.context': 'urn:reso:metadata:1.7:resource:property',
   Country: 'CA',
@@ -200,5 +215,6 @@ module.exports = {
   stringListInvalidPayload,
   additionalPropertyPayload,
   integerOverflowPayload,
+  stringListWithSpacesAfterCommaValidPayload,
   specialEnumFieldsValidPayload
 };
