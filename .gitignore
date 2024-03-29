@@ -118,4 +118,3 @@ schema-validation-report.json
 *.swp
 results/
 *.resoscript
-schema-validation-settings.json
