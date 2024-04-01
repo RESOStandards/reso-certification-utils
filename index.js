@@ -5,7 +5,7 @@ require('dotenv').config();
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
 const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification');
-const { findVariations, updateVariations, computeVariations, DEFAULT_FUZZINESS } = require('./lib/variations');
+const { findVariations, updateVariations, computeVariations, DEFAULT_FUZZINESS, inflateVariations } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
 const { DEFAULT_DD_VERSION, parseBooleanValue } = require('./common');
@@ -20,9 +20,7 @@ if (require?.main === module) {
    */
   const FROM_CLI = true;
 
-  program
-    .name('RESO Certification Utils')
-    .description('Command line batch-testing and restore utils');
+  program.name('RESO Certification Utils').description('Command line batch-testing and restore utils');
 
   program
     .command('runDDTests')
@@ -140,7 +138,16 @@ if (require?.main === module) {
     .command('updateVariations')
     .description('(Admin) Updates suggestions in the Variations Service')
     .requiredOption('-p, --pathToCsvSuggestions <string>', 'Suggestions CSV file name')
+    .option('-f, --isFastTrack', 'Present if Fast Track suggestions')
+    .option('-a, --isAdminReview', 'Present if suggestions are from Admin Review')
+    .option('-o, --overwrite', 'Required to overwrite any existing Fast Track suggestions')
     .action(options => updateVariations({ ...options, fromCli: FROM_CLI }));
+
+  program
+    .command('inflateVariations')
+    .description('Inflates a gzip file of mappings')
+    .requiredOption('-p, --pathToMappings <string>', 'Compressed mappings file name')
+    .action(options => inflateVariations({ ...options, fromCli: FROM_CLI }));
 
   program
     .command('restore')
