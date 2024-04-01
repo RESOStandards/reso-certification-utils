@@ -232,6 +232,30 @@ describe('Schema validation tests', () => {
     assert.equal(report.items[0].fieldName, expectedInvalidField, 'Non advertised field did not match');
   });
 
+  it('Should not have lookup values for non-enum types', () => {
+    let errorMap = {};
+    const version = '2.0';
+    const expectedErrorMessage = `ADDITIONAL fields found that are not part of Data Dictionary ${version}`;
+    const expectedInvalidField = 'AdditionalProperty';
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: additionalPropertyPayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap,
+      isResoDataDictionarySchema: true
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'additional property error message did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidField, 'Non advertised field did not match');
+    assert.equal(
+      Object.keys(report.items[0].errors[0]?.occurrences[0] || {}).indexOf('lookupValue'),
+      -1,
+      'Found lookup value on non enum type'
+    );
+  });
+
   it('Should not find errors in case where maxLength is present on non-string types', async () => {
     let errorMap = {};
     metadata.fields.find(f => f.type === 'Edm.Int64').maxLength = 5;
