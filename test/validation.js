@@ -20,14 +20,9 @@ const {
   specialEnumFieldsValidPayload
 } = require('./schema/payload-samples');
 
-const { beforeEach } = require('mocha');
-
-describe('Schema validation tests', () => {
+describe('Schema validation tests', async () => {
   const metadata = getReferenceMetadata('2.0');
-  let schema;
-  beforeEach(async () => {
-    schema = await generateJsonSchema({ metadataReportJson: metadata });
-  });
+  const schema = await generateJsonSchema({ metadataReportJson: metadata });
 
   it('Should validate a valid array type payload', () => {
     let errorMap = {};
