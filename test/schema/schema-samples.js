@@ -46,7 +46,7 @@ const schemaWithMaxLength = {
         BuyerTeamName: {
           type: ['string', 'null'],
           maxLength: 50,
-          errorMessage: { maxLength: 'SHOULD have a maximum suggested length of 50 characters' }
+          errorMessage: { maxLength: 'MUST have a maximum suggested length of 50 characters' }
         }
       },
       additionalProperties: false
@@ -79,7 +79,7 @@ const schemaWithImplicitNullable = {
         BuyerTeamName: {
           type: ['string', 'null'],
           maxLength: 50,
-          errorMessage: { maxLength: 'SHOULD have a maximum suggested length of 50 characters' }
+          errorMessage: { maxLength: 'MUST have a maximum suggested length of 50 characters' }
         }
       },
       additionalProperties: false
@@ -112,7 +112,7 @@ const nonNullableSchema = {
         BuyerTeamName: {
           type: 'string',
           maxLength: 50,
-          errorMessage: { maxLength: 'SHOULD have a maximum suggested length of 50 characters' }
+          errorMessage: { maxLength: 'MUST have a maximum suggested length of 50 characters' }
         }
       },
       additionalProperties: false
