@@ -120,6 +120,18 @@ const maxLengthPayload = {
   TestMaxLengthField: 'MoreThan5Chars'
 };
 
+const maxLengthPayloadRCF = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  Country: 'CA',
+  StateOrProvince: 'ON',
+  City: 'SampleCityEnumValue',
+  PostalCode: 'K2G 1Y9',
+  StreetName: 'Starwood Rd',
+  StreetNumber: '39',
+  AboveGradeFinishedAreaSource: 'Appraiser',
+  TestMaxLengthField: 'MoreThan5Chars'
+};
+
 const invalidPayloadContext = {
   '@invalid.context': 'urn:reso:metadata:1.7:resource:property',
   Country: 'CA',
@@ -229,5 +241,6 @@ module.exports = {
   integerOverflowPayload,
   stringListWithSpacesAfterCommaValidPayload,
   specialEnumFieldsValidPayload,
-  maxLengthPayload
+  maxLengthPayload,
+  maxLengthPayloadRCF
 };

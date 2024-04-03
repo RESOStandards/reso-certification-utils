@@ -18,7 +18,8 @@ const {
   integerOverflowPayload,
   stringListWithSpacesAfterCommaValidPayload,
   specialEnumFieldsValidPayload,
-  maxLengthPayload
+  maxLengthPayload,
+  maxLengthPayloadRCF
 } = require('./schema/payload-samples');
 
 const { beforeEach } = require('mocha');
@@ -257,7 +258,34 @@ describe('Schema validation tests', () => {
     );
   });
 
-  it('Should find maxLength errors and have proper message', async () => {
+  it('Should find maxLength warnings and have proper message - RCF Testing', async () => {
+    let errorMap = {};
+    const expectedWarningMessage = 'SHOULD have a maximum suggested length of 5 characters';
+    metadata.fields.push({
+      resourceName: 'Property',
+      fieldName: 'TestMaxLengthField',
+      nullable: false,
+      annotations: [],
+      type: 'Edm.String',
+      maxLength: 5
+    });
+    const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
+    errorMap = validate({
+      jsonSchema: modifiedSchema,
+      jsonPayload: maxLengthPayloadRCF,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalWarnings, 1, 'Warning counts did not match');
+    assert.equal(report.totalErrors, 0, 'Error counts did not match - Found non-zero errors');
+    assert.equal(report.items[0].warnings[0].message, expectedWarningMessage, 'additional property warning message did not match');
+
+    metadata.fields.pop();
+  });
+
+  it('Should find maxLength errors and have proper message - DD Testing', async () => {
     let errorMap = {};
     const expectedErrorMessage = 'MUST have a maximum advertised length of 5 characters';
     metadata.fields.push({
