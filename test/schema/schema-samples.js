@@ -18,14 +18,16 @@ const simpleNonEnumSchema = {
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
-          ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/AboveGradeFinishedArea+Field'
+          ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/AboveGradeFinishedArea+Field',
+          typeName: ''
         },
         BuyerTeamName: {
           type: 'Edm.String',
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
-          ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field'
+          ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field',
+          typeName: ''
         }
       }
     }
@@ -58,7 +60,8 @@ const schemaWithMaxLength = {
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
-          ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field'
+          ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field',
+          typeName: ''
         }
       }
     }
@@ -91,6 +94,7 @@ const schemaWithImplicitNullable = {
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
+          typeName: '',
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field'
         }
       }
@@ -124,6 +128,7 @@ const nonNullableSchema = {
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
+          typeName: '',
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field'
         }
       }
@@ -156,6 +161,7 @@ const enumFieldsAndLookupsSchema = {
           isExpansion: false,
           isLookupField: true,
           isComplexType: false,
+          typeName: 'AreaSource',
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/AboveGradeFinishedAreaSource+Field',
           lookupValues: {
             Appraiser: {
@@ -330,6 +336,7 @@ const collectionFieldsSchema = {
           isExpansion: false,
           isLookupField: true,
           isComplexType: false,
+          typeName: 'ExistingLeaseType',
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/AvailableLeaseType+Field',
           lookupValues: {
             'Absolute Net': {
@@ -497,6 +504,7 @@ const expansionFieldsSchema = {
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
+          typeName: '',
           ddWikiUrl: 'https://ddwiki.reso.org/pages/viewpage.action?pageId=1135641'
         },
         OriginalEntryTimestamp: {
@@ -504,6 +512,7 @@ const expansionFieldsSchema = {
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
+          typeName: '',
           ddWikiUrl: 'https://ddwiki.reso.org/pages/viewpage.action?pageId=1135646'
         }
       },
@@ -513,6 +522,7 @@ const expansionFieldsSchema = {
           isExpansion: true,
           isLookupField: false,
           isComplexType: false,
+          typeName: 'Teams',
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/ListTeam+Field'
         }
       }
@@ -548,6 +558,7 @@ const nullableCollectionFieldsSchema = {
           isExpansion: false,
           isLookupField: true,
           isComplexType: false,
+          typeName: 'ExistingLeaseType',
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/AvailableLeaseType+Field',
           lookupValues: {
             'Absolute Net': {

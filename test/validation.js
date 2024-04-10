@@ -19,7 +19,9 @@ const {
   stringListWithSpacesAfterCommaValidPayload,
   specialEnumFieldsValidPayload,
   maxLengthPayload,
-  maxLengthPayloadRCF
+  maxLengthPayloadRCF,
+  nestedPayloadError,
+  nestedCollectionPayloadError
 } = require('./schema/payload-samples');
 
 const { beforeEach } = require('mocha');
@@ -351,5 +353,43 @@ describe('Schema validation tests', () => {
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
     assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'integer overflow error message did not match');
     metadata.fields.pop();
+  });
+
+  it('should show the nested expansion resource and field when expansion field is invalid', async () => {
+    let errorMap = {};
+    const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
+    const expectedInvalidField = 'Foo';
+    const expectedInvalidResource = 'Member';
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: nestedPayloadError,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
+    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+  });
+
+  it('should show the nested expansion resource and field when collection expansion field is invalid', async () => {
+    let errorMap = {};
+    const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
+    const expectedInvalidField = 'Foo';
+    const expectedInvalidResource = 'Media';
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: nestedCollectionPayloadError,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
+    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
   });
 });
