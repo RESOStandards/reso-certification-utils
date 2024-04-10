@@ -17,7 +17,11 @@ const {
   additionalPropertyPayload,
   integerOverflowPayload,
   stringListWithSpacesAfterCommaValidPayload,
-  specialEnumFieldsValidPayload
+  specialEnumFieldsValidPayload,
+  maxLengthPayload,
+  maxLengthPayloadRCF,
+  nestedPayloadError,
+  nestedCollectionPayloadError
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -227,6 +231,83 @@ describe('Schema validation tests', async () => {
     assert.equal(report.items[0].fieldName, expectedInvalidField, 'Non advertised field did not match');
   });
 
+  it('Should not have lookup values for non-enum types', () => {
+    let errorMap = {};
+    const version = '2.0';
+    const expectedErrorMessage = `ADDITIONAL fields found that are not part of Data Dictionary ${version}`;
+    const expectedInvalidField = 'AdditionalProperty';
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: additionalPropertyPayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap,
+      isResoDataDictionarySchema: true
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'additional property error message did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidField, 'Non advertised field did not match');
+    assert.equal(
+      Object.keys(report.items[0].errors[0]?.occurrences[0] || {}).indexOf('lookupValue'),
+      -1,
+      'Found lookup value on non enum type'
+    );
+  });
+
+  it('Should find maxLength warnings and have proper message - RCF Testing', async () => {
+    let errorMap = {};
+    const expectedWarningMessage = 'SHOULD have a maximum suggested length of 5 characters';
+    metadata.fields.push({
+      resourceName: 'Property',
+      fieldName: 'TestMaxLengthField',
+      nullable: false,
+      annotations: [],
+      type: 'Edm.String',
+      maxLength: 5
+    });
+    const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
+    errorMap = validate({
+      jsonSchema: modifiedSchema,
+      jsonPayload: maxLengthPayloadRCF,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalWarnings, 1, 'Warning counts did not match');
+    assert.equal(report.totalErrors, 0, 'Error counts did not match - Found non-zero errors');
+    assert.equal(report.items[0].warnings[0].message, expectedWarningMessage, 'additional property warning message did not match');
+
+    metadata.fields.pop();
+  });
+
+  it('Should find maxLength errors and have proper message - DD Testing', async () => {
+    let errorMap = {};
+    const expectedErrorMessage = 'MUST have a maximum advertised length of 5 characters';
+    metadata.fields.push({
+      resourceName: 'Property',
+      fieldName: 'TestMaxLengthField',
+      nullable: false,
+      annotations: [],
+      type: 'Edm.String',
+      maxLength: 5
+    });
+    const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
+    errorMap = validate({
+      jsonSchema: modifiedSchema,
+      jsonPayload: maxLengthPayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'additional property error message did not match');
+
+    metadata.fields.pop();
+  });
+
   it('Should not find errors in case where maxLength is present on non-string types', async () => {
     let errorMap = {};
     metadata.fields.find(f => f.type === 'Edm.Int64').maxLength = 5;
@@ -267,5 +348,43 @@ describe('Schema validation tests', async () => {
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
     assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'integer overflow error message did not match');
     metadata.fields.pop();
+  });
+
+  it('should show the nested expansion resource and field when expansion field is invalid', async () => {
+    let errorMap = {};
+    const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
+    const expectedInvalidField = 'Foo';
+    const expectedInvalidResource = 'Member';
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: nestedPayloadError,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
+    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+  });
+
+  it('should show the nested expansion resource and field when collection expansion field is invalid', async () => {
+    let errorMap = {};
+    const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
+    const expectedInvalidField = 'Foo';
+    const expectedInvalidResource = 'Media';
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: nestedCollectionPayloadError,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
+    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
   });
 });

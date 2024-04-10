@@ -108,6 +108,30 @@ const odataKeyPayload = {
   AboveGradeFinishedAreaSource: 'Appraiser'
 };
 
+const maxLengthPayload = {
+  '@odata.context': 'urn:reso:metadata:1.7:resource:property',
+  Country: 'CA',
+  StateOrProvince: 'ON',
+  City: 'SampleCityEnumValue',
+  PostalCode: 'K2G 1Y9',
+  StreetName: 'Starwood Rd',
+  StreetNumber: '39',
+  AboveGradeFinishedAreaSource: 'Appraiser',
+  TestMaxLengthField: 'MoreThan5Chars'
+};
+
+const maxLengthPayloadRCF = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  Country: 'CA',
+  StateOrProvince: 'ON',
+  City: 'SampleCityEnumValue',
+  PostalCode: 'K2G 1Y9',
+  StreetName: 'Starwood Rd',
+  StreetNumber: '39',
+  AboveGradeFinishedAreaSource: 'Appraiser',
+  TestMaxLengthField: 'MoreThan5Chars'
+};
+
 const invalidPayloadContext = {
   '@invalid.context': 'urn:reso:metadata:1.7:resource:property',
   Country: 'CA',
@@ -203,6 +227,50 @@ const integerOverflowPayload = {
   Foo: 2 ** 32 + 1
 };
 
+const nestedPayloadError = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      ListAgent: {
+        Foo: 'bar',
+        MemberAlternateId: 'fooo'
+      },
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39',
+      AboveGradeFinishedAreaSource: 'Appraiser'
+    }
+  ]
+};
+
+const nestedCollectionPayloadError = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      Media: [
+        {
+          ChangedByMemberID: 'id',
+          Foo: 'bar'
+        },
+        {
+          ChangedByMemberID: 'id',
+          ImageHeight: 10
+        }
+      ],
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39',
+      AboveGradeFinishedAreaSource: 'Appraiser'
+    }
+  ]
+};
+
 module.exports = {
   valuePayload,
   nonValuePayload,
@@ -216,5 +284,9 @@ module.exports = {
   additionalPropertyPayload,
   integerOverflowPayload,
   stringListWithSpacesAfterCommaValidPayload,
-  specialEnumFieldsValidPayload
+  specialEnumFieldsValidPayload,
+  maxLengthPayload,
+  maxLengthPayloadRCF,
+  nestedPayloadError,
+  nestedCollectionPayloadError
 };
