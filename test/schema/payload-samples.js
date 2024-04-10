@@ -227,6 +227,50 @@ const integerOverflowPayload = {
   Foo: 2 ** 32 + 1
 };
 
+const nestedPayloadError = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      ListAgent: {
+        Foo: 'bar',
+        MemberAlternateId: 'fooo'
+      },
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39',
+      AboveGradeFinishedAreaSource: 'Appraiser'
+    }
+  ]
+};
+
+const nestedCollectionPayloadError = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      Media: [
+        {
+          ChangedByMemberID: 'id',
+          Foo: 'bar'
+        },
+        {
+          ChangedByMemberID: 'id',
+          ImageHeight: 10
+        }
+      ],
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39',
+      AboveGradeFinishedAreaSource: 'Appraiser'
+    }
+  ]
+};
+
 module.exports = {
   valuePayload,
   nonValuePayload,
@@ -242,5 +286,7 @@ module.exports = {
   stringListWithSpacesAfterCommaValidPayload,
   specialEnumFieldsValidPayload,
   maxLengthPayload,
-  maxLengthPayloadRCF
+  maxLengthPayloadRCF,
+  nestedPayloadError,
+  nestedCollectionPayloadError
 };
