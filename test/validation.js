@@ -21,7 +21,10 @@ const {
   maxLengthPayload,
   maxLengthPayloadRCF,
   nestedPayloadError,
-  nestedCollectionPayloadError
+  nestedCollectionPayloadError,
+  nestedPayloadErrorWithNullExpansion,
+  nestedCollectionPayloadErrorWithNull,
+  nestedExpansionTypeError
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -377,6 +380,57 @@ describe('Schema validation tests', async () => {
     errorMap = validate({
       jsonSchema: schema,
       jsonPayload: nestedCollectionPayloadError,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
+    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+  });
+
+  it('should not find error when nested non-collection expansion is null', async () => {
+    let errorMap = {};
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: nestedPayloadErrorWithNullExpansion,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 0, 'Found non-zero errors');
+  });
+
+  it('should find error when nested collection expansion is null', async () => {
+    let errorMap = {};
+    const expectedInvalidField = 'Media';
+    const expectedInvalidResource = 'Property';
+    const expectedErrorMessage = 'MUST be array but found null';
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: nestedCollectionPayloadErrorWithNull,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
+    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+  });
+
+  it('should find error when nested collection expansion has type error', async () => {
+    let errorMap = {};
+    const expectedInvalidField = 'ListAgent';
+    const expectedInvalidResource = 'Member';
+    const expectedErrorMessage = 'MUST be string or null but found integer';
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: nestedExpansionTypeError,
       resourceName: 'Property',
       version: '2.0',
       errorMap

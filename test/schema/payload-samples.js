@@ -271,6 +271,56 @@ const nestedCollectionPayloadError = {
   ]
 };
 
+const nestedPayloadErrorWithNullExpansion = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      ListAgent: null,
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39',
+      AboveGradeFinishedAreaSource: 'Appraiser'
+    }
+  ]
+};
+
+const nestedCollectionPayloadErrorWithNull = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      Media: null,
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39',
+      AboveGradeFinishedAreaSource: 'Appraiser'
+    }
+  ]
+};
+
+const nestedExpansionTypeError = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      ListAgent: {
+        MemberAlternateId: 12
+      },
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39',
+      AboveGradeFinishedAreaSource: 'Appraiser'
+    }
+  ]
+};
+
 module.exports = {
   valuePayload,
   nonValuePayload,
@@ -288,5 +338,8 @@ module.exports = {
   maxLengthPayload,
   maxLengthPayloadRCF,
   nestedPayloadError,
-  nestedCollectionPayloadError
+  nestedCollectionPayloadError,
+  nestedPayloadErrorWithNullExpansion,
+  nestedCollectionPayloadErrorWithNull,
+  nestedExpansionTypeError
 };
