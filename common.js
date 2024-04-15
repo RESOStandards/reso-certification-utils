@@ -354,7 +354,7 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
 
   return {
     metadataMap: {
-      ...fields.reduce((acc, { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '' }) => {
+      ...fields.reduce((acc, { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true }) => {
         if (!acc[resourceName]) {
           acc[resourceName] = {};
           STATS.numResources++;
@@ -374,6 +374,7 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
         acc[resourceName][fieldName] = {
           type,
           typeName,
+          nullable,
           isExpansion,
           isLookupField,
           isComplexType: isComplexType || (!isExpansion && !type?.startsWith('Edm.') && !isLookupField),
