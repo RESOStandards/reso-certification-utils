@@ -372,6 +372,27 @@ describe('Schema validation tests', async () => {
     assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
   });
 
+  it('should not change the payload object', async () => {
+    let errorMap = {};
+    const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
+    const expectedInvalidField = 'Foo';
+    const expectedInvalidResource = 'Media';
+    const originalPayload = JSON.parse(JSON.stringify(nestedCollectionPayloadError));
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: nestedCollectionPayloadError,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
+    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+    assert.deepEqual(originalPayload, nestedCollectionPayloadError, 'Payload was modified during validation');
+  });
+
   it('should show the nested expansion resource and field when collection expansion field is invalid', async () => {
     let errorMap = {};
     const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
