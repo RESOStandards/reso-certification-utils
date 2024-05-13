@@ -7,9 +7,7 @@
     "mocha": true,
     "browser": true
   },
-  "extends": [
-    "eslint:recommended"
-  ],
+  "extends": ["eslint:recommended"],
   "globals": {
     "logger": true,
     "Atomics": "readonly",
@@ -19,22 +17,10 @@
     "ecmaVersion": 2020
   },
   "rules": {
-    "indent": [
-      "error",
-      2
-    ],
-    "linebreak-style": [
-      "error",
-      "unix"
-    ],
-    "quotes": [
-      "error",
-      "single"
-    ],
-    "semi": [
-      "error",
-      "always"
-    ],
+    "indent": ["error", 2],
+    "linebreak-style": ["error", "unix"],
+    "quotes": ["error", "single"],
+    "semi": ["error", "always"],
     "prefer-destructuring": [
       "error",
       {
@@ -86,14 +72,8 @@
       }
     ],
     "no-whitespace-before-property": "error",
-    "object-curly-spacing": [
-      "error",
-      "always"
-    ],
-    "rest-spread-spacing": [
-      "error",
-      "never"
-    ],
+    "object-curly-spacing": ["error", "always"],
+    "rest-spread-spacing": ["error", "never"],
     "space-infix-ops": "error",
     "space-unary-ops": [
       "error",
@@ -109,13 +89,15 @@
         "before": false
       }
     ],
-    "template-curly-spacing": [
+    "template-curly-spacing": ["error", "never"],
+    "template-tag-spacing": ["error", "always"],
+    "no-unused-vars": [
       "error",
-      "never"
-    ],
-    "template-tag-spacing": [
-      "error",
-      "always"
+      {
+        "argsIgnorePattern": "^_$",
+        "ignoreRestSiblings": true,
+        "varsIgnorePattern": "^_$"
+      }
     ]
   }
 }
