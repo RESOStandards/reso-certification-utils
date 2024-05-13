@@ -24,7 +24,8 @@ const {
   nestedCollectionPayloadError,
   nestedPayloadErrorWithNullExpansion,
   nestedCollectionPayloadErrorWithNull,
-  nestedExpansionTypeError
+  nestedExpansionTypeError,
+  atFieldPayloadError
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -280,7 +281,7 @@ describe('Schema validation tests', async () => {
     const report = combineErrors(errorMap);
     assert.equal(report.totalWarnings, 1, 'Warning counts did not match');
     assert.equal(report.totalErrors, 0, 'Error counts did not match - Found non-zero errors');
-    assert.equal(report.items[0].warnings[0].message, expectedWarningMessage, 'additional property warning message did not match');
+    assert.equal(report.items[0].warnings[0].message, expectedWarningMessage, 'max length warning did not match');
 
     metadata.fields.pop();
   });
@@ -306,7 +307,7 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'additional property error message did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'max length message did not match');
 
     metadata.fields.pop();
   });
@@ -461,5 +462,18 @@ describe('Schema validation tests', async () => {
     assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
     assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
     assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+  });
+
+  it('should ignore errors for payload fields with @ in the middle of the string', async () => {
+    let errorMap = {};
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: atFieldPayloadError,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 0, 'Error counts did not match');
   });
 });
