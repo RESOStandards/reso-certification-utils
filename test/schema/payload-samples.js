@@ -336,6 +336,20 @@ const atFieldPayloadError = {
   ]
 };
 
+const invalidOdataIdentifierInvalidPayload = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue,invalidSimpleIdentifier$',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39'
+    }
+  ]
+};
+
 module.exports = {
   valuePayload,
   nonValuePayload,
@@ -357,5 +371,6 @@ module.exports = {
   nestedPayloadErrorWithNullExpansion,
   nestedCollectionPayloadErrorWithNull,
   nestedExpansionTypeError,
-  atFieldPayloadError
+  atFieldPayloadError,
+  invalidOdataIdentifierInvalidPayload
 };

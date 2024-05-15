@@ -25,7 +25,8 @@ const {
   nestedPayloadErrorWithNullExpansion,
   nestedCollectionPayloadErrorWithNull,
   nestedExpansionTypeError,
-  atFieldPayloadError
+  atFieldPayloadError,
+  invalidOdataIdentifierInvalidPayload
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -475,5 +476,30 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 0, 'Error counts did not match');
+  });
+
+  it('should fail with appropriate message in case of failed isflags odata enum check', async () => {
+    let errorMap = {};
+    const expectedField = 'City';
+    const expectedResource = 'Property';
+    const expectedLookupValue = 'invalidSimpleIdentifier$';
+    const expectedErrorMessage = `INVALID OData identifier: ${expectedLookupValue}. See OData Simple Identifiers: https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#sec_SimpleIdentifier`;
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: invalidOdataIdentifierInvalidPayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.items[0].fieldName, expectedField, 'odata simple identfier validation field did not match');
+    assert.equal(report.items[0].resourceName, expectedResource, 'odata simple identfier validation resource did not match');
+    assert.equal(
+      report.items[0].errors[0].occurrences[0].lookupValue,
+      expectedLookupValue,
+      'odata simple identfier validation enum lookup value did not match'
+    );
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'odata simple identfier validation error message did not match');
   });
 });
