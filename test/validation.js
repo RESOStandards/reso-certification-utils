@@ -24,7 +24,9 @@ const {
   nestedCollectionPayloadError,
   nestedPayloadErrorWithNullExpansion,
   nestedCollectionPayloadErrorWithNull,
-  nestedExpansionTypeError
+  nestedExpansionTypeError,
+  atFieldPayloadError,
+  invalidOdataIdentifierInvalidPayload
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -280,7 +282,7 @@ describe('Schema validation tests', async () => {
     const report = combineErrors(errorMap);
     assert.equal(report.totalWarnings, 1, 'Warning counts did not match');
     assert.equal(report.totalErrors, 0, 'Error counts did not match - Found non-zero errors');
-    assert.equal(report.items[0].warnings[0].message, expectedWarningMessage, 'additional property warning message did not match');
+    assert.equal(report.items[0].warnings[0].message, expectedWarningMessage, 'max length warning did not match');
 
     metadata.fields.pop();
   });
@@ -306,7 +308,7 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'additional property error message did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'max length message did not match');
 
     metadata.fields.pop();
   });
@@ -370,6 +372,27 @@ describe('Schema validation tests', async () => {
     assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
     assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
     assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+  });
+
+  it('should not change the payload object', async () => {
+    let errorMap = {};
+    const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
+    const expectedInvalidField = 'Foo';
+    const expectedInvalidResource = 'Media';
+    const originalPayload = JSON.parse(JSON.stringify(nestedCollectionPayloadError));
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: nestedCollectionPayloadError,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
+    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+    assert.deepEqual(originalPayload, nestedCollectionPayloadError, 'Payload was modified during validation');
   });
 
   it('should show the nested expansion resource and field when collection expansion field is invalid', async () => {
@@ -440,5 +463,43 @@ describe('Schema validation tests', async () => {
     assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
     assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
     assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+  });
+
+  it('should ignore errors for payload fields with @ in the middle of the string', async () => {
+    let errorMap = {};
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: atFieldPayloadError,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 0, 'Error counts did not match');
+  });
+
+  it('should fail with appropriate message in case of failed isflags odata enum check', async () => {
+    let errorMap = {};
+    const expectedField = 'City';
+    const expectedResource = 'Property';
+    const expectedLookupValue = 'invalidSimpleIdentifier$';
+    const expectedErrorMessage = `INVALID OData identifier: ${expectedLookupValue}. See OData Simple Identifiers: https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#sec_SimpleIdentifier`;
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: invalidOdataIdentifierInvalidPayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.items[0].fieldName, expectedField, 'odata simple identfier validation field did not match');
+    assert.equal(report.items[0].resourceName, expectedResource, 'odata simple identfier validation resource did not match');
+    assert.equal(
+      report.items[0].errors[0].occurrences[0].lookupValue,
+      expectedLookupValue,
+      'odata simple identfier validation enum lookup value did not match'
+    );
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'odata simple identfier validation error message did not match');
   });
 });
