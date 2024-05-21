@@ -26,7 +26,8 @@ const {
   nestedCollectionPayloadErrorWithNull,
   nestedExpansionTypeError,
   atFieldPayloadError,
-  invalidOdataIdentifierInvalidPayload
+  invalidOdataIdentifierInvalidPayload,
+  validNonStringNonIsflagsPayload
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -501,5 +502,34 @@ describe('Schema validation tests', async () => {
     );
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
     assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'odata simple identfier validation error message did not match');
+  });
+
+  it('should not fail in cases where enum is not string type but is also not isFlags', async () => {
+    let errorMap = {};
+    metadata.fields.push({
+      fieldName: 'SampleField',
+      resourceName: 'Property',
+      typeName: 'SampleTypeName',
+      type: 'SampleTypeName'
+    });
+    metadata.lookups.push({
+      fieldName: 'SampleField',
+      resourceName: 'Property',
+      lookupName: 'SampleTypeName',
+      lookupValue: 'sampleEnumValue$'
+    });
+    const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
+    errorMap = validate({
+      jsonSchema: modifiedSchema,
+      jsonPayload: validNonStringNonIsflagsPayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 0, 'Error counts did not match');
+
+    metadata.fields.pop();
+    metadata.lookups.pop();
   });
 });
