@@ -354,83 +354,80 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
 
   return {
     metadataMap: {
-      ...fields.reduce(
-        (
-          acc,
-          { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true }
-        ) => {
-          if (!acc[resourceName]) {
-            acc[resourceName] = {};
-            STATS.numResources++;
+      ...fields.reduce((acc, { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true }) => {
+        if (!acc[resourceName]) {
+          acc[resourceName] = {};
+          STATS.numResources++;
+        }
+
+        const isLookupField = !!lookupMap?.[type];
+
+        const { ddWikiUrl } =
+          annotations?.reduce((acc, { term, value }) => {
+            if (term === ANNOTATION_DD_WIKI_URL) {
+              acc.ddWikiUrl = value;
+            }
+            return acc;
+          }, {}) || {};
+
+        //add field to map
+        acc[resourceName][fieldName] = {
+          type,
+          typeName,
+          nullable,
+          isExpansion,
+          isLookupField,
+          isComplexType: isComplexType || (!isExpansion && !type?.startsWith('Edm.') && !isLookupField),
+          ddWikiUrl
+        };
+
+        if (isLookupField && lookupMap?.[type]) {
+          if (!acc?.[resourceName]?.[fieldName]?.lookupValues) {
+            acc[resourceName][fieldName].lookupValues = {};
           }
 
-          const isLookupField = !!lookupMap?.[type];
+          if (!acc?.[resourceName]?.[fieldName]?.legacyODataValues) {
+            acc[resourceName][fieldName].legacyODataValues = {};
+          }
 
-          const { ddWikiUrl } =
-            annotations?.reduce((acc, { term, value }) => {
-              if (term === ANNOTATION_DD_WIKI_URL) {
-                acc.ddWikiUrl = value;
-              }
-              return acc;
-            }, {}) || {};
+          Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue, ddWikiUrl, isStringEnumeration }) => {
+            const lookupName = parseLookupName(type);
 
-          //add field to map
-          acc[resourceName][fieldName] = {
-            type,
-            typeName,
-            nullable,
-            isExpansion,
-            isLookupField,
-            isComplexType: isComplexType || (!isExpansion && !type?.startsWith('Edm.') && !isLookupField),
-            ddWikiUrl
-          };
-
-          if (isLookupField && lookupMap?.[type]) {
-            if (!acc?.[resourceName]?.[fieldName]?.lookupValues) {
-              acc[resourceName][fieldName].lookupValues = {};
+            //skip legacyOData matching if we're using string enumerations
+            if (!isStringEnumeration && legacyODataValue?.length) {
+              acc[resourceName][fieldName].legacyODataValues[legacyODataValue] = {
+                type,
+                lookupName,
+                lookupValue,
+                legacyODataValue,
+                ddWikiUrl
+              };
             }
 
-            if (!acc?.[resourceName]?.[fieldName]?.legacyODataValues) {
-              acc[resourceName][fieldName].legacyODataValues = {};
+            if (lookupValue?.length) {
+              acc[resourceName][fieldName].lookupValues[lookupValue] = {
+                type,
+                lookupName,
+                lookupValue,
+                legacyODataValue,
+                ddWikiUrl,
+                isStringEnumeration
+              };
             }
+          });
+        }
 
-            Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue, ddWikiUrl, isStringEnumeration }) => {
-              const lookupName = parseLookupName(type);
+        if (isExpansion) {
+          STATS.numExpansions++;
+        }
 
-              if (isStringEnumeration && lookupValue?.length) {
-                acc[resourceName][fieldName].lookupValues[lookupValue] = {
-                  type,
-                  lookupName,
-                  lookupValue,
-                  legacyODataValue,
-                  ddWikiUrl,
-                  isStringEnumeration
-                };
-              } else if (legacyODataValue?.length) {
-                acc[resourceName][fieldName].legacyODataValues[legacyODataValue] = {
-                  type,
-                  lookupName,
-                  lookupValue,
-                  legacyODataValue,
-                  ddWikiUrl
-                };
-              }
-            });
-          }
+        if (isComplexType) {
+          STATS.numComplexTypes++;
+        }
 
-          if (isExpansion) {
-            STATS.numExpansions++;
-          }
-
-          if (isComplexType) {
-            STATS.numComplexTypes++;
-          }
-
-          STATS.numFields++;
-          return acc;
-        },
-        {}
-      )
+        STATS.numFields++;
+        return acc;
+      }, {})
     },
     stats: STATS
   };
