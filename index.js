@@ -4,11 +4,12 @@ require('dotenv').config();
 
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
-const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification');
+const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification/data-dictionary');
+const { runUpiTests } = require('./lib/certification/upi');
 const { findVariations, updateVariations, computeVariations, DEFAULT_FUZZINESS, inflateVariations } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
-const { DEFAULT_DD_VERSION, parseBooleanValue } = require('./common');
+const { DEFAULT_DD_VERSION, DEFAULT_UPI_VERSION, parseBooleanValue } = require('./common');
 const { DEFAULT_PAGE_SIZE } = require('./lib/replication/utils');
 
 //Only load commander interpreter if running from the CLI
@@ -36,6 +37,18 @@ if (require?.main === module) {
         fromCli: FROM_CLI,
         runAllTests: parseBooleanValue(options?.runAllTests),
         strictMode: parseBooleanValue(options?.strictMode)
+      })
+    );
+
+  program
+    .command('runUpiTests')
+    .description('Runs UPI Tests')
+    .requiredOption('-p, --pathToJSONSamples <string>', 'Path to JSON samples in RESO Common Format')
+    .option('-v, --version <string>', 'Data Dictionary version to use', DEFAULT_UPI_VERSION)
+    .action(options =>
+      runUpiTests({
+        ...options,
+        fromCli: FROM_CLI
       })
     );
 
