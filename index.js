@@ -5,7 +5,7 @@ require('dotenv').config();
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
 const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification/data-dictionary');
-const { runUpiTests } = require('./lib/certification/upi');
+const { runUpiTests, parseUpi } = require('./lib/certification/upi');
 const { findVariations, updateVariations, computeVariations, DEFAULT_FUZZINESS, inflateVariations } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
@@ -178,6 +178,8 @@ module.exports = {
   replicate,
   restore,
   runDDTests,
+  runUpiTests,
+  parseUpi,
   findVariations,
   computeVariations,
   convertMetadata,
