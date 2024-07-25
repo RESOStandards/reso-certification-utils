@@ -316,7 +316,7 @@ describe('Schema validation tests', async () => {
     let errorMap = {};
     metadata.fields.find(f => f.type === 'Edm.Int64').maxLength = 5;
     const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
-    // eslint-disable-next-line no-unused-vars
+     
     const { AdditionalProperty, ...payload } = additionalPropertyPayload;
     errorMap = validate({
       jsonSchema: modifiedSchema,
