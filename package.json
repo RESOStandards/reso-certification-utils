@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/RESOStandards/reso-certification-utils#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=21.1.0"
   },
   "dependencies": {
     "@reso/reso-certification-etl": "github:RESOStandards/reso-certification-etl#22cd1fd1077df5a40c8e8445fa4e996cc8f95284",

@@ -6,7 +6,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install modules
-      run: npm install -g eslint@8.57.0
+      run: npm install -g eslint
     - name: Install and run ESLint
       run: eslint . --quiet
     - name: Run Mocha Tests
