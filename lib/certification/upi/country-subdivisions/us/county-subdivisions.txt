@@ -35557,7 +35557,6 @@ WI|55|141|Wood County|73900|01584160|Sigel town|T1|A
 WI|55|141|Wood County|82650|01584330|Vesper village|C5|F
 WI|55|141|Wood County|88200|01584463|Wisconsin Rapids city|C5|F
 WI|55|141|Wood County|88575|01584472|Wood town|T1|A
-
 WY|56|001|Albany County|91100|01939703|East Albany CCD|Z5|S
 WY|56|001|Albany County|92090|01939721|Laramie CCD|Z5|S
 WY|56|001|Albany County|92695|01939732|Rock River CCD|Z5|S
