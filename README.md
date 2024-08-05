@@ -78,7 +78,7 @@ CLI tools and Node libs to replicate data from a RESO Web API server using beare
 ## Validate RESO Universal Parcel Identifiers (UPIs)
 Validates the given ULI data in RESO Common Format from a library or local file.
 
-[**MORE INFO**](./lib/upi/README.md)
+[**MORE INFO**](./lib/certification/upi/README.md)
 
 ## Restore Results
 Utils for restoring results to a RESO Certification API server.
