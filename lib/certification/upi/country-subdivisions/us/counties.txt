@@ -308,14 +308,15 @@ CO|08|119|00198175|Teller County|H1|A
 CO|08|121|00198176|Washington County|H1|A
 CO|08|123|00198177|Weld County|H1|A
 CO|08|125|00198178|Yuma County|H1|A
-CT|09|001|00212794|Fairfield County|H4|N
-CT|09|003|00212338|Hartford County|H4|N
-CT|09|005|00212796|Litchfield County|H4|N
-CT|09|007|00212797|Middlesex County|H4|N
-CT|09|009|00212798|New Haven County|H4|N
-CT|09|011|00212799|New London County|H4|N
-CT|09|013|00212668|Tolland County|H4|N
-CT|09|015|00212801|Windham County|H4|N
+CT|09|110||Capitol||
+CT|09|140||Naugatuck Valley||
+CT|09|150||Northeastern Connecticut||
+CT|09|160||Northwest Hills||
+CT|09|170||South Central Connecticut||
+CT|09|190||Western Connecticut||
+CT|09|180||Southeastern Connecticut||
+CT|09|120||Greater Bridgeport||
+CT|09|130||Lower Connecticut River Valley||
 DE|10|001|00217271|Kent County|H1|A
 DE|10|003|00217270|New Castle County|H1|A
 DE|10|005|00217269|Sussex County|H1|A
