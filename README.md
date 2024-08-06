@@ -55,10 +55,10 @@ Then use `yarn install --check-files` to install.
 
 ---
 
-## RESO Certification
+## RESO Data Dictionary Certification
 Runs one or more Data Dictionary tests using a provided configuration file.
 
-[**MORE INFO**](./lib/certification/README.md)
+[**MORE INFO**](/lib/certification/data-dictionary/README.md)
 
 ## Find Variations
 Uses a number of techniques to find potential variations for local items contained in a Data Dictionary metadata report.

@@ -1,7 +1,8 @@
 'use strict';
 
 const assert = require('assert');
-const { parseUpi, runUpiTests } = require('../index.js');
+const { runUpiTests } = require('../lib/certification/upi');
+const { parseUpi } = require('../lib/upi');
 
 const KNOWN_GOOD_UPI = 'urn:reso:upi:2.0:US:48201:12345 parcel number',
   KNOWN_GOOD_UPI_WITH_SUBCOMPONENT = `${KNOWN_GOOD_UPI}:sub:test parcel subcomponent`;
@@ -81,7 +82,7 @@ describe('UPI Validation Tests', () => {
         }
       ]
     };
-    
+
     const { errors = [] } = await runUpiTests({ resoCommonFormatJson: records });
     assert(errors && !!errors?.[0] && errors[0].error === 'Invalid country subdivision \'ABCDE\'');
   });
