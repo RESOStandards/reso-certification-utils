@@ -42,7 +42,7 @@ if (require?.main === module) {
 
   program
     .command('runUpiTests')
-    .description('Runs UPI Tests')
+    .description('Runs UPI Tests (see: https://upi.reso.org)')
     .requiredOption('-p, --pathToResoCommonFormatJson <string>', 'Path to JSON samples in RESO Common Format')
     .option('-v, --version <string>', 'Data Dictionary version to use', DEFAULT_UPI_VERSION)
     .action(options =>
