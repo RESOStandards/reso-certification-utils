@@ -55,10 +55,10 @@ Then use `yarn install --check-files` to install.
 
 ---
 
-## RESO Certification
+## RESO Data Dictionary Certification
 Runs one or more Data Dictionary tests using a provided configuration file.
 
-[**MORE INFO**](./lib/certification/README.md)
+[**MORE INFO**](/lib/certification/data-dictionary/README.md)
 
 ## Find Variations
 Uses a number of techniques to find potential variations for local items contained in a Data Dictionary metadata report.
@@ -74,6 +74,11 @@ Generates a schema from a metadata report and validates payload against a given 
 CLI tools and Node libs to replicate data from a RESO Web API server using bearer tokens or OAuth2 Client Credentials.
 
 [**MORE INFO**](./lib/replication/README.md)
+
+## Validate RESO Universal Parcel Identifiers (UPIs)
+Validates the given ULI data in RESO Common Format from a library or local file.
+
+[**MORE INFO**](./lib/certification/upi/README.md)
 
 ## Restore Results
 Utils for restoring results to a RESO Certification API server.

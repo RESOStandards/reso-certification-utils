@@ -371,8 +371,8 @@ const expansionFields = {
       annotations: [
         { term: 'RESO.OData.Metadata.StandardName', value: 'List Team' },
         { term: 'RESO.DDWikiUrl', value: 'https://ddwiki.reso.org/display/DDW20/ListTeam+Field' },
-        // eslint-disable-next-line quotes
-        { term: 'Core.Description', value: "Two or more agents working on the listing agent's team." }
+         
+        { term: 'Core.Description', value: 'Two or more agents working on the listing agent\'s team.' }
       ]
     }
   ],
