@@ -25,7 +25,8 @@ const {
   nestedPayloadErrorWithNullExpansion,
   nestedCollectionPayloadErrorWithNull,
   nestedExpansionTypeError,
-  atFieldPayloadError
+  atFieldPayloadError,
+  expansionErrorMultiValuePayload
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -475,5 +476,32 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 0, 'Error counts did not match');
+  });
+
+  it('Should correctly classify resource and fields in case of errors with expansion fields', async () => {
+    let errorMap = {};
+    const expectedField1 = 'BuyerAgentAOR';
+    const expectedField2 = 'Foo';
+    const expectedResource1 = 'Property';
+    const expectedResource2 = 'Media';
+    const expectedErrorMessage1 = 'MUST be string or null but found array';
+    const expectedErrorMessage2 = 'Fields MUST be advertised in the metadata';
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: expansionErrorMultiValuePayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 4, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage1, 'error message did not match');
+    assert.equal(report.items[1].errors[0].message, expectedErrorMessage2, 'error message did not match');
+    assert.equal(report.items[0].errors[0].occurrences[0].count, 2, 'error occurence count did not match');
+    assert.equal(report.items[1].errors[0].occurrences[0].count, 2, 'error occurence count did not match');
+    assert.equal(report.items[0].fieldName, expectedField1, 'field did not match');
+    assert.equal(report.items[1].fieldName, expectedField2, 'nested expansion field did not match');
+    assert.equal(report.items[0].resourceName, expectedResource1, 'resource did not match');
+    assert.equal(report.items[1].resourceName, expectedResource2, 'nested expansion resource did not match');
   });
 });

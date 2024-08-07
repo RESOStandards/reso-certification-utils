@@ -364,6 +364,48 @@ const validNonStringNonIsflagsPayload = {
   ]
 };
 
+const expansionErrorMultiValuePayload = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      Media: [
+        {
+          ChangedByMemberID: 'id',
+          Foo: 'bar'
+        },
+        {
+          ChangedByMemberID: 'id',
+          ImageHeight: 10
+        }
+      ],
+      BuyerAgentAOR: [],
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39'
+    },
+    {
+      Media: [
+        {
+          ChangedByMemberID: 'id',
+          Foo: 'baz'
+        },
+        {
+          ChangedByMemberID: 'id',
+          ImageHeight: 10
+        }
+      ],
+      BuyerAgentAOR: [],
+      Country: 'IN',
+      StateOrProvince: 'ON',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39'
+    }
+  ]
+};
+
 module.exports = {
   valuePayload,
   nonValuePayload,
@@ -387,5 +429,6 @@ module.exports = {
   nestedExpansionTypeError,
   atFieldPayloadError,
   invalidOdataIdentifierInvalidPayload,
-  validNonStringNonIsflagsPayload
+  validNonStringNonIsflagsPayload,
+  expansionErrorMultiValuePayload
 };
