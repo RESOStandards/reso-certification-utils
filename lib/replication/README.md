@@ -72,13 +72,13 @@ The `replicate` utility performs the latter two of the above steps.
 To test replication using DD 2.0 and `NextLink` behavior, use the following command:
 
 ```
-$ reso-certification-utils replicate -s NextLink -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -p <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 2.0
+$ reso-certification-utils replicate -s NextLink -u https://yourapi.com/serviceRoot -i <clientId> -c <clientSecret> -k <tokenUri> -e api -l 100000 -p <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 2.0
 ```
 
 In DD 1.7, ModificationTimestamp queries were used for testing instead. For example:
 
 ```
-$ reso-certification-utils replicate -s TimestampDesc -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -p <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 1.7
+$ reso-certification-utils replicate -s TimestampDesc -u https://yourapi.com/serviceRoot -i <clientId> -c <clientSecret> -k <tokenUri> -e api -l 100000 -p <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 1.7
 ```
 
 The examples above show the use of the OriginatingSystemName filter. 
@@ -89,7 +89,7 @@ The also assume that the user will have access to the `metadata-report.json` or 
 Once replication is working correctly using the commands above, the next step is to add schema validation. 
 
 ```
-$ reso-certification-utils replicate -s TimestampDesc -u https://yourapi.com/serviceRoot -c <clientId> -i <clientSecret> -k <tokenUri> -e api -l 100000 -p <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 1.7 -j true
+$ reso-certification-utils replicate -s TimestampDesc -u https://yourapi.com/serviceRoot -i <clientId> -c <clientSecret> -k <tokenUri> -e api -l 100000 -p <your-metadata-report.json> -t 100 -f "OriginatingSystemName eq '<your originating system name>'" -v 1.7 -j true
 ```
 
 In this case, `-j` tells the program to use JSON Schema Validation an `-S` sets strict mode, which will exit on first error. Since the number of JSON Schema validation errors can be potentially large, strict mode is enabled by default.

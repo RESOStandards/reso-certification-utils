@@ -90,7 +90,7 @@ Records are hashed in memory, without anything being written to disk, for a larg
 ## Sampling Parameters
 There are parameters used internally that are designed to help with "polite behavior" so the client doesn't get rate limited, since waiting makes the process go slower. 
 
-What seems to work best so far is a 1s delay between requests and a 60m delay if the client encounters an HTTP 429 status code. Please see the [`replicate` option](../replication/README.md) if that's something you're interested in experimenting with. 
+What seems to work best so far is a 1s delay between requests and a 60m delay if the client encounters an HTTP 429 status code. Please see the [`replicate` option](../../replication/README.md) if that's something you're interested in experimenting with. 
 
 # Report Files
 When using the `runDDTests` option, a config file is required with both Unique Organization Id (UOI) and Unique System Id (USI) for the provider and UOI for the recipient. 
