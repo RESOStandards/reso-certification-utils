@@ -1,4 +1,6 @@
 # RESO Universal Parcel Identifier (UPI) Validation
+The RESO Universal Parcel Identifier is a URN-based formula that allows the parcel number and source unambiguously. See: [upi.reso.org](https://upi.reso.org).
+
 To validate RESO UPIs, use this utility from either the command line or call `runUpiTests` as a library method.
 
 # Command Line Usage
