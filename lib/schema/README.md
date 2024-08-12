@@ -49,7 +49,7 @@ let errorMap = {};
 
 // validate
 const payload = JSON.parse(await fs.readFile('<path to payloads file>'));
-errorMap = validate({
+errorMap = await validate({
   version: '2.0',
   jsonPayload: payload,
   errorMap, // pass the error map back into the validate input in case of usage inside a loop
