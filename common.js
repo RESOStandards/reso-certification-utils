@@ -530,13 +530,14 @@ const getErrorHandler = (fromCli = false) => {
 
 /**
  * Reads the contents of a zip file and return an object with key being the filename and value being the contents
- * @param {string} path zip file path
+ * @param {string|Buffer} pathOrBuffer zip file path or buffer
  * @returns {Promise<Record<string, string>>}
  */
-const readZipFileContents = path => {
+const readZipFileContents = pathOrBuffer => {
+  const readZip = pathOrBuffer instanceof Buffer ? yauzl.fromBuffer : yauzl.open;
   return new Promise((res, rej) => {
     const result = {};
-    yauzl.open(path, { lazyEntries: true }, function (err, zipfile) {
+    readZip(pathOrBuffer, { lazyEntries: true }, function (err, zipfile) {
       if (err) throw err;
 
       zipfile.readEntry(); // Start reading.
