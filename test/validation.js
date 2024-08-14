@@ -519,4 +519,21 @@ describe('Schema validation tests', async () => {
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 0, 'Zip payload was not processed correctly');
   });
+
+  it('Should error with invalid if zip file is invalid', async () => {
+    let errorMap = {};
+    const expectedResource = '_INVALID_';
+    const fs = require('fs');
+    const zipBuffer = fs.readFileSync('package.json');
+    errorMap = await validate({
+      jsonSchema: schema,
+      jsonPayload: zipBuffer,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error count does not match');
+    assert.equal(report.items[0].resourceName, expectedResource, 'Did not find an invalid resource for invalid zip payload');
+  });
 });
