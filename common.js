@@ -538,7 +538,7 @@ const readZipFileContents = pathOrBuffer => {
   return new Promise((res, rej) => {
     const result = {};
     readZip(pathOrBuffer, { lazyEntries: true }, function (err, zipfile) {
-      if (err) throw err;
+      if (err) return rej(err);
 
       zipfile.readEntry(); // Start reading.
 
