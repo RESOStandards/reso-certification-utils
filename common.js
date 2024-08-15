@@ -33,6 +33,7 @@ const CERTIFICATION_FILES = {
   LOOKUP_RESOURCE_LOOKUP_METADATA: 'lookup-resource-lookup-metadata.json',
   PROCESSED_METADATA_REPORT: 'metadata-report.processed.json',
   VARIATIONS_REPORT: 'data-dictionary-variations.json',
+  VARIATIONS_REPORT_CSV: 'data-dictionary-variations.csv',
   SCHEMA_VALIDATION_ERROR_REPORT: 'data-availability-schema-validation-errors.json'
 };
 

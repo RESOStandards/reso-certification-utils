@@ -31,6 +31,7 @@ if (require?.main === module) {
     .option('-v, --version <string>', 'Data Dictionary version to use', DEFAULT_DD_VERSION)
     .option('-l, --limit <int>', 'Number of records to sample per strategy, resource, and expansion', DEFAULT_LIMIT)
     .option('-S, --strictMode <boolean>', 'Use strict mode', true)
+    .option('-c, --outputVariationsReportCsv', 'Output variations-report.csv')
     .action(options =>
       runDDTests({
         ...options,
@@ -59,6 +60,7 @@ if (require?.main === module) {
     .option('-f, --fuzziness <float>', 'Set fuzziness to something besides the default', DEFAULT_FUZZINESS)
     .option('-v, --version <string>', 'Data Dictionary version to compare to, i.e. 1.7 or 2.0', DEFAULT_DD_VERSION)
     .option('-s, --useSuggestions <boolean>', 'Use external suggestions in addition to machine-provided ones', true)
+    .option('-c, --outputVariationsReportCsv', 'Output variations-report.csv')
     .action(options => findVariations({ ...options, fromCli: FROM_CLI, useSuggestions: parseBooleanValue(options?.useSuggestions) }));
 
   program
