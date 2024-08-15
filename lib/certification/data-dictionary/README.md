@@ -11,7 +11,7 @@ $ git clone https://github.com/RESOStandards/web-api-commander.git
 JDK 11 or later is required. The recommendation is to use [OpenJDK 17](https://openjdk.org/projects/jdk/17/) or later. You may also use [Oracle JDKs](https://www.oracle.com/java/technologies/downloads/) but they may be subject to additional licensing requirements.
 
 Create a `.env` file (if you don't have one already) and add `WEB_API_COMMANDER_PATH`, pointing to the path where you downloaded the Commander. 
-See: [sample.env](../../sample.env) for an example.
+See: [sample.env](/sample.env) for an example.
 
 
 Display available options for this command:
@@ -31,7 +31,7 @@ Options:
 ```
 
 **Notes**
-* The `-p` argument is required. This will be the path to the JSON DD testing config. See [`sample-dd-config.json`](./sample-dd-config.json)
+* The `-p` argument is required. This will be the path to the JSON DD testing config. See [`sample-dd-config.json`](/lib/certification/sample-dd-config.json)
 * The limit (`-l` or `--limit`) can be changed in pre-testing, but the default will be used for certification
 * The tests are fast-fail, meaning that if the metadata tests don't succeed, data sampling won't be done since the output of the first step is required by others. Once the metadata tests pass, each subsequent test can be run individually
 
@@ -40,7 +40,7 @@ Options:
 # Data Dictionary 1.7
 For Data Dictionary 1.7, the following tests are run:
 1. **Metadata Validation** (RESO Commander) - Includes type, synonym checking, and Lookup Resource validation
-2. **Data Availability Report** (RESO Cert Utils) - Data Availability sampling using the [`replicate` option](../replication/README.md) and the TimestampDesc strategy
+2. **Data Availability Report** (RESO Cert Utils) - Data Availability sampling using the [`replicate` option](/lib/replication/README.md) and the TimestampDesc strategy
 
 ```
 $ reso-certification-utils runDDTests -v 1.7 -p your-config.json -a
@@ -49,12 +49,12 @@ $ reso-certification-utils runDDTests -v 1.7 -p your-config.json -a
 # Data Dictionary 2.0
 For Data Dictionary 2.0, the following tests are run:
 1. **Metadata Validation** (RESO Commander) - Includes type, synonym checking, and Lookup Resource validation
-2. **Variations Report** (RESO Cert Utils) - Uses the [`findVariations` option](../variations/README.md) with the output of step (1)
+2. **Variations Report** (RESO Cert Utils) - Uses the [`findVariations` option](/lib/variations/README.md) with the output of step (1)
   * Note: You will need auth info in your `.env` file to access the Variations Service for mappings
   * Without auth info, machine based techniques alone will be used
-  * See [sample.env](../../sample.env) for more information
+  * See [sample.env](/sample.env) for more information
   * Please contact [dev@reso.org](dev@reso.org) with any questions
-3. **Data Availability Report** (RESO Cert Utils) - Data Availability sampling using the [`replicate` option](../replication/README.md) and the following strategies:
+3. **Data Availability Report** (RESO Cert Utils) - Data Availability sampling using the [`replicate` option](/lib/replication/README.md) and the following strategies:
   * TimestampDesc
   * NextLink
   * NextLink with ModificationTimestamp greater than 3 years ago
@@ -90,13 +90,13 @@ Records are hashed in memory, without anything being written to disk, for a larg
 ## Sampling Parameters
 There are parameters used internally that are designed to help with "polite behavior" so the client doesn't get rate limited, since waiting makes the process go slower. 
 
-What seems to work best so far is a 1s delay between requests and a 60m delay if the client encounters an HTTP 429 status code. Please see the [`replicate` option](../../replication/README.md) if that's something you're interested in experimenting with. 
+What seems to work best so far is a 1s delay between requests and a 60m delay if the client encounters an HTTP 429 status code. Please see the [`replicate` option](/lib/replication/README.md) if that's something you're interested in experimenting with. 
 
 # Report Files
 When using the `runDDTests` option, a config file is required with both Unique Organization Id (UOI) and Unique System Id (USI) for the provider and UOI for the recipient. 
 
 See: 
-* [`sample-dd-config.json`](./sample-dd-config.json)
+* [`sample-dd-config.json`](/lib/certification/sample-dd-config.json)
 * [RESO UOI Google Sheet](https://docs.google.com/spreadsheets/d/13azRbctJ3V2yTibmFYLSfJZsdHc8v3r2NEgEmoHviRc/edit#gid=1039531884)
 
 If each step is run individually, as outlined in the preceding sections, then the files are placed in the `results` directory. 
@@ -149,9 +149,9 @@ There are two files related to sampling and availability:
 ## Schema Validation Errors
 If there are schema validation errors while sampling, the output will be in a file called `data-availability-schema-validation-errors.json`. In this case, there will be no data availability reports, as outlined above. 
 
-The format of the schema validation reports can be [seen in the tests](../../test/schema/). These are generally grouped into categories with error messages and counts. 
+The format of the schema validation reports can be [seen in the tests](/test/schema/). These are generally grouped into categories with error messages and counts. 
 
-Schema validation will also fail fast when used with Data Dictionary 2.0 testing, meaning that sampling will stop upon encountering a page of records that has validation errors. If you wish to run schema validation on its own, see the [`validate` action](../schema/README.md). 
+Schema validation will also fail fast when used with Data Dictionary 2.0 testing, meaning that sampling will stop upon encountering a page of records that has validation errors. If you wish to run schema validation on its own, see the [`validate` action](/lib/schema/README.md). 
 
 This is also used for RESO Common Format testing.
 
