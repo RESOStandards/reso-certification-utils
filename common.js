@@ -1,7 +1,6 @@
 const fs = require('fs');
-const path = require('path');
+const { resolve, normalize, join } = require('path');
 const fse = require('fs-extra');
-const chalk = require('chalk');
 const yauzl = require('yauzl');
 
 /**
@@ -197,7 +196,7 @@ const buildRecipientEndorsementPath = ({
   if (!isValidEndorsement(endorsementName)) throw new Error(`Invalid endorsementName: ${endorsementName}`);
   if (!isValidVersion(endorsementName, version)) throw new Error(`Invalid version: ${version}`);
 
-  return path.join(
+  return join(
     process.cwd(),
     resultsPath,
     `${endorsementName}-${version}`,
@@ -218,7 +217,7 @@ const buildRecipientEndorsementPath = ({
  * @param {String} recipientUoi
  */
 const archiveEndorsement = ({ resultsPath, providerUoi, providerUsi, recipientUoi, endorsementName, version } = {}) => {
-  const srcPath = path.join(
+  const srcPath = join(
       buildRecipientEndorsementPath({
         resultsPath,
         providerUoi,
@@ -228,7 +227,7 @@ const archiveEndorsement = ({ resultsPath, providerUoi, providerUsi, recipientUo
         version
       })
     ),
-    destPath = path.join(
+    destPath = join(
       buildRecipientEndorsementPath({
         resultsPath,
         providerUoi,
@@ -356,80 +355,86 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
 
   return {
     metadataMap: {
-      ...fields.reduce((acc, { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true }) => {
-        if (!acc[resourceName]) {
-          acc[resourceName] = {};
-          STATS.numResources++;
-        }
-
-        const isLookupField = !!lookupMap?.[type];
-
-        const { ddWikiUrl } =
-          annotations?.reduce((acc, { term, value }) => {
-            if (term === ANNOTATION_DD_WIKI_URL) {
-              acc.ddWikiUrl = value;
-            }
-            return acc;
-          }, {}) || {};
-
-        //add field to map
-        acc[resourceName][fieldName] = {
-          type,
-          typeName,
-          nullable,
-          isExpansion,
-          isLookupField,
-          isComplexType: isComplexType || (!isExpansion && !type?.startsWith('Edm.') && !isLookupField),
-          ddWikiUrl
-        };
-
-        if (isLookupField && lookupMap?.[type]) {
-          if (!acc?.[resourceName]?.[fieldName]?.lookupValues) {
-            acc[resourceName][fieldName].lookupValues = {};
+      ...fields.reduce(
+        (
+          acc,
+          { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true }
+        ) => {
+          if (!acc[resourceName]) {
+            acc[resourceName] = {};
+            STATS.numResources++;
           }
 
-          if (!acc?.[resourceName]?.[fieldName]?.legacyODataValues) {
-            acc[resourceName][fieldName].legacyODataValues = {};
+          const isLookupField = !!lookupMap?.[type];
+
+          const { ddWikiUrl } =
+            annotations?.reduce((acc, { term, value }) => {
+              if (term === ANNOTATION_DD_WIKI_URL) {
+                acc.ddWikiUrl = value;
+              }
+              return acc;
+            }, {}) || {};
+
+          //add field to map
+          acc[resourceName][fieldName] = {
+            type,
+            typeName,
+            nullable,
+            isExpansion,
+            isLookupField,
+            isComplexType: isComplexType || (!isExpansion && !type?.startsWith('Edm.') && !isLookupField),
+            ddWikiUrl
+          };
+
+          if (isLookupField && lookupMap?.[type]) {
+            if (!acc?.[resourceName]?.[fieldName]?.lookupValues) {
+              acc[resourceName][fieldName].lookupValues = {};
+            }
+
+            if (!acc?.[resourceName]?.[fieldName]?.legacyODataValues) {
+              acc[resourceName][fieldName].legacyODataValues = {};
+            }
+
+            Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue, ddWikiUrl, isStringEnumeration }) => {
+              const lookupName = parseLookupName(type);
+
+              //skip legacyOData matching if we're using string enumerations
+              if (!isStringEnumeration && legacyODataValue?.length) {
+                acc[resourceName][fieldName].legacyODataValues[legacyODataValue] = {
+                  type,
+                  lookupName,
+                  lookupValue,
+                  legacyODataValue,
+                  ddWikiUrl
+                };
+              }
+
+              if (lookupValue?.length) {
+                acc[resourceName][fieldName].lookupValues[lookupValue] = {
+                  type,
+                  lookupName,
+                  lookupValue,
+                  legacyODataValue,
+                  ddWikiUrl,
+                  isStringEnumeration
+                };
+              }
+            });
           }
 
-          Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue, ddWikiUrl, isStringEnumeration }) => {
-            const lookupName = parseLookupName(type);
+          if (isExpansion) {
+            STATS.numExpansions++;
+          }
 
-            //skip legacyOData matching if we're using string enumerations
-            if (!isStringEnumeration && legacyODataValue?.length) {
-              acc[resourceName][fieldName].legacyODataValues[legacyODataValue] = {
-                type,
-                lookupName,
-                lookupValue,
-                legacyODataValue,
-                ddWikiUrl
-              };
-            }
+          if (isComplexType) {
+            STATS.numComplexTypes++;
+          }
 
-            if (lookupValue?.length) {
-              acc[resourceName][fieldName].lookupValues[lookupValue] = {
-                type,
-                lookupName,
-                lookupValue,
-                legacyODataValue,
-                ddWikiUrl,
-                isStringEnumeration
-              };
-            }
-          });
-        }
-
-        if (isExpansion) {
-          STATS.numExpansions++;
-        }
-
-        if (isComplexType) {
-          STATS.numComplexTypes++;
-        }
-
-        STATS.numFields++;
-        return acc;
-      }, {})
+          STATS.numFields++;
+          return acc;
+        },
+        {}
+      )
     },
     stats: STATS
   };
@@ -469,7 +474,7 @@ const getLoggers = (fromCli = false) => {
   if (fromCli) {
     return {
       LOG: message => console.log(message),
-      LOG_ERROR: message => console.error(chalk.redBright.bold(message))
+      LOG_ERROR: message => console.error(message)
     };
   } else {
     return {
@@ -578,6 +583,19 @@ const readZipFileContents = pathOrBuffer => {
   });
 };
 
+/**
+ * Normalizes and resolves a filename
+ *
+ * @param {Object} options a filename and optional outputPath for the file
+ * @returns a normalized file name with . or .. expansion
+ */
+const resolveFilePathSync = ({ outputPath, filename }) => {
+  if (!(filename && filename?.length)) {
+    throw new Error('\'filename\' must contain the name of a file to resolve');
+  }
+  return resolve(normalize(join(outputPath && outputPath?.length ? outputPath : '', filename)));
+};
+
 module.exports = {
   NOT_OK,
   DEFAULT_DD_VERSION,
@@ -607,5 +625,6 @@ module.exports = {
   parseResoUrn,
   parseBooleanValue,
   getErrorHandler,
-  readZipFileContents
+  readZipFileContents,
+  resolveFilePathSync
 };
