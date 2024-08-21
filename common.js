@@ -539,6 +539,9 @@ const getErrorHandler = (fromCli = false) => {
  * @returns {Promise<Record<string, string>>}
  */
 const readZipFileContents = pathOrBuffer => {
+  if (!(pathOrBuffer instanceof Buffer || fs.existsSync(pathOrBuffer))) {
+    throw new Error('Invalid payload file');
+  }
   const readZip = pathOrBuffer instanceof Buffer ? yauzl.fromBuffer : yauzl.open;
   return new Promise((res, rej) => {
     const result = {};
@@ -547,7 +550,7 @@ const readZipFileContents = pathOrBuffer => {
 
       zipfile.readEntry(); // Start reading.
 
-      zipfile.on('entry', function (entry) {
+      zipfile.on('entry', entry => {
         if (entry.fileName.includes('__MACOSX')) {
           // These are temp files injected by macos. So we skip them.
           zipfile.readEntry();
@@ -556,15 +559,15 @@ const readZipFileContents = pathOrBuffer => {
           zipfile.readEntry();
         } else {
           // It's a file, we process it.
-          zipfile.openReadStream(entry, function (err, readStream) {
+          zipfile.openReadStream(entry, (err, readStream) => {
             if (err) throw err;
             const chunks = [];
 
-            readStream.on('data', function (chunk) {
+            readStream.on('data', chunk => {
               chunks.push(chunk);
             });
 
-            readStream.on('end', function () {
+            readStream.on('end', () => {
               const contents = Buffer.concat(chunks).toString('utf8');
               result[entry.fileName.slice(entry.fileName.lastIndexOf('/') + 1, entry.fileName.length)] = contents;
               // Move to the next entry.
