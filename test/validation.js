@@ -317,7 +317,7 @@ describe('Schema validation tests', async () => {
     let errorMap = {};
     metadata.fields.find(f => f.type === 'Edm.Int64').maxLength = 5;
     const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
-     
+
     const { AdditionalProperty, ...payload } = additionalPropertyPayload;
     errorMap = validate({
       jsonSchema: modifiedSchema,
@@ -358,8 +358,10 @@ describe('Schema validation tests', async () => {
   it('should show the nested expansion resource and field when expansion field is invalid', async () => {
     let errorMap = {};
     const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
-    const expectedInvalidField = 'Foo';
-    const expectedInvalidResource = 'Member';
+    const expectedInvalidParentField = 'ListAgent';
+    const expectedInvalidParentResource = 'Property';
+    const expectedInvalidSourceModel = 'Member';
+    const expectedInvalidSourceModelField = 'Foo';
     errorMap = validate({
       jsonSchema: schema,
       jsonPayload: nestedPayloadError,
@@ -370,15 +372,21 @@ describe('Schema validation tests', async () => {
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
     assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
-    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
-    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+    assert.equal(report.items[0].fieldName, expectedInvalidParentField, 'nested expansion field did not match');
+    assert.equal(report.items[0].resourceName, expectedInvalidParentResource, 'nested expansion resource did not match');
+    assert.equal(report.items[0].errors[0].occurrences[0].sourceModel, expectedInvalidSourceModel, 'Expansion resource did not match');
+    assert.equal(
+      report.items[0].errors[0].occurrences[0].sourceModelField,
+      expectedInvalidSourceModelField,
+      'Expansion field did not match'
+    );
   });
 
   it('should not change the payload object', async () => {
     let errorMap = {};
     const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
-    const expectedInvalidField = 'Foo';
-    const expectedInvalidResource = 'Media';
+    const expectedInvalidField = 'Media';
+    const expectedInvalidResource = 'Property';
     const originalPayload = JSON.parse(JSON.stringify(nestedCollectionPayloadError));
     errorMap = validate({
       jsonSchema: schema,
@@ -398,8 +406,10 @@ describe('Schema validation tests', async () => {
   it('should show the nested expansion resource and field when collection expansion field is invalid', async () => {
     let errorMap = {};
     const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
-    const expectedInvalidField = 'Foo';
-    const expectedInvalidResource = 'Media';
+    const expectedInvalidField = 'Media';
+    const expectedInvalidResource = 'Property';
+    const expectedInvalidSourceModel = 'Media';
+    const expectedInvalidSourceModelField = 'Foo';
     errorMap = validate({
       jsonSchema: schema,
       jsonPayload: nestedCollectionPayloadError,
@@ -412,6 +422,12 @@ describe('Schema validation tests', async () => {
     assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
     assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
     assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+    assert.equal(report.items[0].errors[0].occurrences[0].sourceModel, expectedInvalidSourceModel, 'Expansion resource did not match');
+    assert.equal(
+      report.items[0].errors[0].occurrences[0].sourceModelField,
+      expectedInvalidSourceModelField,
+      'Expansion field did not match'
+    );
   });
 
   it('should not find error when nested non-collection expansion is null', async () => {
@@ -449,7 +465,9 @@ describe('Schema validation tests', async () => {
   it('should find error when nested collection expansion has type error', async () => {
     let errorMap = {};
     const expectedInvalidField = 'ListAgent';
-    const expectedInvalidResource = 'Member';
+    const expectedInvalidResource = 'Property';
+    const expectedInvalidSourceModel = 'Member';
+    const expectedInvalidSourceModelField = 'MemberAlternateId';
     const expectedErrorMessage = 'MUST be string or null but found integer';
     errorMap = validate({
       jsonSchema: schema,
@@ -463,6 +481,12 @@ describe('Schema validation tests', async () => {
     assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
     assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
     assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+    assert.equal(report.items[0].errors[0].occurrences[0].sourceModel, expectedInvalidSourceModel, 'Expansion resource did not match');
+    assert.equal(
+      report.items[0].errors[0].occurrences[0].sourceModelField,
+      expectedInvalidSourceModelField,
+      'Expansion field did not match'
+    );
   });
 
   it('should ignore errors for payload fields with @ in the middle of the string', async () => {
@@ -481,11 +505,13 @@ describe('Schema validation tests', async () => {
   it('Should correctly classify resource and fields in case of errors with expansion fields', async () => {
     let errorMap = {};
     const expectedField1 = 'BuyerAgentAOR';
-    const expectedField2 = 'Foo';
+    const expectedField2 = 'Media';
     const expectedResource1 = 'Property';
-    const expectedResource2 = 'Media';
+    const expectedResource2 = 'Property';
     const expectedErrorMessage1 = 'MUST be string or null but found array';
     const expectedErrorMessage2 = 'Fields MUST be advertised in the metadata';
+    const expectedInvalidSourceModel = 'Media';
+    const expectedInvalidSourceModelField = 'Foo';
     errorMap = validate({
       jsonSchema: schema,
       jsonPayload: expansionErrorMultiValuePayload,
@@ -503,5 +529,11 @@ describe('Schema validation tests', async () => {
     assert.equal(report.items[1].fieldName, expectedField2, 'nested expansion field did not match');
     assert.equal(report.items[0].resourceName, expectedResource1, 'resource did not match');
     assert.equal(report.items[1].resourceName, expectedResource2, 'nested expansion resource did not match');
+    assert.equal(report.items[1].errors[0].occurrences[0].sourceModel, expectedInvalidSourceModel, 'expansion resource did not match');
+    assert.equal(
+      report.items[1].errors[0].occurrences[0].sourceModelField,
+      expectedInvalidSourceModelField,
+      'expansion field did not match'
+    );
   });
 });
