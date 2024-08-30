@@ -26,7 +26,8 @@ const {
   nestedCollectionPayloadErrorWithNull,
   nestedExpansionTypeError,
   atFieldPayloadError,
-  expansionErrorMultiValuePayload
+  expansionErrorMultiValuePayload,
+  expansionIgnoredItem
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -162,6 +163,36 @@ describe('Schema validation tests', async () => {
     errorMap = validate({
       jsonSchema: schema,
       jsonPayload: specialEnumFieldsValidPayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap,
+      validationConfig: config
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 0, 'Error counts did not match');
+    assert.equal(report.totalWarnings, 1, 'Warning counts did not match');
+    assert.equal(report.items[0].warnings[0].message, expectedErrorMessage, 'enum error message did not match');
+    assert.equal(report.items[0].warnings[0].occurrences[0].lookupValue, expectedEnumValue, 'enum lookup value did not match');
+  });
+
+  it('Should convert expansion enum errors to warnings based on validation config', () => {
+    let errorMap = {};
+    const config = {
+      '2.0': {
+        Media: {
+          ImageSizeDescription: {
+            ignoreEnumerations: true
+          }
+        }
+      }
+    };
+    const expectedEnumValue = 'Foo';
+    const expectedErrorMessage =
+      'The following enumerations in the ImageSizeDescription Field were not advertised. This will fail in Data Dictionary 2.1';
+
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: expansionIgnoredItem,
       resourceName: 'Property',
       version: '2.0',
       errorMap,
