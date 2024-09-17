@@ -29,7 +29,8 @@ const {
   expansionErrorMultiValuePayload,
   expansionIgnoredItem,
   collectionExpansionError,
-  singleValueExpansionError
+  singleValueExpansionError,
+  topLevelUnadvertisedField
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -621,5 +622,18 @@ describe('Schema validation tests', async () => {
     assert.equal(report.items[0].errors[0].occurrences[0].lookupValue, expectedEnumValue, 'enum lookup value did not match');
     assert.equal(report.items[0].errors[0].occurrences[0].sourceModel, expectedSourceModel, 'expanded resource did not match');
     assert.equal(report.items[0].errors[0].occurrences[0].sourceModelField, expectedSourceModelField, 'expanded field did not match');
+  });
+
+  it('should not find errors if there are extra properties on top-level alongside "value"', async () => {
+    let errorMap = {};
+    errorMap = validate({
+      jsonSchema: await generateJsonSchema({ metadataReportJson: metadata, additionalProperties: true }),
+      jsonPayload: topLevelUnadvertisedField,
+      resourceName: 'Property',
+      version: '1.7',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 0, 'Error counts did not match');
   });
 });

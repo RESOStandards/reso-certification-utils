@@ -456,6 +456,22 @@ const singleValueExpansionError = {
   Media: [{ ImageSizeDescription: 'Foo' }]
 };
 
+const topLevelUnadvertisedField = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39',
+      AboveGradeFinishedAreaSource: 'Appraiser'
+    }
+  ],
+  Foo: false
+};
+
 module.exports = {
   valuePayload,
   nonValuePayload,
@@ -483,5 +499,6 @@ module.exports = {
   expansionErrorMultiValuePayload,
   expansionIgnoredItem,
   collectionExpansionError,
-  singleValueExpansionError
+  singleValueExpansionError,
+  topLevelUnadvertisedField
 };
