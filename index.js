@@ -137,6 +137,7 @@ if (require?.main === module) {
     .option('-a, --additionalProperties', 'Pass this flag to allow additional properties in the schema. False by default')
     .option('-v, --version <string>', 'The DD version of the metadata report')
     .option('-p, --payloadPath <string>', 'Path to the payload file OR directory/zip containing files that need to be validated')
+    .option('-c, --createReports', 'Option to generate metadata and availability reports for RCF testing')
     .option('-r, --resourceName <string>', 'Resource name to validate against. Required if --version is passed when validating.')
     .description('Generate a schema or validate a payload against a schema')
     .action(options => schema({ ...options, fromCli: FROM_CLI }));

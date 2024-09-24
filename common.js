@@ -358,7 +358,7 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
       ...fields.reduce(
         (
           acc,
-          { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true, isCollection = false }
+          { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true, ...rest }
         ) => {
           if (!acc[resourceName]) {
             acc[resourceName] = {};
@@ -381,10 +381,11 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
             typeName,
             nullable,
             isExpansion,
-            isCollection,
             isLookupField,
             isComplexType: isComplexType || (!isExpansion && !type?.startsWith('Edm.') && !isLookupField),
-            ddWikiUrl
+            annotations,
+            ddWikiUrl,
+            ...rest
           };
 
           if (isLookupField && lookupMap?.[type]) {
