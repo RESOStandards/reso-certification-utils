@@ -12,8 +12,9 @@ Generate a schema or validate a payload against a schema
 Options:
   -G, --generate               Generate a schema for payload validation
   -V, --validate               Validate one or multiple payloads with a schema
+  -c, --createReports          Option to generate metadata and availability reports for RCF testing
   -m, --metadataPath <string>  Path to the metadata report JSON file
-  -o, --outputPath <string>    Path tho the directory to store the generated schema. Defaults to "./"
+  -o, --outputPath <string>    Path tho the directory to store the generated schema/reports. Defaults to "./"
   -a, --additionalProperties   Pass this flag to allow additional properties in the schema. False by default
   -v, --version <string>       The DD version of the metadata report
   -p, --payloadPath <string>   Path to the payload file OR directory/zip containing files that need to be validated
@@ -36,8 +37,9 @@ $ reso-certification-utils schema -V -p <path to payloads file, zip, or director
 # Usage in a library
 
 ```js
+// Schema generation and validation
 const { getReferenceMetadata } = require('reso-certification-etl');
-const { generateJsonSchema, validate, combineErrors } = require('./lib/schema');
+const { generateJsonSchema, validate, combineErrors, generateReports } = require('./lib/schema');
 const fs = require('fs/promises');
 
 // generate
@@ -61,4 +63,6 @@ errorMap = validate({
 const errorReport = combineErrors(errorMap);
 console.log(JSON.stringify(errorReport, null, 2));
 
+// Metadata and Data availability report generation
+const { ddReport, daReport } = generateReports([payload])
 ```
