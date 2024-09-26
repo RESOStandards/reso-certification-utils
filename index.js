@@ -2,7 +2,7 @@
 
 require('dotenv').config();
 
-const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
+const { schema, combineErrors, generateJsonSchema, validate, generateReports, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
 const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification/data-dictionary');
 const { runUpiTests, parseUpi } = require('./lib/certification/upi');
@@ -186,5 +186,6 @@ module.exports = {
   convertMetadata,
   combineErrors,
   generateJsonSchema,
-  validate
+  validate,
+  generateReports
 };
