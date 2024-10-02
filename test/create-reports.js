@@ -138,4 +138,60 @@ describe('Schema validation tests', async () => {
     const field = ddReport.fields.find(f => f.fieldName === 'LocalIntValue');
     assert.equal(field.type, 'Edm.Int32');
   });
+
+  it('Should correctly infer data type for local expansion', async () => {
+    const payload = {
+      '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+      value: [
+        {
+          Country: 'CA',
+          LocalIntValue: 10,
+          LocalExpansion: {
+            Foo: 'bar'
+          }
+        },
+        {
+          Country: 'US',
+          LocalIntValue: 68000
+        }
+      ]
+    };
+    const { ddReport } = await generateReports([payload]);
+    const field = ddReport.fields.find(f => f.fieldName === 'LocalExpansion');
+    assert.equal(field.type, 'Custom Type');
+    assert.equal(field.isExpansion, true);
+    assert.equal(!!field.isCollection, false);
+  });
+
+  it('Should correctly classify for standard single value expansion', async () => {
+    const payload = {
+      '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+      value: [
+        {
+          Country: 'CA',
+          LocalIntValue: 10,
+          LocalExpansion: {
+            Foo: 'bar'
+          }
+        },
+        {
+          Country: 'US',
+          BuyerAgent: {
+            JobTitle: 'Foo'
+          }
+        }
+      ]
+    };
+    const { ddReport } = await generateReports([payload]);
+    const field1 = ddReport.fields.find(f => f.fieldName === 'LocalExpansion');
+    assert.equal(field1.type, 'Custom Type');
+    assert.equal(field1.isExpansion, true);
+    assert.equal(!!field1.isCollection, false);
+
+    const field2 = ddReport.fields.find(f => f.fieldName === 'BuyerAgent');
+    assert.equal(field2.type, 'org.reso.metadata.Member');
+    assert.equal(field2.typeName, 'Member');
+    assert.equal(field2.isExpansion, true);
+    assert.equal(!!field2.isCollection, false);
+  });
 });
