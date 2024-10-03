@@ -1,3 +1,4 @@
+/* eslint-disable quotes */
 const expectDAReportSimple = {
   description: 'RESO Data Availability Report',
   version: '1.7',
@@ -24,11 +25,6 @@ const expectDAReportSimple = {
     }
   ],
   fields: [
-    {
-      resourceName: 'Property',
-      fieldName: '@reso.context',
-      frequency: 1
-    },
     {
       resourceName: 'Property',
       fieldName: 'Country',
@@ -63,6 +59,11 @@ const expectDAReportSimple = {
       resourceName: 'Property',
       fieldName: 'Foo',
       frequency: 1
+    },
+    {
+      fieldName: 'OriginatingSystem',
+      frequency: 1,
+      resourceName: 'Property'
     }
   ],
   lookupValues: [
@@ -215,7 +216,7 @@ const expectDDReportSimple = {
         },
         {
           term: 'Core.Description',
-          value: 'The street name portion of a listed property\'s street address.'
+          value: "The street name portion of a listed property's street address."
         },
         {
           term: 'RESO.OData.Metadata.Payloads',
@@ -326,11 +327,6 @@ const expectDAReportMulti = {
   fields: [
     {
       resourceName: 'Property',
-      fieldName: '@reso.context',
-      frequency: 2
-    },
-    {
-      resourceName: 'Property',
       fieldName: 'Country',
       frequency: 2
     },
@@ -363,6 +359,11 @@ const expectDAReportMulti = {
       resourceName: 'Property',
       fieldName: 'Foo',
       frequency: 2
+    },
+    {
+      fieldName: 'OriginatingSystem',
+      frequency: 1,
+      resourceName: 'Property'
     }
   ],
   lookupValues: [
@@ -433,22 +434,12 @@ const expectedMultiResourceDAReport = {
   fields: [
     {
       resourceName: 'Property',
-      fieldName: '@reso.context',
-      frequency: 1
-    },
-    {
-      resourceName: 'Property',
       fieldName: 'Country',
       frequency: 1
     },
     {
       resourceName: 'Property',
       fieldName: 'StateOrProvince',
-      frequency: 1
-    },
-    {
-      resourceName: 'Lookup',
-      fieldName: '@reso.context',
       frequency: 1
     },
     {

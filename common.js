@@ -597,6 +597,20 @@ const resolveFilePathSync = ({ outputPath, filename }) => {
   return resolve(normalize(join(outputPath && outputPath?.length ? outputPath : '', filename)));
 };
 
+/**
+ * 
+ * @param {any} value 
+ * @returns boolean
+ * 
+ * Frequency for a field should only be incrmemented if the corrsponding
+ * value is valid. A valid value shouldn't be `null`, `undefined`, or an
+ * empty list.
+ */
+const isValidValue = value => {
+  if(Array.isArray(value))  return value.filter(Boolean)?.length > 0;
+  return value !== null && value !== undefined;
+};
+
 module.exports = {
   NOT_OK,
   DEFAULT_DD_VERSION,
@@ -627,5 +641,6 @@ module.exports = {
   parseBooleanValue,
   getErrorHandler,
   readZipFileContents,
-  resolveFilePathSync
+  resolveFilePathSync,
+  isValidValue
 };
