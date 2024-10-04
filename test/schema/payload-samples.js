@@ -406,6 +406,72 @@ const expansionErrorMultiValuePayload = {
   ]
 };
 
+const collectionExpansionError = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      Media: [
+        {
+          ChangedByMemberID: 'id'
+        },
+        {
+          ChangedByMemberID: 'id',
+          ImageHeight: 'foo'
+        }
+      ],
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39'
+    }
+  ]
+};
+
+const expansionIgnoredItem = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39',
+      AboveGradeFinishedAreaSource: 'Appraiser',
+      Media: [{ ImageSizeDescription: 'Foo' }]
+    }
+  ]
+};
+
+const singleValueExpansionError = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  Country: 'CA',
+  StateOrProvince: 'ON',
+  City: 'SampleCityEnumValue',
+  PostalCode: 'K2G 1Y9',
+  StreetName: 'Starwood Rd',
+  StreetNumber: '39',
+  AboveGradeFinishedAreaSource: 'Appraiser',
+  Media: [{ ImageSizeDescription: 'Foo' }]
+};
+
+const topLevelUnadvertisedField = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'SampleCityEnumValue',
+      PostalCode: 'K2G 1Y9',
+      StreetName: 'Starwood Rd',
+      StreetNumber: '39',
+      AboveGradeFinishedAreaSource: 'Appraiser'
+    }
+  ],
+  Foo: false
+};
+
 module.exports = {
   valuePayload,
   nonValuePayload,
@@ -430,5 +496,9 @@ module.exports = {
   atFieldPayloadError,
   invalidOdataIdentifierInvalidPayload,
   validNonStringNonIsflagsPayload,
-  expansionErrorMultiValuePayload
+  expansionErrorMultiValuePayload,
+  expansionIgnoredItem,
+  collectionExpansionError,
+  singleValueExpansionError,
+  topLevelUnadvertisedField
 };

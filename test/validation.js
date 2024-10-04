@@ -26,7 +26,11 @@ const {
   nestedCollectionPayloadErrorWithNull,
   nestedExpansionTypeError,
   atFieldPayloadError,
-  expansionErrorMultiValuePayload
+  expansionErrorMultiValuePayload,
+  expansionIgnoredItem,
+  collectionExpansionError,
+  singleValueExpansionError,
+  topLevelUnadvertisedField
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -162,6 +166,36 @@ describe('Schema validation tests', async () => {
     errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: specialEnumFieldsValidPayload,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap,
+      validationConfig: config
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 0, 'Error counts did not match');
+    assert.equal(report.totalWarnings, 1, 'Warning counts did not match');
+    assert.equal(report.items[0].warnings[0].message, expectedErrorMessage, 'enum error message did not match');
+    assert.equal(report.items[0].warnings[0].occurrences[0].lookupValue, expectedEnumValue, 'enum lookup value did not match');
+  });
+
+  it('Should convert expansion enum errors to warnings based on validation config', async () => {
+    let errorMap = {};
+    const config = {
+      '2.0': {
+        Media: {
+          ImageSizeDescription: {
+            ignoreEnumerations: true
+          }
+        }
+      }
+    };
+    const expectedEnumValue = 'Foo';
+    const expectedErrorMessage =
+      'The following enumerations in the ImageSizeDescription Field were not advertised. This will fail in Data Dictionary 2.1';
+
+    errorMap = await validate({
+      jsonSchema: schema,
+      jsonPayload: expansionIgnoredItem,
       resourceName: 'Property',
       version: '2.0',
       errorMap,
@@ -567,5 +601,71 @@ describe('Schema validation tests', async () => {
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error count does not match');
     assert.equal(report.items[0].resourceName, expectedResource, 'Did not find an invalid resource for invalid zip payload');
+  });
+
+  it('Should correctly classify resource and fields in case of errors in collection expansions', async () => {
+    let errorMap = {};
+    const expectedField1 = 'Media';
+    const expectedResource1 = 'Property';
+    const expectedErrorMessage1 = 'MUST be integer or null but found string';
+    const expectedInvalidSourceModel = 'Media';
+    const expectedInvalidSourceModelField = 'ImageHeight';
+    errorMap = await validate({
+      jsonSchema: schema,
+      jsonPayload: collectionExpansionError,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage1, 'error message did not match');
+    assert.equal(report.items[0].errors[0].occurrences[0].count, 1, 'error occurence count did not match');
+    assert.equal(report.items[0].fieldName, expectedField1, 'field did not match');
+    assert.equal(report.items[0].resourceName, expectedResource1, 'resource did not match');
+    assert.equal(report.items[0].errors[0].occurrences[0].sourceModel, expectedInvalidSourceModel, 'expansion resource did not match');
+    assert.equal(
+      report.items[0].errors[0].occurrences[0].sourceModelField,
+      expectedInvalidSourceModelField,
+      'expansion field did not match'
+    );
+  });
+
+  it('Should correctly parse single value expansion errors', async () => {
+    let errorMap = {};
+    const expectedEnumValue = 'Foo';
+    const expectedErrorMessage = 'MUST be equal to one of the allowed values';
+    const expectedResource = 'Property';
+    const expectedField = 'Media';
+    const expectedSourceModel = 'Media';
+    const expectedSourceModelField = 'ImageSizeDescription';
+    errorMap = await validate({
+      jsonSchema: schema,
+      jsonPayload: singleValueExpansionError,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.items[0].resourceName, expectedResource, 'resource did not match');
+    assert.equal(report.items[0].fieldName, expectedField, 'field did not match');
+    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'enum error message did not match');
+    assert.equal(report.items[0].errors[0].occurrences[0].lookupValue, expectedEnumValue, 'enum lookup value did not match');
+    assert.equal(report.items[0].errors[0].occurrences[0].sourceModel, expectedSourceModel, 'expanded resource did not match');
+    assert.equal(report.items[0].errors[0].occurrences[0].sourceModelField, expectedSourceModelField, 'expanded field did not match');
+  });
+
+  it('should not find errors if there are extra properties on top-level alongside "value"', async () => {
+    let errorMap = {};
+    errorMap = await validate({
+      jsonSchema: await generateJsonSchema({ metadataReportJson: metadata, additionalProperties: true }),
+      jsonPayload: topLevelUnadvertisedField,
+      resourceName: 'Property',
+      version: '1.7',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 0, 'Error counts did not match');
   });
 });

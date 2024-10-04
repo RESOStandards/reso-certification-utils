@@ -570,7 +570,7 @@ const readZipFileContents = pathOrBuffer => {
 
             readStream.on('end', () => {
               const contents = Buffer.concat(chunks).toString('utf8');
-              result[entry.fileName.slice(entry.fileName.lastIndexOf('/') + 1, entry.fileName.length)] = contents;
+              result[entry.fileName] = contents;
               // Move to the next entry.
               zipfile.readEntry();
             });
