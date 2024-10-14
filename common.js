@@ -536,18 +536,22 @@ const getErrorHandler = (fromCli = false) => {
 
 /**
  * Reads the contents of a zip file and return an object with key being the filename and value being the contents
- * @param {string} path zip file path
+ * @param {string|Buffer} pathOrBuffer zip file path or buffer
  * @returns {Promise<Record<string, string>>}
  */
-const readZipFileContents = path => {
+const readZipFileContents = pathOrBuffer => {
+  if (!(pathOrBuffer instanceof Buffer || fs.existsSync(pathOrBuffer))) {
+    throw new Error('Invalid payload file');
+  }
+  const readZip = pathOrBuffer instanceof Buffer ? yauzl.fromBuffer : yauzl.open;
   return new Promise((res, rej) => {
     const result = {};
-    yauzl.open(path, { lazyEntries: true }, function (err, zipfile) {
-      if (err) throw err;
+    readZip(pathOrBuffer, { lazyEntries: true }, function (err, zipfile) {
+      if (err) return rej(err);
 
       zipfile.readEntry(); // Start reading.
 
-      zipfile.on('entry', function (entry) {
+      zipfile.on('entry', entry => {
         if (entry.fileName.includes('__MACOSX')) {
           // These are temp files injected by macos. So we skip them.
           zipfile.readEntry();
@@ -556,15 +560,15 @@ const readZipFileContents = path => {
           zipfile.readEntry();
         } else {
           // It's a file, we process it.
-          zipfile.openReadStream(entry, function (err, readStream) {
+          zipfile.openReadStream(entry, (err, readStream) => {
             if (err) throw err;
             const chunks = [];
 
-            readStream.on('data', function (chunk) {
+            readStream.on('data', chunk => {
               chunks.push(chunk);
             });
 
-            readStream.on('end', function () {
+            readStream.on('end', () => {
               const contents = Buffer.concat(chunks).toString('utf8');
               result[entry.fileName] = contents;
               // Move to the next entry.
