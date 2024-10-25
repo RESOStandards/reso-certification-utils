@@ -30,7 +30,8 @@ const {
   expansionIgnoredItem,
   collectionExpansionError,
   singleValueExpansionError,
-  topLevelUnadvertisedField
+  topLevelUnadvertisedField,
+  keyFieldPayloadMulti
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -635,5 +636,39 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 0, 'Error counts did not match');
+  });
+
+  it('should accumulate key fields if they exist on the failed record', async () => {
+    let errorMap = {};
+    const mediaKeyField = 'MediaKey';
+    const propertyKeyField = 'ListingKey';
+    const roomKeyFIeld = 'RoomKey';
+
+    const expectedMediaKeys = ['mediakey1', 'mediakey2'];
+    const expectedRoomKeys = ['roomkey1', 'roomkey2'];
+    const expectedPropertyKeys = ['listingkey1'];
+
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: keyFieldPayloadMulti,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+
+    assert.equal(report.totalErrors, 5, 'Error counts did not match');
+
+    const propertyErrors = report.items.find(x => x.resourceName === 'Property' && x.fieldName === 'City');
+    assert.equal(propertyErrors.errors[0].occurrences[0].keyField, propertyKeyField, 'Property key field did not match');
+    assert.deepEqual(propertyErrors.errors[0].occurrences[0].keys, expectedPropertyKeys, 'Property keys did not match');
+
+    const mediaErrors = report.items.find(x => x.resourceName === 'Property' && x.fieldName === 'Media');
+    assert.equal(mediaErrors.errors[0].occurrences[0].keyField, mediaKeyField, 'Media key field did not match');
+    assert.deepEqual(mediaErrors.errors[0].occurrences[0].keys, expectedMediaKeys, 'Media keys did not match');
+
+    const roomErrors = report.items.find(x => x.resourceName === 'Property' && x.fieldName === 'Rooms');
+    assert.equal(roomErrors.errors[0].occurrences[0].keyField, roomKeyFIeld, 'Room key field did not match');
+    assert.deepEqual(roomErrors.errors[0].occurrences[0].keys, expectedRoomKeys, 'Room keys did not match');
   });
 });
