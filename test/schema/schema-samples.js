@@ -2,36 +2,88 @@ const simpleNonEnumSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',
   oneOf: [
-    { properties: { '@reso.context': { type: 'string' } }, additionalProperties: false },
-    { properties: { '@reso.context': { type: 'string' }, value: { type: 'array' } }, additionalProperties: false }
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        }
+      },
+      additionalProperties: false
+    },
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        },
+        value: {
+          type: 'array'
+        }
+      },
+      additionalProperties: false
+    }
   ],
   definitions: {
     Property: {
       type: 'object',
-      properties: { AboveGradeFinishedArea: { type: ['number', 'null'] }, BuyerTeamName: { type: ['string', 'null'] } },
+      properties: {
+        AboveGradeFinishedArea: {
+          type: ['number', 'null']
+        },
+        BuyerTeamName: {
+          type: ['string', 'null']
+        }
+      },
       additionalProperties: false
     },
     MetadataMap: {
       Property: {
         AboveGradeFinishedArea: {
           type: 'Edm.Decimal',
+          typeName: '',
+          nullable: true,
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
+          annotations: [
+            {
+              term: 'RESO.OData.Metadata.StandardName',
+              value: 'Above Grade Finished Area'
+            },
+            {
+              term: 'RESO.DDWikiUrl',
+              value: 'https://ddwiki.reso.org/display/DDW20/AboveGradeFinishedArea+Field'
+            },
+            {
+              term: 'Core.Description',
+              value: 'The finished area within the structure that is at or above the surface of the ground.'
+            }
+          ],
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/AboveGradeFinishedArea+Field',
-          typeName: '',
-          nullable: true,
-          isCollection: false
+          scale: 2,
+          precision: 14
         },
         BuyerTeamName: {
           type: 'Edm.String',
+          typeName: '',
+          nullable: true,
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
-          ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field',
-          typeName: '',
-          nullable: true,
-          isCollection: false
+          annotations: [
+            {
+              term: 'RESO.OData.Metadata.StandardName',
+              value: 'Buyer Team Name'
+            },
+            {
+              term: 'RESO.DDWikiUrl',
+              value: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field'
+            },
+            {
+              term: 'Core.Description',
+              value: 'The name of the team representing the buyer.'
+            }
+          ],
+          ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field'
         }
       }
     }
@@ -42,8 +94,25 @@ const schemaWithMaxLength = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',
   oneOf: [
-    { properties: { '@reso.context': { type: 'string' } }, additionalProperties: false },
-    { properties: { '@reso.context': { type: 'string' }, value: { type: 'array' } }, additionalProperties: false }
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        }
+      },
+      additionalProperties: false
+    },
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        },
+        value: {
+          type: 'array'
+        }
+      },
+      additionalProperties: false
+    }
   ],
   definitions: {
     Property: {
@@ -52,7 +121,9 @@ const schemaWithMaxLength = {
         BuyerTeamName: {
           type: ['string', 'null'],
           maxLength: 50,
-          errorMessage: { maxLength: 'SHOULD have a maximum suggested length of 50 characters' }
+          errorMessage: {
+            maxLength: 'SHOULD have a maximum suggested length of 50 characters'
+          }
         }
       },
       additionalProperties: false
@@ -61,13 +132,27 @@ const schemaWithMaxLength = {
       Property: {
         BuyerTeamName: {
           type: 'Edm.String',
+          typeName: '',
+          nullable: true,
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
+          annotations: [
+            {
+              term: 'RESO.OData.Metadata.StandardName',
+              value: 'Buyer Team Name'
+            },
+            {
+              term: 'RESO.DDWikiUrl',
+              value: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field'
+            },
+            {
+              term: 'Core.Description',
+              value: 'The name of the team representing the buyer.'
+            }
+          ],
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field',
-          typeName: '',
-          nullable: true,
-          isCollection: false
+          maxLength: 50
         }
       }
     }
@@ -78,8 +163,25 @@ const schemaWithImplicitNullable = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',
   oneOf: [
-    { properties: { '@reso.context': { type: 'string' } }, additionalProperties: false },
-    { properties: { '@reso.context': { type: 'string' }, value: { type: 'array' } }, additionalProperties: false }
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        }
+      },
+      additionalProperties: false
+    },
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        },
+        value: {
+          type: 'array'
+        }
+      },
+      additionalProperties: false
+    }
   ],
   definitions: {
     Property: {
@@ -88,7 +190,9 @@ const schemaWithImplicitNullable = {
         BuyerTeamName: {
           type: ['string', 'null'],
           maxLength: 50,
-          errorMessage: { maxLength: 'SHOULD have a maximum suggested length of 50 characters' }
+          errorMessage: {
+            maxLength: 'SHOULD have a maximum suggested length of 50 characters'
+          }
         }
       },
       additionalProperties: false
@@ -97,13 +201,27 @@ const schemaWithImplicitNullable = {
       Property: {
         BuyerTeamName: {
           type: 'Edm.String',
+          typeName: '',
+          nullable: true,
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
-          typeName: '',
+          annotations: [
+            {
+              term: 'RESO.OData.Metadata.StandardName',
+              value: 'Buyer Team Name'
+            },
+            {
+              term: 'RESO.DDWikiUrl',
+              value: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field'
+            },
+            {
+              term: 'Core.Description',
+              value: 'The name of the team representing the buyer.'
+            }
+          ],
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field',
-          nullable: true,
-          isCollection: false
+          maxLength: 50
         }
       }
     }
@@ -114,8 +232,25 @@ const nonNullableSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',
   oneOf: [
-    { properties: { '@reso.context': { type: 'string' } }, additionalProperties: false },
-    { properties: { '@reso.context': { type: 'string' }, value: { type: 'array' } }, additionalProperties: false }
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        }
+      },
+      additionalProperties: false
+    },
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        },
+        value: {
+          type: 'array'
+        }
+      },
+      additionalProperties: false
+    }
   ],
   definitions: {
     Property: {
@@ -124,7 +259,9 @@ const nonNullableSchema = {
         BuyerTeamName: {
           type: 'string',
           maxLength: 50,
-          errorMessage: { maxLength: 'SHOULD have a maximum suggested length of 50 characters' }
+          errorMessage: {
+            maxLength: 'SHOULD have a maximum suggested length of 50 characters'
+          }
         }
       },
       additionalProperties: false
@@ -133,13 +270,27 @@ const nonNullableSchema = {
       Property: {
         BuyerTeamName: {
           type: 'Edm.String',
+          typeName: '',
+          nullable: false,
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
-          typeName: '',
+          annotations: [
+            {
+              term: 'RESO.OData.Metadata.StandardName',
+              value: 'Buyer Team Name'
+            },
+            {
+              term: 'RESO.DDWikiUrl',
+              value: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field'
+            },
+            {
+              term: 'Core.Description',
+              value: 'The name of the team representing the buyer.'
+            }
+          ],
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/BuyerTeamName+Field',
-          nullable: false,
-          isCollection: false
+          maxLength: 50
         }
       }
     }
@@ -150,8 +301,25 @@ const enumFieldsAndLookupsSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',
   oneOf: [
-    { properties: { '@reso.context': { type: 'string' } }, additionalProperties: false },
-    { properties: { '@reso.context': { type: 'string' }, value: { type: 'array' } }, additionalProperties: false }
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        }
+      },
+      additionalProperties: false
+    },
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        },
+        value: {
+          type: 'array'
+        }
+      },
+      additionalProperties: false
+    }
   ],
   definitions: {
     Property: {
@@ -168,12 +336,26 @@ const enumFieldsAndLookupsSchema = {
       Property: {
         AboveGradeFinishedAreaSource: {
           type: 'org.reso.metadata.enums.AreaSource',
+          typeName: 'AreaSource',
+          nullable: true,
           isExpansion: false,
           isLookupField: true,
           isComplexType: false,
-          typeName: 'AreaSource',
-          isCollection: false,
-          nullable: true,
+          annotations: [
+            {
+              term: 'RESO.OData.Metadata.StandardName',
+              value: 'Above Grade Finished Area Source'
+            },
+            {
+              term: 'RESO.DDWikiUrl',
+              value: 'https://ddwiki.reso.org/display/DDW20/AboveGradeFinishedAreaSource+Field'
+            },
+            {
+              term: 'Core.Description',
+              value:
+                'The source of the measurements. This is a pick list of options showing the source of the measurement (e.g., Agent, Assessor, Estimate).'
+            }
+          ],
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/AboveGradeFinishedAreaSource+Field',
           lookupValues: {
             Appraiser: {
@@ -324,8 +506,25 @@ const collectionFieldsSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',
   oneOf: [
-    { properties: { '@reso.context': { type: 'string' } }, additionalProperties: false },
-    { properties: { '@reso.context': { type: 'string' }, value: { type: 'array' } }, additionalProperties: false }
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        }
+      },
+      additionalProperties: false
+    },
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        },
+        value: {
+          type: 'array'
+        }
+      },
+      additionalProperties: false
+    }
   ],
   definitions: {
     Property: {
@@ -345,13 +544,28 @@ const collectionFieldsSchema = {
       Property: {
         AvailableLeaseType: {
           type: 'org.reso.metadata.enums.ExistingLeaseType',
+          typeName: 'ExistingLeaseType',
+          nullable: false,
           isExpansion: false,
           isLookupField: true,
           isComplexType: false,
-          typeName: 'ExistingLeaseType',
-          isCollection: true,
-          nullable: false,
+          annotations: [
+            {
+              term: 'RESO.OData.Metadata.StandardName',
+              value: 'Available Lease Type'
+            },
+            {
+              term: 'RESO.DDWikiUrl',
+              value: 'https://ddwiki.reso.org/display/DDW20/AvailableLeaseType+Field'
+            },
+            {
+              term: 'Core.Description',
+              value:
+                'Information about the available types of lease for the property (i.e., Net, NNN, NN, Gross, Absolute Net, Escalation Clause, Ground Lease, etc.).'
+            }
+          ],
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/AvailableLeaseType+Field',
+          isCollection: true,
           lookupValues: {
             'Absolute Net': {
               type: 'org.reso.metadata.enums.ExistingLeaseType',
@@ -501,47 +715,121 @@ const expansionFieldsSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',
   oneOf: [
-    { properties: { '@reso.context': { type: 'string' } }, additionalProperties: false },
-    { properties: { '@reso.context': { type: 'string' }, value: { type: 'array' } }, additionalProperties: false }
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        }
+      },
+      additionalProperties: false
+    },
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        },
+        value: {
+          type: 'array'
+        }
+      },
+      additionalProperties: false
+    }
   ],
   definitions: {
     Teams: {
       type: 'object',
-      properties: { ModificationTimestamp: { type: ['string', 'null'] }, OriginalEntryTimestamp: { type: ['string', 'null'] } },
+      properties: {
+        ModificationTimestamp: {
+          type: ['string', 'null']
+        },
+        OriginalEntryTimestamp: {
+          type: ['string', 'null']
+        }
+      },
       additionalProperties: false
     },
-    Property: { type: 'object', properties: { ListTeam: { $ref: '#/definitions/Teams' } }, additionalProperties: false },
+    Property: {
+      type: 'object',
+      properties: {
+        ListTeam: {
+          $ref: '#/definitions/Teams'
+        }
+      },
+      additionalProperties: false
+    },
     MetadataMap: {
       Teams: {
         ModificationTimestamp: {
           type: 'Edm.DateTimeOffset',
+          typeName: '',
+          nullable: true,
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
-          typeName: '',
-          nullable: true,
-          isCollection: false,
-          ddWikiUrl: 'https://ddwiki.reso.org/pages/viewpage.action?pageId=1135641'
+          annotations: [
+            {
+              term: 'RESO.OData.Metadata.StandardName',
+              value: 'Modification Timestamp'
+            },
+            {
+              term: 'RESO.DDWikiUrl',
+              value: 'https://ddwiki.reso.org/pages/viewpage.action?pageId=1135641'
+            },
+            {
+              term: 'Core.Description',
+              value: 'The date/time the roster (team or office) record was last modified.'
+            }
+          ],
+          ddWikiUrl: 'https://ddwiki.reso.org/pages/viewpage.action?pageId=1135641',
+          precision: 27
         },
         OriginalEntryTimestamp: {
           type: 'Edm.DateTimeOffset',
+          typeName: '',
+          nullable: true,
           isExpansion: false,
           isLookupField: false,
           isComplexType: false,
-          typeName: '',
-          nullable: true,
+          annotations: [
+            {
+              term: 'RESO.OData.Metadata.StandardName',
+              value: 'Original Entry Timestamp'
+            },
+            {
+              term: 'RESO.DDWikiUrl',
+              value: 'https://ddwiki.reso.org/pages/viewpage.action?pageId=1135646'
+            },
+            {
+              term: 'Core.Description',
+              value: 'The date/time the roster (team or office) record was originally input into the source system.'
+            }
+          ],
           ddWikiUrl: 'https://ddwiki.reso.org/pages/viewpage.action?pageId=1135646',
-          isCollection: false
+          precision: 27
         }
       },
       Property: {
         ListTeam: {
           type: 'org.reso.metadata.Teams',
+          typeName: 'Teams',
+          nullable: true,
           isExpansion: true,
           isLookupField: false,
           isComplexType: false,
-          typeName: 'Teams',
-          nullable: true,
+          annotations: [
+            {
+              term: 'RESO.OData.Metadata.StandardName',
+              value: 'List Team'
+            },
+            {
+              term: 'RESO.DDWikiUrl',
+              value: 'https://ddwiki.reso.org/display/DDW20/ListTeam+Field'
+            },
+            {
+              term: 'Core.Description',
+              value: 'Two or more agents working on the listing agent\'s team.'
+            }
+          ],
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/ListTeam+Field',
           isCollection: false
         }
@@ -554,8 +842,25 @@ const nullableCollectionFieldsSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',
   oneOf: [
-    { properties: { '@reso.context': { type: 'string' } }, additionalProperties: false },
-    { properties: { '@reso.context': { type: 'string' }, value: { type: 'array' } }, additionalProperties: false }
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        }
+      },
+      additionalProperties: false
+    },
+    {
+      properties: {
+        '@reso.context': {
+          type: 'string'
+        },
+        value: {
+          type: 'array'
+        }
+      },
+      additionalProperties: false
+    }
   ],
   definitions: {
     Property: {
@@ -575,13 +880,28 @@ const nullableCollectionFieldsSchema = {
       Property: {
         AvailableLeaseType: {
           type: 'org.reso.metadata.enums.ExistingLeaseType',
+          typeName: 'ExistingLeaseType',
+          nullable: true,
           isExpansion: false,
           isLookupField: true,
           isComplexType: false,
-          isCollection: true,
-          typeName: 'ExistingLeaseType',
-          nullable: true,
+          annotations: [
+            {
+              term: 'RESO.OData.Metadata.StandardName',
+              value: 'Available Lease Type'
+            },
+            {
+              term: 'RESO.DDWikiUrl',
+              value: 'https://ddwiki.reso.org/display/DDW20/AvailableLeaseType+Field'
+            },
+            {
+              term: 'Core.Description',
+              value:
+                'Information about the available types of lease for the property (i.e., Net, NNN, NN, Gross, Absolute Net, Escalation Clause, Ground Lease, etc.).'
+            }
+          ],
           ddWikiUrl: 'https://ddwiki.reso.org/display/DDW20/AvailableLeaseType+Field',
+          isCollection: true,
           lookupValues: {
             'Absolute Net': {
               type: 'org.reso.metadata.enums.ExistingLeaseType',
