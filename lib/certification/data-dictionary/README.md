@@ -31,16 +31,16 @@ Options:
 ```
 
 **Notes**
-* The `-p` argument is required. This will be the path to the JSON DD testing config. See [`sample-dd-config.json`](/lib/certification/sample-dd-config.json)
-* The limit (`-l` or `--limit`) can be changed in pre-testing, but the default will be used for certification
-* The tests are fast-fail, meaning that if the metadata tests don't succeed, data sampling won't be done since the output of the first step is required by others. Once the metadata tests pass, each subsequent test can be run individually
+* The `-p` argument is required. This will be the path to the JSON DD testing config. See [`sample-dd-config.json`](/lib/certification/sample-dd-config.json).
+* The limit (`-l` or `--limit`) can be changed in pre-testing, but the default will be used for certification.
+* The tests are fast-fail, meaning that if the metadata tests don't succeed, data sampling won't be done since the output of the first step is required by others. Once the metadata tests pass, each subsequent test can be run individually.
 
 <br />
 
 # Data Dictionary 1.7
 For Data Dictionary 1.7, the following tests are run:
-1. **Metadata Validation** (RESO Commander) - Includes type, synonym checking, and Lookup Resource validation
-2. **Data Availability Report** (RESO Cert Utils) - Data Availability sampling using the [`replicate` option](/lib/replication/README.md) and the TimestampDesc strategy
+1. **Metadata Validation** (RESO Commander) - Includes type, synonym checking, and Lookup Resource validation.
+2. **Data Availability Report** (RESO Cert Utils) - Data Availability sampling using the [`replicate` option](/lib/replication/README.md) and the TimestampDesc strategy.
 
 ```
 $ reso-certification-utils runDDTests -v 1.7 -p your-config.json -a
@@ -49,19 +49,19 @@ $ reso-certification-utils runDDTests -v 1.7 -p your-config.json -a
 # Data Dictionary 2.0
 For Data Dictionary 2.0, the following tests are run:
 1. **Metadata Validation** (RESO Commander) - Includes type, synonym checking, and Lookup Resource validation
-2. **Variations Report** (RESO Cert Utils) - Uses the [`findVariations` option](/lib/variations/README.md) with the output of step (1)
-  * Note: You will need auth info in your `.env` file to access the Variations Service for mappings
-  * Without auth info, machine based techniques alone will be used
-  * See [sample.env](/sample.env) for more information
-  * Please contact [dev@reso.org](dev@reso.org) with any questions
+2. **Variations Report** (RESO Cert Utils) - Uses the [`findVariations` option](/lib/variations/README.md) with the output of step (1).
+  * Note: You will need auth info in your `.env` file to access the Variations Service for mappings.
+  * Without auth info, machine based techniques alone will be used.
+  * See [sample.env](/sample.env) for more information.
+  * Please contact [dev@reso.org](dev@reso.org) with any questions.
 3. **Data Availability Report** (RESO Cert Utils) - Data Availability sampling using the [`replicate` option](/lib/replication/README.md) and the following strategies:
   * TimestampDesc
   * NextLink
   * NextLink with ModificationTimestamp greater than 3 years ago
 4. **Schema Validation** (RESO Cert Utils) - JSON Schema are generated from the output in step (1)
-  * This is enabled by default since the `-S` or `--strictMode` flag is required for certification
-  * Schema validation checks can be skipped by passing `-S false` or `--strictMode false`
-  * This step is actually done in conjunction with step (3) but is listed for clarity
+  * This is enabled by default since the `-S` or `--strictMode` flag is required for certification.
+  * Schema validation checks can be skipped by passing `-S false` or `--strictMode false`.
+  * This step is actually done in conjunction with step (3) but is listed for clarity.
  
 
 ```
