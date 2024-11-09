@@ -596,6 +596,20 @@ const resolveFilePathSync = ({ outputPath, filename }) => {
   return resolve(normalize(join(outputPath && outputPath?.length ? outputPath : '', filename)));
 };
 
+/**
+ * Determines whether a URL string is valid
+ * @param {String} url the string URL to test
+ * @returns true if valid, false otherwise
+ */
+const isValidUrl = url => {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 module.exports = {
   NOT_OK,
   DEFAULT_DD_VERSION,
@@ -626,5 +640,6 @@ module.exports = {
   parseBooleanValue,
   getErrorHandler,
   readZipFileContents,
-  resolveFilePathSync
+  resolveFilePathSync,
+  isValidUrl
 };

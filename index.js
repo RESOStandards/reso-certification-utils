@@ -165,8 +165,8 @@ if (require?.main === module) {
   program
     .command('restore')
     .description('(Admin) Restores local or S3 results to a RESO Certification API instance')
-    .option('-p, --pathToResults <string>', 'Path to test results')
-    .option('-u, --url <string>', 'URL of Certification API')
+    .requiredOption('-p, --pathToResults <string>', 'Path to test results')
+    .requiredOption('-u, --url <string>', 'URL of Certification API')
     .action(options => restore({ ...options, fromCli: FROM_CLI }));
 
   program.parse();
