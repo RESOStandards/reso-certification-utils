@@ -19,6 +19,7 @@ Options:
   -p, --payloadPath <string>   Path to the payload file OR directory/zip containing files that need to be validated
   -r, --resourceName <string>  Resource name to validate against. Required if --version is passed when validating.
   -h, --help                   display help for command
+  -k, --disableKey             Pass this flag to remove record keys from the error report
 ```
 
 ### Generate
@@ -54,7 +55,8 @@ errorMap = validate({
   jsonPayload: payload,
   errorMap, // pass the error map back into the validate input in case of usage inside a loop
   jsonSchema: schema,
-  resourceName: 'Property'
+  resourceName: 'Property',
+  disableKeys: true
 });
 
 // The error map will hold the results of multiple validation so to transform it into a single error report we can use `combineErrors`
