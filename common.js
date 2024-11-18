@@ -358,7 +358,17 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
       ...fields.reduce(
         (
           acc,
-          { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true, isCollection = false }
+          {
+            resourceName,
+            fieldName,
+            type,
+            isExpansion = false,
+            isComplexType = false,
+            annotations,
+            typeName = '',
+            nullable = true,
+            isCollection = false
+          }
         ) => {
           if (!acc[resourceName]) {
             acc[resourceName] = {};
@@ -474,12 +484,14 @@ const getLoggers = (fromCli = false) => {
   const noop = () => {};
   if (fromCli) {
     return {
-      LOG: message => console.log(message),
+      LOG_INFO: message => console.log(message),
+      LOG_WARNING: message => console.warn(message),
       LOG_ERROR: message => console.error(message)
     };
   } else {
     return {
-      LOG: noop,
+      LOG_INFO: noop,
+      LOG_WARNING: noop,
       LOG_ERROR: noop
     };
   }
