@@ -532,16 +532,18 @@ const createReplicationStateServiceInstance = () => {
  * @returns Error handler function
  */
 const getErrorHandler = (fromCli = false) => {
+  const { LOG_ERROR } = getLoggers(fromCli);
+
   return (message, { terminate = true } = {}) => {
+    LOG_ERROR(message);
     if (fromCli) {
-      console.error(`${message}`);
       if (terminate) {
         process.exit(NOT_OK);
-      } else {
-        process.exitCode = NOT_OK;
       }
     } else {
-      throw new Error(message);
+      if (terminate) {
+        throw new Error(message);
+      }
     }
   };
 };
@@ -603,7 +605,7 @@ const readZipFileContents = path => {
  */
 const resolveFilePathSync = ({ outputPath, filename }) => {
   if (!(filename && filename?.length)) {
-    throw new Error('\'filename\' must contain the name of a file to resolve');
+    throw new Error("'filename' must contain the name of a file to resolve");
   }
   return resolve(normalize(join(outputPath && outputPath?.length ? outputPath : '', filename)));
 };
