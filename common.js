@@ -605,7 +605,7 @@ const readZipFileContents = path => {
  */
 const resolveFilePathSync = ({ outputPath, filename }) => {
   if (!(filename && filename?.length)) {
-    throw new Error("'filename' must contain the name of a file to resolve");
+    throw new Error('\'filename\' must contain the name of a file to resolve');
   }
   return resolve(normalize(join(outputPath && outputPath?.length ? outputPath : '', filename)));
 };
