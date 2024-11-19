@@ -534,18 +534,20 @@ const createReplicationStateServiceInstance = () => {
 const getErrorHandler = (fromCli = false) => {
   const { LOG_ERROR } = getLoggers(fromCli);
 
-  return (message, { terminate = true } = {}) => {
-    LOG_ERROR(message);
-    if (fromCli) {
+  if (fromCli) {
+    return (message, { terminate = true } = {}) => {
+      LOG_ERROR(message);
       if (terminate) {
         process.exit(NOT_OK);
       }
-    } else {
+    };
+  } else {
+    return (message, { terminate = true } = {}) => {
       if (terminate) {
         throw new Error(message);
       }
-    }
-  };
+    };
+  }
 };
 
 /**
