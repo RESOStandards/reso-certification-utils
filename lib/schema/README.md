@@ -19,7 +19,7 @@ Options:
   -p, --payloadPath <string>   Path to the payload file OR directory/zip containing files that need to be validated
   -r, --resourceName <string>  Resource name to validate against. Required if --version is passed when validating.
   -h, --help                   display help for command
-  -k, --disableKey             Pass this flag to remove record keys from the error report
+  -k, --disableKeys             Pass this flag to remove record keys from the error report
 ```
 
 ### Generate
