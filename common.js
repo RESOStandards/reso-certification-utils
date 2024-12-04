@@ -480,19 +480,31 @@ const parseResoUrn = (urn = '') => {
  * @param {Boolean} fromCli true if using the console, false otherwise (default)
  * @returns a pair of loggers, one for normal messages and another for errors
  */
-const getLoggers = (fromCli = false) => {
+const getLogger = (fromCli = false) => {
   const noop = () => {};
   if (fromCli) {
     return {
-      LOG_INFO: message => console.log(message),
-      LOG_WARNING: message => console.warn(message),
-      LOG_ERROR: message => console.error(message)
+      info: message => {
+        if (message?.length) {
+          console.log(message);
+        } else return;
+      },
+      warn: message => {
+        if (message?.length) {
+          console.warn(message);
+        } else return;
+      },
+      error: message => {
+        if (message?.length) {
+          console.error(message);
+        } else return;
+      }
     };
   } else {
     return {
-      LOG_INFO: noop,
-      LOG_WARNING: noop,
-      LOG_ERROR: noop
+      info: noop,
+      warn: noop,
+      error: noop
     };
   }
 };
@@ -532,11 +544,11 @@ const createReplicationStateServiceInstance = () => {
  * @returns Error handler function
  */
 const getErrorHandler = (fromCli = false) => {
-  const { LOG_ERROR } = getLoggers(fromCli);
+  const logger = getLogger(fromCli);
 
   if (fromCli) {
     return (message, { terminate = true } = {}) => {
-      LOG_ERROR(message);
+      logger.error(message);
       if (terminate) {
         process.exit(NOT_OK);
       }
@@ -651,7 +663,7 @@ module.exports = {
   getPreviousVersion,
   sleep,
   buildMetadataMap,
-  getLoggers,
+  getLogger,
   parseResoUrn,
   parseBooleanValue,
   getErrorHandler,
