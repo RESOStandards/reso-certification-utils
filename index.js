@@ -11,6 +11,7 @@ const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
 const { DEFAULT_DD_VERSION, DEFAULT_UPI_VERSION, parseBooleanValue } = require('./common');
 const { DEFAULT_PAGE_SIZE } = require('./lib/replication/utils');
+const { generateRcfData } = require('./lib/datagenerator');
 
 //Only load commander interpreter if running from the CLI
 if (require?.main === module) {
@@ -168,6 +169,21 @@ if (require?.main === module) {
     .option('-p, --pathToResults <string>', 'Path to test results')
     .option('-u, --url <string>', 'URL of Certification API')
     .action(options => restore({ ...options, fromCli: FROM_CLI }));
+
+  // TODO: need to extract all resourceNames from the metadata report JSON if no resourceNames were passed.
+  program
+    .command('datagenerator')
+    .description('Generates data in RESO Common format and writes it to the given output path.')
+    .option('-p, --pathToMetadataReportJson <string>', 'Path to metadata report JSON. Defaults to the RESO reference DD 2.0 report.')
+    .option('-r, --resourceNames <string>', 'Comma-separated list of resources to generate data for from the metadata report.', '')
+    .option('-x, --useExpansions', 'Pass if using expanded data')
+    .option('-o, --outputPath <string>', 'Path to output the generated data to')
+    .action(({ resourceNames, ...options }) => {
+      //TODO: for the fallback, generate all possible resource names from the metadata report
+      const resources = resourceNames && resourceNames?.length ? resourceNames.split(',') : [];
+      
+      generateRcfData({ ...options, resources, fromCli: FROM_CLI });
+    });
 
   program.parse();
 }
