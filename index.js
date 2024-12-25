@@ -180,9 +180,11 @@ if (require?.main === module) {
     .option('-o, --outputPath <string>', 'Path to output the generated data to')
     .action(({ resourceNames, ...options }) => {
       //TODO: for the fallback, generate all possible resource names from the metadata report
-      const resources = resourceNames && resourceNames?.length ? resourceNames.split(',') : [];
-      
-      generateRcfData({ ...options, resources, fromCli: FROM_CLI });
+      generateRcfData({
+        ...options,
+        resourceNames: resourceNames && resourceNames?.length ? resourceNames.split(',') : [],
+        fromCli: FROM_CLI
+      });
     });
 
   program.parse();

@@ -1,0 +1,58 @@
+{
+  "fields": [
+    {
+      "resourceName": "Property",
+      "fieldName": "ListingKey",
+      "type": "Edm.String"
+    },
+    {
+      "resourceName": "Property",
+      "fieldName": "StandardStatus",
+      "type": "StandardStatus"
+    },
+    {
+      "resourceName": "Property",
+      "fieldName": "BedroomsTotal",
+      "type": "Edm.Int32",
+      "nullable": true
+    },
+    {
+      "resourceName": "Property",
+      "fieldName": "ListPrice",
+      "type": "Edm.Decimal",
+      "scale": 2,
+      "precision": 14,
+      "nullable": true
+    },
+    {
+      "resourceName": "Property",
+      "fieldName": "InteriorFeatures",
+      "type": "Edm.String",
+      "isCollection": true
+    },
+    {
+      "resourceName": "Property",
+      "fieldName": "Media",
+      "type": "Media",
+      "isExpansion": true
+    },
+    {
+      "resourceName": "Property",
+      "fieldName": "ModificationTimestamp",
+      "type": "Edm.DateTimeOffset"
+    }
+  ],
+  "lookups": [{
+    "lookupName": "StandardStatus",
+    "lookupValue": "Active",
+    "type": "Edm.String"
+  },{
+    "lookupName": "StandardStatus",
+    "lookupValue": "Active Under Contract",
+    "type": "Edm.String"
+  },{
+    "lookupName": "StandardStatus",
+    "lookupValue": "Pending",
+    "type": "Edm.String"
+  }]
+}
