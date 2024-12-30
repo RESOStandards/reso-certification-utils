@@ -358,7 +358,17 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
       ...fields.reduce(
         (
           acc,
-          { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true, isCollection = false }
+          {
+            resourceName,
+            fieldName,
+            type,
+            isExpansion = false,
+            isComplexType = false,
+            annotations,
+            typeName = '',
+            nullable = true,
+            isCollection = false
+          }
         ) => {
           if (!acc[resourceName]) {
             acc[resourceName] = {};
@@ -512,6 +522,12 @@ const createReplicationStateServiceInstance = () => {
   return replicationStateService;
 };
 
+const createDataGeneratorStateServiceInstance = metadataReportJson => {
+  const datageneratorStateService = require('./lib/datagenerator/services/datagenerator-state');
+  datageneratorStateService.init(metadataReportJson);
+  return datageneratorStateService;
+};
+
 /**
  * Creates context-sensitive error handler function that logs to
  * the console or throws errors depending on whether the caller is using the CLI
@@ -591,7 +607,7 @@ const readZipFileContents = path => {
  */
 const resolveFilePathSync = ({ outputPath, filename }) => {
   if (!(filename && filename?.length)) {
-    throw new Error('\'filename\' must contain the name of a file to resolve');
+    throw new Error("'filename' must contain the name of a file to resolve");
   }
   return resolve(normalize(join(outputPath && outputPath?.length ? outputPath : '', filename)));
 };
@@ -612,6 +628,7 @@ module.exports = {
   isValidVersion,
   getEndorsementMetadata,
   createReplicationStateServiceInstance,
+  createDataGeneratorStateServiceInstance,
   createResoScriptBearerTokenConfig,
   createResoScriptClientCredentialsConfig,
   getFileSafeIso8601Timestamp,

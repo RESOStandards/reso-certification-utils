@@ -175,8 +175,12 @@ if (require?.main === module) {
     .command('datagenerator')
     .description('Generates data in RESO Common format and writes it to the given output path.')
     .option('-p, --pathToMetadataReportJson <string>', 'Path to metadata report JSON. Defaults to the RESO reference DD 2.0 report.')
-    .option('-r, --resourceNames <string>', 'Comma-separated list of resources to generate data for from the metadata report.', '')
-    .option('-x, --useExpansions', 'Pass if using expanded data')
+    .option(
+      '-r, --resourceNames <string>',
+      'Comma-separated list of resources from the metadata report to generate top-level data for.',
+      ''
+    )
+    .option('-x, --useExpansions', 'If set, Include data for expansions nested within the top-level record.')
     .option('-o, --outputPath <string>', 'Path to output the generated data to')
     .action(({ resourceNames, ...options }) => {
       //TODO: for the fallback, generate all possible resource names from the metadata report
