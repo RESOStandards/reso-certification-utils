@@ -524,6 +524,7 @@ const createReplicationStateServiceInstance = () => {
 
 const createDataGeneratorStateServiceInstance = metadataReportJson => {
   const datageneratorStateService = require('./lib/datagenerator/services/datagenerator-state');
+  datageneratorStateService.reset();
   datageneratorStateService.init(metadataReportJson);
   return datageneratorStateService;
 };
