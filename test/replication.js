@@ -3,16 +3,16 @@ const { createReplicationStateServiceInstance } = require('../common');
 const { scorePayload } = require('../lib/replication/utils');
 const assert = require('assert');
 
-describe('Replication tests', () => {
+describe('Replication related tests', () => {
   it('Should not throw error is non-string non-array value is present', async () => {
     const metadataReport = getMetadata('2.0');
     const payload = {
       '@reso.context': 'urn:reso:metadata:1.7:resource:property',
       value: [
         {
-          Country: 'CA',
+          Country: 'CA', // expected case non-array string lookup value
           StateOrProvince: 'ON',
-          BusinessType: 5 // non-string non-array lookup value
+          BusinessType: 5 // non-array non-string lookup value
         }
       ]
     };
