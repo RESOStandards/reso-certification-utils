@@ -472,6 +472,50 @@ const topLevelUnadvertisedField = {
   Foo: false
 };
 
+const keyFieldPayloadMulti = {
+  '@reso.context': 'urn:reso:metadata:1.7:resource:property',
+  value: [
+    {
+      Country: 'CA',
+      StateOrProvince: 'ON',
+      City: 'NYC',
+      ListingKey: 'listingkey1',
+      Media: [
+        {
+          ResourceName: 'Property',
+          MediaCategory: 'Branded Virtual Tour',
+          MediaURL: 'https://example.com/vJVDL415WZ7GE1/',
+          ShortDescription: 'Example',
+          MediaKey: 'mediakey1'
+        },
+        {
+          ResourceName: 'Property',
+          MediaCategory: 'Branded Virtual Tour',
+          MediaURL: 'https://example.com/vJVDL415WZ7GE1/doc/floorplan_imperial.pdf',
+          ShortDescription: 'imperial',
+          MediaKey: 'mediakey2'
+        }
+      ],
+      Rooms: [
+        {
+          RoomWidth: 4.409,
+          RoomLength: 2.977,
+          RoomLengthWidthUnits: 'Meters',
+          RoomKey: 'roomkey1',
+          RoomLengthWidthSource: 'LocalProvider'
+        },
+        {
+          RoomWidth: 4.3,
+          RoomLength: 5.998,
+          RoomLengthWidthUnits: 'Meters',
+          RoomKey: 'roomkey2',
+          RoomLengthWidthSource: 'LocalProvider'
+        }
+      ]
+    }
+  ]
+};
+
 module.exports = {
   valuePayload,
   nonValuePayload,
@@ -500,5 +544,6 @@ module.exports = {
   expansionIgnoredItem,
   collectionExpansionError,
   singleValueExpansionError,
-  topLevelUnadvertisedField
+  topLevelUnadvertisedField,
+  keyFieldPayloadMulti
 };
