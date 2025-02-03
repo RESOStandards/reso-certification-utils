@@ -139,6 +139,7 @@ if (require?.main === module) {
     .option('-p, --payloadPath <string>', 'Path to the payload file OR directory/zip containing files that need to be validated')
     .option('-c, --createReports', 'Option to generate metadata and availability reports for RCF testing')
     .option('-r, --resourceName <string>', 'Resource name to validate against. Required if --version is passed when validating.')
+    .option('-k, --disableKeys', 'Pass this flag to remove record keys from the error report')
     .description('Generate a schema or validate a payload against a schema')
     .action(options => schema({ ...options, fromCli: FROM_CLI }));
 

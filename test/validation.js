@@ -30,7 +30,8 @@ const {
   expansionIgnoredItem,
   collectionExpansionError,
   singleValueExpansionError,
-  topLevelUnadvertisedField
+  topLevelUnadvertisedField,
+  keyFieldPayloadMulti
 } = require('./schema/payload-samples');
 
 describe('Schema validation tests', async () => {
@@ -78,6 +79,8 @@ describe('Schema validation tests', async () => {
 
   it('Should find errors in case of type mismatch in simple types', () => {
     let errorMap = {};
+    const resourceName = 'Property';
+    const fieldName = 'PostalCode';
     errorMap = validate({
       jsonSchema: schema,
       jsonPayload: simpleTypeMismatchErrorPayload,
@@ -88,11 +91,15 @@ describe('Schema validation tests', async () => {
     const report = combineErrors(errorMap);
     const expectedErrorMessage = `MUST be string or null but found ${typeof simpleTypeMismatchErrorPayload.PostalCode}`;
     assert(report.totalErrors === 1);
-    assert(report.items[0].errors[0].message === expectedErrorMessage);
+    assert(!!report.errors[expectedErrorMessage], 'Expected error message not found');
+    assert(!!report.errors[expectedErrorMessage].resources?.Property?.fields?.PostalCode, 'Expected field not found');
+    assert(report.errors[expectedErrorMessage].resources?.[resourceName]?.fields?.[fieldName]?.count === 1, 'Expected count did not match');
   });
 
   it('Should find errors in case of enum mismatch in complex types', () => {
     let errorMap = {};
+    const resourceName = 'Property';
+    const fieldName = 'AboveGradeFinishedAreaSource';
     const expectedErrorMessage = 'MUST be equal to one of the allowed values';
     const expectedInvalidEnum = enumMismatchPayload.value[0].AboveGradeFinishedAreaSource;
     errorMap = validate({
@@ -104,8 +111,11 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'enum error message did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].lookupValue, expectedInvalidEnum, 'enum lookup value did not match');
+    assert(!!report.errors[expectedErrorMessage], 'Expected error message not found');
+    assert(
+      !!report.errors[expectedErrorMessage].resources?.[resourceName]?.fields?.[fieldName]?.lookups?.[expectedInvalidEnum],
+      'Expected enum value not found'
+    );
   });
 
   it('Should validate even when top level context is @odata instead of @reso', () => {
@@ -150,6 +160,8 @@ describe('Schema validation tests', async () => {
 
   it('Should convert enum errors to warnings based on validation config', () => {
     let errorMap = {};
+    const resourceName = 'Property';
+    const fieldName = 'MLSAreaMinor';
     const config = {
       '2.0': {
         Property: {
@@ -174,8 +186,11 @@ describe('Schema validation tests', async () => {
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 0, 'Error counts did not match');
     assert.equal(report.totalWarnings, 1, 'Warning counts did not match');
-    assert.equal(report.items[0].warnings[0].message, expectedErrorMessage, 'enum error message did not match');
-    assert.equal(report.items[0].warnings[0].occurrences[0].lookupValue, expectedEnumValue, 'enum lookup value did not match');
+    assert(!!report.warnings?.[expectedErrorMessage], 'Expected enum error message not found');
+    assert(
+      !!report.warnings[expectedErrorMessage].resources?.[resourceName]?.fields?.[fieldName]?.lookups?.[expectedEnumValue],
+      'Expected enum value not found'
+    );
   });
 
   it('Should convert expansion enum errors to warnings based on validation config', () => {
@@ -189,6 +204,8 @@ describe('Schema validation tests', async () => {
         }
       }
     };
+    const resourceName = 'Property';
+    const fieldName = 'Media';
     const expectedEnumValue = 'Foo';
     const expectedErrorMessage =
       'The following enumerations in the ImageSizeDescription Field were not advertised. This will fail in Data Dictionary 2.1';
@@ -204,12 +221,17 @@ describe('Schema validation tests', async () => {
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 0, 'Error counts did not match');
     assert.equal(report.totalWarnings, 1, 'Warning counts did not match');
-    assert.equal(report.items[0].warnings[0].message, expectedErrorMessage, 'enum error message did not match');
-    assert.equal(report.items[0].warnings[0].occurrences[0].lookupValue, expectedEnumValue, 'enum lookup value did not match');
+    assert(!!report.warnings?.[expectedErrorMessage], 'Expected enum error message not found');
+    assert(
+      !!report.warnings[expectedErrorMessage].resources?.[resourceName]?.fields?.[fieldName]?.lookups?.[expectedEnumValue],
+      'Expected enum value not found'
+    );
   });
 
   it('Should find errors in case of invalid enums in string list', () => {
     let errorMap = {};
+    const resourceName = 'Property';
+    const fieldName = 'AboveGradeFinishedAreaSource';
     const expectedErrorMessage = 'MUST be equal to one of the allowed values';
     const expectedInvalidEnum = 'InvalidEnum';
     errorMap = validate({
@@ -221,8 +243,11 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'enum error message did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].lookupValue, expectedInvalidEnum, 'enum lookup value did not match');
+    assert(!!report.errors?.[expectedErrorMessage], 'Expected enum error message not found');
+    assert(
+      !!report.errors[expectedErrorMessage].resources?.[resourceName]?.fields?.[fieldName]?.lookups?.[expectedInvalidEnum],
+      'Expected enum value not found'
+    );
   });
 
   it('Should not find errors in case of valid enums containing space after comma', async () => {
@@ -253,6 +278,7 @@ describe('Schema validation tests', async () => {
 
   it('Should find errors in case of additional properties not advertised in the metadata', () => {
     let errorMap = {};
+    const resourceName = 'Property';
     const version = '2.0';
     const expectedErrorMessage = `ADDITIONAL fields found that are not part of Data Dictionary ${version}`;
     const expectedInvalidField = 'AdditionalProperty';
@@ -266,12 +292,16 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'additional property error message did not match');
-    assert.equal(report.items[0].fieldName, expectedInvalidField, 'Non advertised field did not match');
+    assert(!!report.errors?.[expectedErrorMessage], 'Expected enum error message not found');
+    assert(
+      !!report.errors[expectedErrorMessage].resources?.[resourceName]?.fields?.[expectedInvalidField],
+      'Expected field value not found'
+    );
   });
 
   it('Should not have lookup values for non-enum types', () => {
     let errorMap = {};
+    const resourceName = 'Property';
     const version = '2.0';
     const expectedErrorMessage = `ADDITIONAL fields found that are not part of Data Dictionary ${version}`;
     const expectedInvalidField = 'AdditionalProperty';
@@ -285,12 +315,14 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'additional property error message did not match');
-    assert.equal(report.items[0].fieldName, expectedInvalidField, 'Non advertised field did not match');
-    assert.equal(
-      Object.keys(report.items[0].errors[0]?.occurrences[0] || {}).indexOf('lookupValue'),
-      -1,
-      'Found lookup value on non enum type'
+    assert(!!report.errors?.[expectedErrorMessage], 'Expected enum error message not found');
+    assert(
+      !!report.errors[expectedErrorMessage].resources?.[resourceName]?.fields?.[expectedInvalidField],
+      'Expected field value not found'
+    );
+    assert(
+      !('lookups' in report.errors[expectedErrorMessage].resources?.[resourceName]?.fields?.[expectedInvalidField]),
+      'Enum value found when not expected'
     );
   });
 
@@ -316,7 +348,7 @@ describe('Schema validation tests', async () => {
     const report = combineErrors(errorMap);
     assert.equal(report.totalWarnings, 1, 'Warning counts did not match');
     assert.equal(report.totalErrors, 0, 'Error counts did not match - Found non-zero errors');
-    assert.equal(report.items[0].warnings[0].message, expectedWarningMessage, 'max length warning did not match');
+    assert(!!report.warnings?.[expectedWarningMessage], 'Max length warning did not match');
 
     metadata.fields.pop();
   });
@@ -342,7 +374,7 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'max length message did not match');
+    assert(!!report.errors?.[expectedErrorMessage], 'Max length error did not match');
 
     metadata.fields.pop();
   });
@@ -385,7 +417,7 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'integer overflow error message did not match');
+    assert(!!report.errors?.[expectedErrorMessage], 'integer overflow error message did not match');
     metadata.fields.pop();
   });
 
@@ -405,12 +437,19 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
-    assert.equal(report.items[0].fieldName, expectedInvalidParentField, 'nested expansion field did not match');
-    assert.equal(report.items[0].resourceName, expectedInvalidParentResource, 'nested expansion resource did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].sourceModel, expectedInvalidSourceModel, 'Expansion resource did not match');
+    assert(!!report.errors?.[expectedErrorMessage], 'nested expansion error message did not match');
+    assert(
+      !!report.errors[expectedErrorMessage].resources?.[expectedInvalidParentResource]?.fields?.[expectedInvalidParentField],
+      'Expected field value not found'
+    );
     assert.equal(
-      report.items[0].errors[0].occurrences[0].sourceModelField,
+      report.errors[expectedErrorMessage].resources?.[expectedInvalidParentResource]?.fields?.[expectedInvalidParentField]?.sourceModel,
+      expectedInvalidSourceModel,
+      'Expansion resource did not match'
+    );
+    assert.equal(
+      report.errors[expectedErrorMessage].resources?.[expectedInvalidParentResource]?.fields?.[expectedInvalidParentField]
+        ?.sourceModelField,
       expectedInvalidSourceModelField,
       'Expansion field did not match'
     );
@@ -431,9 +470,11 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
-    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
-    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+    assert(!!report.errors?.[expectedErrorMessage], 'nested expansion error message did not match');
+    assert(
+      !!report.errors[expectedErrorMessage].resources?.[expectedInvalidResource]?.fields?.[expectedInvalidField],
+      'Expected field value not found'
+    );
     assert.deepEqual(originalPayload, nestedCollectionPayloadError, 'Payload was modified during validation');
   });
 
@@ -453,12 +494,18 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
-    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
-    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].sourceModel, expectedInvalidSourceModel, 'Expansion resource did not match');
+    assert(!!report.errors?.[expectedErrorMessage], 'nested expansion error message did not match');
+    assert(
+      !!report.errors[expectedErrorMessage].resources?.[expectedInvalidResource]?.fields?.[expectedInvalidField],
+      'Expected field value not found'
+    );
     assert.equal(
-      report.items[0].errors[0].occurrences[0].sourceModelField,
+      report.errors[expectedErrorMessage].resources?.[expectedInvalidResource]?.fields?.[expectedInvalidField]?.sourceModel,
+      expectedInvalidSourceModel,
+      'Expansion resource did not match'
+    );
+    assert.equal(
+      report.errors[expectedErrorMessage].resources?.[expectedInvalidResource]?.fields?.[expectedInvalidField]?.sourceModelField,
       expectedInvalidSourceModelField,
       'Expansion field did not match'
     );
@@ -491,9 +538,11 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
-    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
-    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
+    assert(!!report.errors?.[expectedErrorMessage], 'nested expansion error message did not match');
+    assert(
+      !!report.errors[expectedErrorMessage].resources?.[expectedInvalidResource]?.fields?.[expectedInvalidField],
+      'Expected field value not found'
+    );
   });
 
   it('should find error when nested collection expansion has type error', async () => {
@@ -512,12 +561,18 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'nested expansion error message did not match');
-    assert.equal(report.items[0].fieldName, expectedInvalidField, 'nested expansion field did not match');
-    assert.equal(report.items[0].resourceName, expectedInvalidResource, 'nested expansion resource did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].sourceModel, expectedInvalidSourceModel, 'Expansion resource did not match');
+    assert(!!report.errors?.[expectedErrorMessage], 'nested expansion error message did not match');
+    assert(
+      !!report.errors[expectedErrorMessage].resources?.[expectedInvalidResource]?.fields?.[expectedInvalidField],
+      'Expected field value not found'
+    );
     assert.equal(
-      report.items[0].errors[0].occurrences[0].sourceModelField,
+      report.errors[expectedErrorMessage].resources?.[expectedInvalidResource]?.fields?.[expectedInvalidField]?.sourceModel,
+      expectedInvalidSourceModel,
+      'Expansion resource did not match'
+    );
+    assert.equal(
+      report.errors[expectedErrorMessage].resources?.[expectedInvalidResource]?.fields?.[expectedInvalidField]?.sourceModelField,
       expectedInvalidSourceModelField,
       'Expansion field did not match'
     );
@@ -555,19 +610,40 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 4, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage1, 'error message did not match');
-    assert.equal(report.items[1].errors[0].message, expectedErrorMessage2, 'error message did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].count, 2, 'error occurence count did not match');
-    assert.equal(report.items[1].errors[0].occurrences[0].count, 2, 'error occurence count did not match');
-    assert.equal(report.items[0].fieldName, expectedField1, 'field did not match');
-    assert.equal(report.items[1].fieldName, expectedField2, 'nested expansion field did not match');
-    assert.equal(report.items[0].resourceName, expectedResource1, 'resource did not match');
-    assert.equal(report.items[1].resourceName, expectedResource2, 'nested expansion resource did not match');
-    assert.equal(report.items[1].errors[0].occurrences[0].sourceModel, expectedInvalidSourceModel, 'expansion resource did not match');
+
+    assert(!!report.errors?.[expectedErrorMessage1], 'error message did not match');
+    assert(!!report.errors?.[expectedErrorMessage2], 'error message did not match');
+
+    assert(
+      !!report.errors[expectedErrorMessage1].resources?.[expectedResource1]?.fields?.[expectedField1],
+      'Expected field value not found'
+    );
     assert.equal(
-      report.items[1].errors[0].occurrences[0].sourceModelField,
+      report.errors[expectedErrorMessage1].resources?.[expectedResource1]?.fields?.[expectedField1]?.count,
+      2,
+      'Error count did not match'
+    );
+
+    assert(
+      !!report.errors[expectedErrorMessage2].resources?.[expectedResource2]?.fields?.[expectedField2],
+      'Nested expansion field did not match'
+    );
+    assert.equal(
+      report.errors[expectedErrorMessage2].resources?.[expectedResource2]?.fields?.[expectedField2]?.count,
+      2,
+      'Error count did not match'
+    );
+
+    assert.equal(
+      report.errors[expectedErrorMessage2].resources?.[expectedResource2]?.fields?.[expectedField2]?.sourceModel,
+      expectedInvalidSourceModel,
+      'Expansion resource did not match'
+    );
+
+    assert.equal(
+      report.errors[expectedErrorMessage2].resources?.[expectedResource2]?.fields?.[expectedField2]?.sourceModelField,
       expectedInvalidSourceModelField,
-      'expansion field did not match'
+      'Expansion field did not match'
     );
   });
 
@@ -587,15 +663,28 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage1, 'error message did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].count, 1, 'error occurence count did not match');
-    assert.equal(report.items[0].fieldName, expectedField1, 'field did not match');
-    assert.equal(report.items[0].resourceName, expectedResource1, 'resource did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].sourceModel, expectedInvalidSourceModel, 'expansion resource did not match');
+    assert(!!report.errors?.[expectedErrorMessage1], 'error message did not match');
+
+    assert(
+      !!report.errors[expectedErrorMessage1].resources?.[expectedResource1]?.fields?.[expectedField1],
+      'Nested expansion field did not match'
+    );
     assert.equal(
-      report.items[0].errors[0].occurrences[0].sourceModelField,
+      report.errors[expectedErrorMessage1].resources?.[expectedResource1]?.fields?.[expectedField1]?.count,
+      1,
+      'Error count did not match'
+    );
+
+    assert.equal(
+      report.errors[expectedErrorMessage1].resources?.[expectedResource1]?.fields?.[expectedField1]?.sourceModel,
+      expectedInvalidSourceModel,
+      'Expansion resource did not match'
+    );
+
+    assert.equal(
+      report.errors[expectedErrorMessage1].resources?.[expectedResource1]?.fields?.[expectedField1]?.sourceModelField,
       expectedInvalidSourceModelField,
-      'expansion field did not match'
+      'Expansion field did not match'
     );
   });
 
@@ -616,12 +705,22 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error counts did not match');
-    assert.equal(report.items[0].resourceName, expectedResource, 'resource did not match');
-    assert.equal(report.items[0].fieldName, expectedField, 'field did not match');
-    assert.equal(report.items[0].errors[0].message, expectedErrorMessage, 'enum error message did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].lookupValue, expectedEnumValue, 'enum lookup value did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].sourceModel, expectedSourceModel, 'expanded resource did not match');
-    assert.equal(report.items[0].errors[0].occurrences[0].sourceModelField, expectedSourceModelField, 'expanded field did not match');
+    assert(!!report.errors?.[expectedErrorMessage], 'enum error message did not match');
+    assert(!!report.errors[expectedErrorMessage].resources?.[expectedResource]?.fields?.[expectedField], 'field did not match');
+    assert(
+      !!report.errors[expectedErrorMessage].resources?.[expectedResource]?.fields?.[expectedField]?.lookups?.[expectedEnumValue],
+      'enum lookup value did not match'
+    );
+    assert.equal(
+      report.errors[expectedErrorMessage].resources?.[expectedResource]?.fields?.[expectedField]?.sourceModel,
+      expectedSourceModel,
+      'expanded resource did not match'
+    );
+    assert.equal(
+      report.errors[expectedErrorMessage].resources?.[expectedResource]?.fields?.[expectedField]?.sourceModelField,
+      expectedSourceModelField,
+      'expanded field did not match'
+    );
   });
 
   it('should not find errors if there are extra properties on top-level alongside "value"', async () => {
@@ -635,5 +734,33 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 0, 'Error counts did not match');
+  });
+
+  it('should accumulate key fields if they exist on the failed record', async () => {
+    let errorMap = {};
+    const resourceName = 'Property';
+
+    const expectedMediaKeys = ['mediakey1', 'mediakey2'];
+    const expectedRoomKeys = ['roomkey1', 'roomkey2'];
+    const expectedPropertyKeys = ['listingkey1'];
+
+    errorMap = validate({
+      jsonSchema: schema,
+      jsonPayload: keyFieldPayloadMulti,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    const expectedErrorMessage = 'MUST be equal to one of the allowed values';
+
+    assert.equal(report.totalErrors, 5, 'Error counts did not match');
+    assert(!!report.errors?.[expectedErrorMessage], 'Error message did not match');
+
+    assert.deepEqual(
+      report.errors?.[expectedErrorMessage]?.resources?.[resourceName]?.keys,
+      expectedPropertyKeys.concat(expectedMediaKeys).concat(expectedRoomKeys),
+      'Record keys did not match'
+    );
   });
 });
