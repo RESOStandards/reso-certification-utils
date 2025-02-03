@@ -30,7 +30,7 @@ const resetReplicationStateForTests = () => {
   });
 };
 
-describe('Schema validation tests', async () => {
+describe('Schema report generation tests', async () => {
   beforeEach(resetReplicationStateForTests);
 
   it('Should generate valid reports for a simple payload', async () => {
