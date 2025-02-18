@@ -183,7 +183,8 @@ const buildRecipientEndorsementPath = ({
   recipientUoi,
   endorsementName,
   version,
-  currentOrArchived = 'current'
+  currentOrArchived = 'current',
+  outputPath
 } = {}) => {
   //TODO: clean up
   if (!resultsPath) throw Error('resultsPath is required!');
@@ -197,7 +198,7 @@ const buildRecipientEndorsementPath = ({
   if (!isValidVersion(endorsementName, version)) throw new Error(`Invalid version: ${version}`);
 
   return join(
-    process.cwd(),
+    outputPath || process.cwd(),
     resultsPath,
     `${endorsementName}-${version}`,
     `${providerUoi}-${providerUsi}`,
@@ -216,7 +217,7 @@ const buildRecipientEndorsementPath = ({
  * @param {String} providerUsi
  * @param {String} recipientUoi
  */
-const archiveEndorsement = ({ resultsPath, providerUoi, providerUsi, recipientUoi, endorsementName, version } = {}) => {
+const archiveEndorsement = ({ resultsPath, providerUoi, providerUsi, recipientUoi, endorsementName, version, outputPath } = {}) => {
   const srcPath = join(
       buildRecipientEndorsementPath({
         resultsPath,
@@ -224,7 +225,8 @@ const archiveEndorsement = ({ resultsPath, providerUoi, providerUsi, recipientUo
         providerUsi,
         recipientUoi,
         endorsementName,
-        version
+        version,
+        outputPath
       })
     ),
     destPath = join(
@@ -235,7 +237,8 @@ const archiveEndorsement = ({ resultsPath, providerUoi, providerUsi, recipientUo
         recipientUoi,
         endorsementName,
         version,
-        currentOrArchived: 'archived'
+        currentOrArchived: 'archived',
+        outputPath
       }),
       getFileSafeIso8601Timestamp()
     );
@@ -358,7 +361,7 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
       ...fields.reduce(
         (
           acc,
-          { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true, isCollection = false }
+          { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true, ...rest }
         ) => {
           if (!acc[resourceName]) {
             acc[resourceName] = {};
@@ -381,10 +384,11 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
             typeName,
             nullable,
             isExpansion,
-            isCollection,
             isLookupField,
             isComplexType: isComplexType || (!isExpansion && !type?.startsWith('Edm.') && !isLookupField),
-            ddWikiUrl
+            annotations,
+            ddWikiUrl,
+            ...rest
           };
 
           if (isLookupField && lookupMap?.[type]) {
@@ -596,6 +600,20 @@ const resolveFilePathSync = ({ outputPath, filename }) => {
   return resolve(normalize(join(outputPath && outputPath?.length ? outputPath : '', filename)));
 };
 
+/**
+ * 
+ * @param {any} value 
+ * @returns boolean
+ * 
+ * Frequency for a field should only be incrmemented if the corrsponding
+ * value is valid. A valid value shouldn't be `null`, `undefined`, or an
+ * empty list.
+ */
+const isValidValue = value => {
+  if(Array.isArray(value))  return value.filter(Boolean)?.length > 0;
+  return value !== null && value !== undefined;
+};
+
 module.exports = {
   NOT_OK,
   DEFAULT_DD_VERSION,
@@ -626,5 +644,6 @@ module.exports = {
   parseBooleanValue,
   getErrorHandler,
   readZipFileContents,
-  resolveFilePathSync
+  resolveFilePathSync,
+  isValidValue
 };

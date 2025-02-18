@@ -2,7 +2,7 @@
 
 require('dotenv').config();
 
-const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
+const { schema, combineErrors, generateJsonSchema, validate, generateReports, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
 const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification/data-dictionary');
 const { runUpiTests, parseUpi } = require('./lib/certification/upi');
@@ -31,6 +31,7 @@ if (require?.main === module) {
     .option('-v, --version <string>', 'Data Dictionary version to use', DEFAULT_DD_VERSION)
     .option('-l, --limit <int>', 'Number of records to sample per strategy, resource, and expansion', DEFAULT_LIMIT)
     .option('-S, --strictMode <boolean>', 'Use strict mode', true)
+    .option('-o, --outputPath <string>', 'Name of directory for results')
     .action(options =>
       runDDTests({
         ...options,
@@ -137,6 +138,7 @@ if (require?.main === module) {
     .option('-a, --additionalProperties', 'Pass this flag to allow additional properties in the schema. False by default')
     .option('-v, --version <string>', 'The DD version of the metadata report')
     .option('-p, --payloadPath <string>', 'Path to the payload file OR directory/zip containing files that need to be validated')
+    .option('-c, --createReports', 'Option to generate metadata and availability reports for RCF testing')
     .option('-r, --resourceName <string>', 'Resource name to validate against. Required if --version is passed when validating.')
     .option('-k, --disableKeys', 'Pass this flag to remove record keys from the error report')
     .description('Generate a schema or validate a payload against a schema')
@@ -186,5 +188,6 @@ module.exports = {
   convertMetadata,
   combineErrors,
   generateJsonSchema,
-  validate
+  validate,
+  generateReports
 };
