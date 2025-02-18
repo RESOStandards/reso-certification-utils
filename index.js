@@ -31,6 +31,7 @@ if (require?.main === module) {
     .option('-v, --version <string>', 'Data Dictionary version to use', DEFAULT_DD_VERSION)
     .option('-l, --limit <int>', 'Number of records to sample per strategy, resource, and expansion', DEFAULT_LIMIT)
     .option('-S, --strictMode <boolean>', 'Use strict mode', true)
+    .option('-o, --outputPath <string>', 'Name of directory for results')
     .action(options =>
       runDDTests({
         ...options,
