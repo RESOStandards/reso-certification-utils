@@ -217,7 +217,7 @@ const buildRecipientEndorsementPath = ({
  * @param {String} providerUsi
  * @param {String} recipientUoi
  */
-const archiveEndorsement = ({ resultsPath, providerUoi, providerUsi, recipientUoi, endorsementName, version } = {}) => {
+const archiveEndorsement = ({ resultsPath, providerUoi, providerUsi, recipientUoi, endorsementName, version, outputPath } = {}) => {
   const srcPath = join(
       buildRecipientEndorsementPath({
         resultsPath,
@@ -225,7 +225,8 @@ const archiveEndorsement = ({ resultsPath, providerUoi, providerUsi, recipientUo
         providerUsi,
         recipientUoi,
         endorsementName,
-        version
+        version,
+        outputPath
       })
     ),
     destPath = join(
@@ -236,7 +237,8 @@ const archiveEndorsement = ({ resultsPath, providerUoi, providerUsi, recipientUo
         recipientUoi,
         endorsementName,
         version,
-        currentOrArchived: 'archived'
+        currentOrArchived: 'archived',
+        outputPath
       }),
       getFileSafeIso8601Timestamp()
     );
