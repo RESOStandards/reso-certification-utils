@@ -183,7 +183,8 @@ const buildRecipientEndorsementPath = ({
   recipientUoi,
   endorsementName,
   version,
-  currentOrArchived = 'current'
+  currentOrArchived = 'current',
+  outputPath
 } = {}) => {
   //TODO: clean up
   if (!resultsPath) throw Error('resultsPath is required!');
@@ -197,7 +198,7 @@ const buildRecipientEndorsementPath = ({
   if (!isValidVersion(endorsementName, version)) throw new Error(`Invalid version: ${version}`);
 
   return join(
-    process.cwd(),
+    outputPath || process.cwd(),
     resultsPath,
     `${endorsementName}-${version}`,
     `${providerUoi}-${providerUsi}`,
