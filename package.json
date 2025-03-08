@@ -33,7 +33,7 @@
     "ajv-errors": "^3.0.0",
     "ajv-formats": "^2.1.1",
     "aws-sdk": "^2.1354.0",
-    "axios": "^0.28.0",
+    "axios": "^1.8.2",
     "chalk": "^4.1.2",
     "change-case": "^5.4.4",
     "commander": "^9.4.0",
