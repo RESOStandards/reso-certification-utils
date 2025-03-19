@@ -233,7 +233,8 @@ const nestedPayloadError = {
     {
       ListAgent: {
         Foo: 'bar',
-        MemberAlternateId: 'fooo'
+        MemberAlternateId: 'fooo',
+        MemberDesignation: ['Graduate, REALTOR Institute / GRI']
       },
       Country: 'CA',
       StateOrProvince: 'ON',
