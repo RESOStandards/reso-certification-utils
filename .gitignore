@@ -119,3 +119,4 @@ schema-validation-report.json
 results/
 *.resoscript
 upi-validation-report.json
+reso-variations.json
