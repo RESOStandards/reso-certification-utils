@@ -424,10 +424,13 @@ describe('Schema validation tests', async () => {
   it('should show the nested expansion resource and field when expansion field is invalid', async () => {
     let errorMap = {};
     const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
+    const expectedErrorMessage2 = 'MUST be equal to one of the allowed values';
     const expectedInvalidParentField = 'ListAgent';
     const expectedInvalidParentResource = 'Property';
     const expectedInvalidSourceModel = 'Member';
     const expectedInvalidSourceModelField = 'Foo';
+    const expectedInvalidSourceModelField2 = 'MemberDesignation';
+    const expectedInvalidLookup = 'Graduate, REALTOR Institute / GRI';
     errorMap = validate({
       jsonSchema: schema,
       jsonPayload: nestedPayloadError,
@@ -436,10 +439,15 @@ describe('Schema validation tests', async () => {
       errorMap
     });
     const report = combineErrors(errorMap);
-    assert.equal(report.totalErrors, 1, 'Error counts did not match');
+    assert.equal(report.totalErrors, 2, 'Error counts did not match');
     assert(!!report.errors?.[expectedErrorMessage], 'nested expansion error message did not match');
+    assert(!!report.errors?.[expectedErrorMessage2], 'nested expansion error message did not match');
     assert(
       !!report.errors[expectedErrorMessage].resources?.[expectedInvalidParentResource]?.fields?.[expectedInvalidParentField],
+      'Expected field value not found'
+    );
+    assert(
+      !!report.errors[expectedErrorMessage2].resources?.[expectedInvalidParentResource]?.fields?.[expectedInvalidParentField],
       'Expected field value not found'
     );
     assert.equal(
@@ -448,10 +456,28 @@ describe('Schema validation tests', async () => {
       'Expansion resource did not match'
     );
     assert.equal(
+      report.errors[expectedErrorMessage2].resources?.[expectedInvalidParentResource]?.fields?.[expectedInvalidParentField]?.sourceModel,
+      expectedInvalidSourceModel,
+      'Expansion resource did not match'
+    );
+    assert.equal(
       report.errors[expectedErrorMessage].resources?.[expectedInvalidParentResource]?.fields?.[expectedInvalidParentField]
         ?.sourceModelField,
       expectedInvalidSourceModelField,
       'Expansion field did not match'
+    );
+    assert.equal(
+      report.errors[expectedErrorMessage2].resources?.[expectedInvalidParentResource]?.fields?.[expectedInvalidParentField]
+        ?.sourceModelField,
+      expectedInvalidSourceModelField2,
+      'Expansion field did not match'
+    );
+    assert.equal(
+      report.errors[expectedErrorMessage2].resources?.[expectedInvalidParentResource]?.fields?.[expectedInvalidParentField]?.lookups?.[
+        expectedInvalidLookup
+      ]?.count,
+      1,
+      'Invalid lookup count did not match'
     );
   });
 
