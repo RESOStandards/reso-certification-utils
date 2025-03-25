@@ -137,7 +137,40 @@ The following files are related to metadata testing:
 There are also artifacts produced by Cucumber, `data-dictionary-2.0.html` and `data-dictionary-2.0.json`. The HTML file is useful for diagnosing metadata errors and can be opened in a local browser.
 
 ## Variations Report
-Variations are contained within the `data-dictionary-variations.json` file. The format should be fairly self-explanatory in that each resource, field, or enumeration can have zero or more suggestions. 
+Variations are contained within the `data-dictionary-variations.json` file. The format should be fairly self-explanatory in that each resource, field, or enumeration can have zero or more suggestions.
+Provider Variations Review Overview
+Data elements are flagged in two ways:
+
+Machine-based suggestions, generated automatically.
+Fast Track Subgroup suggestions.
+Providers may submit the suggestions that they would like to dispute or have ignored as local data elements.
+
+Handling Disputed Suggestions
+Machine-Based Suggestions
+RESO staff may ignore the machine-based suggestion and the data element would remain as a local field or lookup.
+RESO staff may make a revised suggestion, different from the disputed machine-based suggestion.
+Disputes on revised suggestions go to the Fast Track Subgroup for consideration.
+Example
+
+Source Data Element: Carport-One Car under ParkingFeatures
+Machine-Based Suggestion: Carport under ParkingFeatures
+A request is made to ignore the suggestion.
+Revised Suggestion: Carport AND CoveredSpaces
+The revised suggestion is disputed.
+The Fast Track Subgroup will review the item.
+Fast Track Subgroup Suggestions
+The subgroup approves mapping suggestions for nonstandard data elements to standard Data Dictionary data elements.
+Organizations being certified may dispute suggestions made by the subgroup.
+Disputed data elements go back to the subgroup for further consideration.
+Example
+
+Source Data Element: Gas Stove under Appliances
+Fast Track Suggestion: Gas Range under Appliances
+Suggestion is disputed.
+The Fast Track Subgroup reviews the suggestion.
+May offer a new suggestion.
+May offer an additional suggestion.
+May elect to ignore the data element and not offer a suggestion.
 
 This is similar to the Variations Report in the DD 2.0 Preflight Check.
 
