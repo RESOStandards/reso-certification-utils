@@ -35,19 +35,28 @@ Options:
 * The limit (`-l` or `--limit`) can be changed in pre-testing, but the default will be used for certification
 * The tests are fast-fail, meaning that if the metadata tests don't succeed, data sampling won't be done since the output of the first step is required by others. Once the metadata tests pass, each subsequent test can be run individually
 
-<br />
 
 # Data Dictionary 1.7
-For Data Dictionary 1.7, the following tests are run:
-1. **Metadata Validation** (RESO Commander) - Includes type, synonym checking, and Lookup Resource validation
-2. **Data Availability Report** (RESO Cert Utils) - Data Availability sampling using the [`replicate` option](/lib/replication/README.md) and the TimestampDesc strategy
+To run Data Dictionary 1.7 tests, use the command:
 
 ```
 $ reso-certification-utils runDDTests -v 1.7 -p your-config.json -a
 ```
 
+The following tests are run:
+1. **Metadata Validation** (RESO Commander) - Includes type, synonym checking, and Lookup Resource validation
+2. **Data Availability Report** (RESO Cert Utils) - Data Availability sampling using the [`replicate` option](/lib/replication/README.md) and the TimestampDesc strategy
+
+
 # Data Dictionary 2.0
-For Data Dictionary 2.0, the following tests are run:
+
+To run Data Dictionary 2.0 tests, use the command:
+
+```
+$ reso-certification-utils runDDTests -v 2.0 -p your-config.json -a
+```
+
+The following tests are run:
 1. **Metadata Validation** (RESO Commander) - Includes type, synonym checking, and Lookup Resource validation
 2. **Variations Report** (RESO Cert Utils) - Uses the [`findVariations` option](/lib/variations/README.md) with the output of step (1)
   * Note: You will need auth info in your `.env` file to access the Variations Service for mappings
@@ -62,11 +71,7 @@ For Data Dictionary 2.0, the following tests are run:
   * This is enabled by default since the `-S` or `--strictMode` flag is required for certification
   * Schema validation checks can be skipped by passing `-S false` or `--strictMode false`
   * This step is actually done in conjunction with step (3) but is listed for clarity
- 
 
-```
-$ reso-certification-utils runDDTests -v 2.0 -p your-config.json -a
-```
 
 # Sampling
 
@@ -91,6 +96,7 @@ Records are hashed in memory, without anything being written to disk, for a larg
 There are parameters used internally that are designed to help with "polite behavior" so the client doesn't get rate limited, since waiting makes the process go slower. 
 
 What seems to work best so far is a 1s delay between requests and a 60m delay if the client encounters an HTTP 429 status code. Please see the [`replicate` option](/lib/replication/README.md) if that's something you're interested in experimenting with. 
+
 
 # Report Files
 When using the `runDDTests` option, a config file is required with both Unique Organization Id (UOI) and Unique System Id (USI) for the provider and UOI for the recipient. 
@@ -126,7 +132,7 @@ The directory structure is as follows:
     + ...
 ```
 
-## Metadata Testing
+# Metadata Testing
 The following files are related to metadata testing:
 
 * `metadata.xml` - The OData XML Metadata downloaded from the provider
@@ -136,58 +142,75 @@ The following files are related to metadata testing:
 
 There are also artifacts produced by Cucumber, `data-dictionary-2.0.html` and `data-dictionary-2.0.json`. The HTML file is useful for diagnosing metadata errors and can be opened in a local browser.
 
-## Variations Report
-Variations are contained within the `data-dictionary-variations.json` file. The format should be fairly self-explanatory in that each resource, field, or enumeration can have zero or more suggestions.
-Provider Variations Review Overview
-Data elements are flagged in two ways:
+# Variations Report
+RESO uses machine-based and human suggestions during the Variations review process.
 
-Machine-based suggestions, generated automatically.
-Fast Track Subgroup suggestions.
-Providers may submit the suggestions that they would like to dispute or have ignored as local data elements.
+Suggested mappings are outputted to the `data-dictionary-variations.json` file. The format should be fairly self-explanatory in that each resource, field, or enumeration can have zero or more suggestions. If there are suggestions, they need to be resolved. 
 
-Handling Disputed Suggestions
-Machine-Based Suggestions
-RESO staff may ignore the machine-based suggestion and the data element would remain as a local field or lookup.
-RESO staff may make a revised suggestion, different from the disputed machine-based suggestion.
-Disputes on revised suggestions go to the Fast Track Subgroup for consideration.
-Example
+## Machine Suggestions
+* **Substring** - case-insensitive substring matching (with special characters removed).
+* **Edit Distance** - [**Levenshtein distance**](https://en.wikipedia.org/wiki/Levenshtein_distance), which flags similar Data Dictionary terms that vary by up to 25% of the word length. For example, if a term is four characters, anything is found within one character of an existing Data Dictionary element it would be flagged.
 
-Source Data Element: Carport-One Car under ParkingFeatures
-Machine-Based Suggestion: Carport under ParkingFeatures
-A request is made to ignore the suggestion.
-Revised Suggestion: Carport AND CoveredSpaces
-The revised suggestion is disputed.
-The Fast Track Subgroup will review the item.
-Fast Track Subgroup Suggestions
-The subgroup approves mapping suggestions for nonstandard data elements to standard Data Dictionary data elements.
-Organizations being certified may dispute suggestions made by the subgroup.
-Disputed data elements go back to the subgroup for further consideration.
-Example
+Machine suggestions only apply to terms that are greater than three characters in length. RESO expects some false positives for machine-based matching. Similar to a spelling checker, these items can be ignored by RESO staff and won't be flagged again once they are.
 
-Source Data Element: Gas Stove under Appliances
-Fast Track Suggestion: Gas Range under Appliances
-Suggestion is disputed.
-The Fast Track Subgroup reviews the suggestion.
-May offer a new suggestion.
-May offer an additional suggestion.
-May elect to ignore the data element and not offer a suggestion.
+**Close and Exact Matches**
+Machine suggestions will also classify items as Close or Exact Matches, which are case-insensitive with all special characters removed.
+* **Close Matches** - elements that match what's in the Data Dictionary within one character.
+  * Example: DD has Canceled but provider has Cancelled.
+* **Exact Matches** - elements that only vary by what's in the Data Dictionary by a space or special character.
+  * Example: DD has Built-in Gas Oven but provider has Built In Gas Oven.
+ 
+Close or Exact Matches MUST be resolved. If providers disagree with the suggestions with either of these matches, it's usually a result of something needing further review in the Data Dictionary and needs to be surfaced with that workgroup. 
 
-This is similar to the Variations Report in the DD 2.0 Preflight Check.
+## Human Suggestions
+* **Admin Review** - existing or new suggestions provided by RESO staff. 
+* **Fast Track** - existing or new suggestions provided by the RESO Fast Track Subgroup. 
 
-## Sampling and Availability
+## Disputed Suggestions
+Providers may dispute suggestions generated during the Variations Review process by contacting [**RESO Staff**](dev@reso.org).
+
+### Machine Suggestions
+* RESO staff may ignore machine-based suggestions and the corresponding data elements would be classified as local.
+* RESO staff may make a revised suggestion, different from the disputed machine-based suggestion.
+* Disputes on revised suggestions go to the Fast Track Subgroup for consideration.
+
+**Example** 
+
+* Source Data Element: **Carport-One Car** under **ParkingFeatures**
+* Machine-Based Suggestion: **Carport** under **ParkingFeatures**
+* A request is made to ignore the suggestion.
+* Revised Suggestion: **Carport** AND **CoveredSpaces**
+* The revised suggestion is disputed.
+* The Fast Track Subgroup will review the item.
+
+### Fast Track Subgroup Suggestions
+* The subgroup approves mapping suggestions for nonstandard data elements to standard Data Dictionary data elements.
+* Providers being certified may dispute suggestions made by the subgroup.
+* Disputed data elements go back to the subgroup for further consideration.
+
+**Example**
+
+* Source Data Element: **Gas Stove** under **Appliances**
+* Fast Track Suggestion: **Gas Range** under **Appliances**
+* Suggestion is disputed.
+* The Fast Track Subgroup reviews the suggestion.
+* May offer a new suggestion.
+* May offer an additional suggestion.
+* May elect to ignore the data element and not offer a suggestion.
+
+# Sampling and Availability
 There are two files related to sampling and availability:
 * `data-availability-report.json` - Shows raw frequencies and stats for what was sampled
 * `data-availability-responses.json` - Shows the requests that were run during testing
 
-## Schema Validation Errors
+# Schema Validation Errors
 If there are schema validation errors while sampling, the output will be in a file called `data-availability-schema-validation-errors.json`. In this case, there will be no data availability reports, as outlined above. 
 
 The format of the schema validation reports can be [seen in the tests](/test/schema/). These are generally grouped into categories with error messages and counts. 
 
 Schema validation will also fail fast when used with Data Dictionary 2.0 testing, meaning that sampling will stop upon encountering a page of records that has validation errors. If you wish to run schema validation on its own, see the [`validate` action](/lib/schema/README.md). 
 
-This is also used for RESO Common Format testing.
-
+This processs is also used for RESO Common Format testing.
 
 # Questions?
 If you have any questions, please contact [dev@reso.org](dev@reso.org).
