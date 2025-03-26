@@ -179,7 +179,7 @@ Providers may dispute suggestions generated during the Variations Review process
 * Source Data Element: **Carport-One Car** under **ParkingFeatures**
 * Machine-Based Suggestion: **Carport** under **ParkingFeatures**
 * A request is made to ignore the suggestion.
-* Revised Suggestion: **Carport** AND **CoveredSpaces**
+* Revised Suggestion: **Carport** AND **CarportSpaces**
 * The revised suggestion is disputed.
 * The Fast Track Subgroup will review the item.
 
