@@ -1,3 +1,5 @@
+'use strict';
+
 const fs = require('fs');
 const { resolve, normalize, join } = require('path');
 const fse = require('fs-extra');
@@ -507,7 +509,7 @@ const parseBooleanValue = item => {
 };
 
 const createReplicationStateServiceInstance = () => {
-  const replicationStateService = require('./lib/replication/services/replication-state');
+  const replicationStateService = require('./lib/replication/services/state');
   replicationStateService.init();
   return replicationStateService;
 };
