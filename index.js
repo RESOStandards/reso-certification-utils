@@ -98,6 +98,7 @@ if (require?.main === module) {
         jsonSchemaValidation = false,
         maxPageSize,
         top,
+        outputPath,
         ...remainingOptions
       } = options;
 
@@ -109,7 +110,8 @@ if (require?.main === module) {
         jsonSchemaValidation: parseBooleanValue(jsonSchemaValidation),
         strictMode: parseBooleanValue(strictMode),
         maxPageSize: parseInt(maxPageSize) ?? undefined,
-        top: parseInt(top) ?? undefined
+        top: parseInt(top) ?? undefined,
+        shouldSaveResults: !!outputPath
       };
 
       if (bearerToken) {
