@@ -198,14 +198,14 @@ const buildRecipientEndorsementPath = ({
   if (!isValidEndorsement(endorsementName)) throw new Error(`Invalid endorsementName: ${endorsementName}`);
   if (!isValidVersion(endorsementName, version)) throw new Error(`Invalid version: ${version}`);
 
-  return join(
+  return resolve(normalize(join(
     process.cwd(),
     resultsPath,
     `${endorsementName}-${version}`,
     `${providerUoi}-${providerUsi}`,
     recipientUoi,
     currentOrArchived
-  );
+  )));
 };
 
 /**
