@@ -3,7 +3,7 @@ FROM node:slim@sha256:5ae787590295f944e7dc200bf54861bac09bf21b5fdb4c9b97aee7781b
 RUN apt-get update && apt-get install -y git openjdk-17-jre-headless
 
 RUN git clone https://github.com/RESOStandards/web-api-commander --single-branch
-RUN git clone https://github.com/RESOStandards/reso-certification-utils --single-branch --branch 220-optimize-record-hashes
+RUN git clone https://github.com/RESOStandards/reso-certification-utils --single-branch --branch v2.0.0
 
 # clean up
 RUN apt-get remove -y git
