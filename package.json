@@ -1,6 +1,6 @@
 {
   "name": "@reso/reso-certification-utils",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "NodeJS package with reference artifacts and ETL processes for Certification.",
   "main": "index.js",
   "scripts": {
