@@ -28,7 +28,7 @@
     "node": ">=21.1.0"
   },
   "dependencies": {
-    "@reso/reso-certification-etl": "github:RESOStandards/reso-certification-etl#09538aecf7086a42f58d2a0bb5f220a7dcb62863",
+    "@reso/reso-certification-etl": "github:RESOStandards/reso-certification-etl#f4456cd1d50432aa6054c37f88a866e580312f90",
     "ajv": "^8.12.0",
     "ajv-errors": "^3.0.0",
     "ajv-formats": "^2.1.1",
