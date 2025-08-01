@@ -38,9 +38,9 @@ describe('Schema validation tests', async () => {
   const metadata = getReferenceMetadata('2.0');
   const schema = await generateJsonSchema({ metadataReportJson: metadata });
 
-  it('Should validate a valid array type payload', () => {
+  it('Should validate a valid array type payload', async () => {
     let errorMap = {};
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: valuePayload,
       resourceName: 'Property',
@@ -51,9 +51,9 @@ describe('Schema validation tests', async () => {
     assert(report.totalErrors === 0);
   });
 
-  it('Should validate valid non-array type payload', () => {
+  it('Should validate valid non-array type payload', async () => {
     let errorMap = {};
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: nonValuePayload,
       resourceName: 'Property',
@@ -64,9 +64,9 @@ describe('Schema validation tests', async () => {
     assert(report.totalErrors === 0);
   });
 
-  it('Should validate valid payload containing expansions', () => {
+  it('Should validate valid payload containing expansions', async () => {
     let errorMap = {};
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: expansionPayload,
       resourceName: 'Property',
@@ -77,11 +77,11 @@ describe('Schema validation tests', async () => {
     assert(report.totalErrors === 0);
   });
 
-  it('Should find errors in case of type mismatch in simple types', () => {
+  it('Should find errors in case of type mismatch in simple types', async () => {
     let errorMap = {};
     const resourceName = 'Property';
     const fieldName = 'PostalCode';
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: simpleTypeMismatchErrorPayload,
       resourceName: 'Property',
@@ -96,13 +96,13 @@ describe('Schema validation tests', async () => {
     assert(report.errors[expectedErrorMessage].resources?.[resourceName]?.fields?.[fieldName]?.count === 1, 'Expected count did not match');
   });
 
-  it('Should find errors in case of enum mismatch in complex types', () => {
+  it('Should find errors in case of enum mismatch in complex types', async () => {
     let errorMap = {};
     const resourceName = 'Property';
     const fieldName = 'AboveGradeFinishedAreaSource';
     const expectedErrorMessage = 'MUST be equal to one of the allowed values';
     const expectedInvalidEnum = enumMismatchPayload.value[0].AboveGradeFinishedAreaSource;
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: enumMismatchPayload,
       resourceName: 'Property',
@@ -118,9 +118,9 @@ describe('Schema validation tests', async () => {
     );
   });
 
-  it('Should validate even when top level context is @odata instead of @reso', () => {
+  it('Should validate even when top level context is @odata instead of @reso', async () => {
     let errorMap = {};
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: odataKeyPayload,
       resourceName: 'Property',
@@ -131,9 +131,9 @@ describe('Schema validation tests', async () => {
     assert.equal(report.totalErrors, 0, 'Error counts did not match');
   });
 
-  it('Should find error even when top level context is invalid', () => {
+  it('Should find error even when top level context is invalid', async () => {
     try {
-      validate({
+      await validate({
         jsonSchema: schema,
         jsonPayload: invalidPayloadContext,
         resourceName: 'Property',
@@ -145,9 +145,9 @@ describe('Schema validation tests', async () => {
     }
   });
 
-  it('Should properly parse and validate valid string list lookup values', () => {
+  it('Should properly parse and validate valid string list lookup values', async () => {
     let errorMap = {};
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: stringListValidPayload,
       resourceName: 'Property',
@@ -158,7 +158,7 @@ describe('Schema validation tests', async () => {
     assert.equal(report.totalErrors, 0, 'Error counts did not match');
   });
 
-  it('Should convert enum errors to warnings based on validation config', () => {
+  it('Should convert enum errors to warnings based on validation config', async () => {
     let errorMap = {};
     const resourceName = 'Property';
     const fieldName = 'MLSAreaMinor';
@@ -175,7 +175,7 @@ describe('Schema validation tests', async () => {
     const expectedErrorMessage =
       'The following enumerations in the MLSAreaMinor Field were not advertised. This will fail in Data Dictionary 2.1';
 
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: specialEnumFieldsValidPayload,
       resourceName: 'Property',
@@ -193,7 +193,7 @@ describe('Schema validation tests', async () => {
     );
   });
 
-  it('Should convert expansion enum errors to warnings based on validation config', () => {
+  it('Should convert expansion enum errors to warnings based on validation config', async () => {
     let errorMap = {};
     const config = {
       '2.0': {
@@ -210,7 +210,7 @@ describe('Schema validation tests', async () => {
     const expectedErrorMessage =
       'The following enumerations in the ImageSizeDescription Field were not advertised. This will fail in Data Dictionary 2.1';
 
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: expansionIgnoredItem,
       resourceName: 'Property',
@@ -228,13 +228,13 @@ describe('Schema validation tests', async () => {
     );
   });
 
-  it('Should find errors in case of invalid enums in string list', () => {
+  it('Should find errors in case of invalid enums in string list', async () => {
     let errorMap = {};
     const resourceName = 'Property';
     const fieldName = 'AboveGradeFinishedAreaSource';
     const expectedErrorMessage = 'MUST be equal to one of the allowed values';
     const expectedInvalidEnum = 'InvalidEnum';
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: stringListInvalidPayload,
       resourceName: 'Property',
@@ -265,7 +265,7 @@ describe('Schema validation tests', async () => {
       type: 'Edm.String'
     });
     const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: modifiedSchema,
       jsonPayload: stringListWithSpacesAfterCommaValidPayload,
       resourceName: 'Property',
@@ -276,13 +276,13 @@ describe('Schema validation tests', async () => {
     assert.equal(report.totalErrors, 0, 'Error counts did not match');
   });
 
-  it('Should find errors in case of additional properties not advertised in the metadata', () => {
+  it('Should find errors in case of additional properties not advertised in the metadata', async () => {
     let errorMap = {};
     const resourceName = 'Property';
     const version = '2.0';
     const expectedErrorMessage = `ADDITIONAL fields found that are not part of Data Dictionary ${version}`;
     const expectedInvalidField = 'AdditionalProperty';
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: additionalPropertyPayload,
       resourceName: 'Property',
@@ -299,13 +299,13 @@ describe('Schema validation tests', async () => {
     );
   });
 
-  it('Should not have lookup values for non-enum types', () => {
+  it('Should not have lookup values for non-enum types', async () => {
     let errorMap = {};
     const resourceName = 'Property';
     const version = '2.0';
     const expectedErrorMessage = `ADDITIONAL fields found that are not part of Data Dictionary ${version}`;
     const expectedInvalidField = 'AdditionalProperty';
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: additionalPropertyPayload,
       resourceName: 'Property',
@@ -338,7 +338,7 @@ describe('Schema validation tests', async () => {
       maxLength: 5
     });
     const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: modifiedSchema,
       jsonPayload: maxLengthPayloadRCF,
       resourceName: 'Property',
@@ -365,7 +365,7 @@ describe('Schema validation tests', async () => {
       maxLength: 5
     });
     const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: modifiedSchema,
       jsonPayload: maxLengthPayload,
       resourceName: 'Property',
@@ -385,7 +385,7 @@ describe('Schema validation tests', async () => {
     const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
 
     const { AdditionalProperty, ...payload } = additionalPropertyPayload;
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: modifiedSchema,
       jsonPayload: payload,
       resourceName: 'Property',
@@ -408,7 +408,7 @@ describe('Schema validation tests', async () => {
     });
     const modifiedSchema = await generateJsonSchema({ metadataReportJson: metadata });
     const expectedErrorMessage = `MUST be <= ${2 ** 32 - 1}`;
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: modifiedSchema,
       jsonPayload: integerOverflowPayload,
       resourceName: 'Property',
@@ -431,7 +431,7 @@ describe('Schema validation tests', async () => {
     const expectedInvalidSourceModelField = 'Foo';
     const expectedInvalidSourceModelField2 = 'MemberDesignation';
     const expectedInvalidLookup = 'Graduate, REALTOR Institute / GRI';
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: nestedPayloadError,
       resourceName: 'Property',
@@ -487,7 +487,7 @@ describe('Schema validation tests', async () => {
     const expectedInvalidField = 'Media';
     const expectedInvalidResource = 'Property';
     const originalPayload = JSON.parse(JSON.stringify(nestedCollectionPayloadError));
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: nestedCollectionPayloadError,
       resourceName: 'Property',
@@ -511,7 +511,7 @@ describe('Schema validation tests', async () => {
     const expectedInvalidResource = 'Property';
     const expectedInvalidSourceModel = 'Media';
     const expectedInvalidSourceModelField = 'Foo';
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: nestedCollectionPayloadError,
       resourceName: 'Property',
@@ -539,7 +539,7 @@ describe('Schema validation tests', async () => {
 
   it('Should not find error when nested non-collection expansion is null', async () => {
     let errorMap = {};
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: nestedPayloadErrorWithNullExpansion,
       resourceName: 'Property',
@@ -555,7 +555,7 @@ describe('Schema validation tests', async () => {
     const expectedInvalidField = 'Media';
     const expectedInvalidResource = 'Property';
     const expectedErrorMessage = 'MUST be array but found null';
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: nestedCollectionPayloadErrorWithNull,
       resourceName: 'Property',
@@ -578,7 +578,7 @@ describe('Schema validation tests', async () => {
     const expectedInvalidSourceModel = 'Member';
     const expectedInvalidSourceModelField = 'MemberAlternateId';
     const expectedErrorMessage = 'MUST be string or null but found integer';
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: nestedExpansionTypeError,
       resourceName: 'Property',
@@ -606,7 +606,7 @@ describe('Schema validation tests', async () => {
 
   it('Should ignore errors for payload fields with @ in the middle of the string', async () => {
     let errorMap = {};
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: atFieldPayloadError,
       resourceName: 'Property',
@@ -627,7 +627,7 @@ describe('Schema validation tests', async () => {
     const expectedErrorMessage2 = 'Fields MUST be advertised in the metadata';
     const expectedInvalidSourceModel = 'Media';
     const expectedInvalidSourceModelField = 'Foo';
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: expansionErrorMultiValuePayload,
       resourceName: 'Property',
@@ -673,6 +673,43 @@ describe('Schema validation tests', async () => {
     );
   });
 
+  it('Should validate an in-memory zip buffer', async () => {
+    let errorMap = {};
+    const fs = require('fs');
+    const zipBuffer = fs.readFileSync('test/schema/zipped-test-payload.zip');
+    errorMap = await validate({
+      jsonSchema: schema,
+      jsonPayload: zipBuffer,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 0, 'Zip payload was not processed correctly');
+  });
+
+  it('Should error with invalid if zip file is invalid', async () => {
+    let errorMap = {};
+    const expectedResource = '_INVALID_';
+    const expectedErrorMessage = 'INVALID Zip file';
+    const fs = require('fs');
+    const zipBuffer = fs.readFileSync('package.json');
+    errorMap = await validate({
+      jsonSchema: schema,
+      jsonPayload: zipBuffer,
+      resourceName: 'Property',
+      version: '2.0',
+      errorMap
+    });
+    const report = combineErrors(errorMap);
+    assert.equal(report.totalErrors, 1, 'Error count does not match');
+    assert.equal(
+      !!report.payloadErrors[expectedErrorMessage]?.resources[expectedResource],
+      true,
+      'Did not find an invalid resource for invalid zip payload'
+    );
+  });
+
   it('Should correctly classify resource and fields in case of errors in collection expansions', async () => {
     let errorMap = {};
     const expectedField1 = 'Media';
@@ -680,7 +717,7 @@ describe('Schema validation tests', async () => {
     const expectedErrorMessage1 = 'MUST be integer or null but found string';
     const expectedInvalidSourceModel = 'Media';
     const expectedInvalidSourceModelField = 'ImageHeight';
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: collectionExpansionError,
       resourceName: 'Property',
@@ -714,7 +751,7 @@ describe('Schema validation tests', async () => {
     );
   });
 
-  it('Should correctly parse single value expansion errors', () => {
+  it('Should correctly parse single value expansion errors', async () => {
     let errorMap = {};
     const expectedEnumValue = 'Foo';
     const expectedErrorMessage = 'MUST be equal to one of the allowed values';
@@ -722,7 +759,7 @@ describe('Schema validation tests', async () => {
     const expectedField = 'Media';
     const expectedSourceModel = 'Media';
     const expectedSourceModelField = 'ImageSizeDescription';
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: singleValueExpansionError,
       resourceName: 'Property',
@@ -751,7 +788,7 @@ describe('Schema validation tests', async () => {
 
   it('Should not find errors if there are extra properties on top-level alongside "value"', async () => {
     let errorMap = {};
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: await generateJsonSchema({ metadataReportJson: metadata, additionalProperties: true }),
       jsonPayload: topLevelUnadvertisedField,
       resourceName: 'Property',
@@ -770,7 +807,7 @@ describe('Schema validation tests', async () => {
     const expectedRoomKeys = ['roomkey1', 'roomkey2'];
     const expectedPropertyKeys = ['listingkey1'];
 
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: keyFieldPayloadMulti,
       resourceName: 'Property',
