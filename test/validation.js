@@ -691,6 +691,7 @@ describe('Schema validation tests', async () => {
   it('Should error with invalid if zip file is invalid', async () => {
     let errorMap = {};
     const expectedResource = '_INVALID_';
+    const expectedErrorMessage = 'INVALID Zip file';
     const fs = require('fs');
     const zipBuffer = fs.readFileSync('package.json');
     errorMap = await validate({
@@ -702,7 +703,11 @@ describe('Schema validation tests', async () => {
     });
     const report = combineErrors(errorMap);
     assert.equal(report.totalErrors, 1, 'Error count does not match');
-    assert.equal(report.items[0].resourceName, expectedResource, 'Did not find an invalid resource for invalid zip payload');
+    assert.equal(
+      !!report.payloadErrors[expectedErrorMessage]?.resources[expectedResource],
+      true,
+      'Did not find an invalid resource for invalid zip payload'
+    );
   });
 
   it('Should correctly classify resource and fields in case of errors in collection expansions', async () => {
@@ -802,7 +807,7 @@ describe('Schema validation tests', async () => {
     const expectedRoomKeys = ['roomkey1', 'roomkey2'];
     const expectedPropertyKeys = ['listingkey1'];
 
-    errorMap = validate({
+    errorMap = await validate({
       jsonSchema: schema,
       jsonPayload: keyFieldPayloadMulti,
       resourceName: 'Property',
