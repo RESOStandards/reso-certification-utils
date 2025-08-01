@@ -10,6 +10,7 @@ RUN rm -rf web-api-commander/.git
 RUN rm -rf /var/lib/apt/lists/*
 
 ENV WEB_API_COMMANDER_PATH=/web-api-commander
+ENV JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8
 ENV REFERENCE_METADATA_URL=https://services.reso.org/metadata
 ENV NODE_OPTIONS=--max-old-space-size=8192
 ADD ./ ./
