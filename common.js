@@ -346,10 +346,13 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
     }
 
     if (isStringEnumeration(type)) {
-      acc[lookupName].push({ lookupValue, ddWikiUrl, isStringEnumeration: true });
+      // the standard lookup value in the Lookup Resource is represented as an annotated value
+      acc[lookupName].push({ lookupValue, standardLookupValue: annotatedLookupValue, ddWikiUrl, isStringEnumeration: true });
     } else {
       acc[lookupName].push({ lookupValue: annotatedLookupValue, legacyODataValue: lookupValue, ddWikiUrl });
     }
+
+    //if (!!annotatedLookupValue && annotatedLookupValue !== lookupValue) console.log(`lookupName: ${lookupName}, lookupValue: ${lookupValue}, annotatedLookupValue: ${annotatedLookupValue}`);
 
     STATS.numLookups++;
     return acc;
@@ -398,7 +401,7 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
               acc[resourceName][fieldName].legacyODataValues = {};
             }
 
-            Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue, ddWikiUrl, isStringEnumeration }) => {
+            Object.values(lookupMap?.[type]).forEach(({ lookupValue, standardLookupValue, legacyODataValue, ddWikiUrl, isStringEnumeration }) => {
               const lookupName = parseLookupName(type);
 
               //skip legacyOData matching if we're using string enumerations
@@ -413,7 +416,7 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
               }
 
               if (lookupValue?.length) {
-                acc[resourceName][fieldName].lookupValues[lookupValue] = {
+                const value = {
                   type,
                   lookupName,
                   lookupValue,
@@ -421,6 +424,12 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
                   ddWikiUrl,
                   isStringEnumeration
                 };
+
+                if (!!standardLookupValue) {
+                  value.standardLookupValue = standardLookupValue;
+                }
+
+                acc[resourceName][fieldName].lookupValues[lookupValue] = value;
               }
             });
           }
