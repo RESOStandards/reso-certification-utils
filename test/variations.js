@@ -4,6 +4,7 @@ const assert = require('assert');
 const { computeVariations } = require('../index.js');
 const { getReferenceMetadata } = require('../lib/misc/index.js');
 const { MATCHING_STRATEGIES } = require('../lib/variations/index.js');
+const { ANNOTATION_TERM_STANDARD_NAME } = require('@reso/reso-certification-etl/lib/process-metadata.js');
 
 const getRandomNonAlphaNumericCharacter = () => {
   const chars = ['_', '&', '-', ' ', ', '];
@@ -31,7 +32,6 @@ const TEST_FUZZINESS = 0.25,
   DD_1_7 = '1.7',
   DD_2_0 = '2.0',
   DEFAULT_VERSION = DD_1_7;
-
 
 describe('Variations Service reference metadata tests', () => {
   it('Should have required properties when the metadata report is empty', async () => {
@@ -738,6 +738,114 @@ describe('Variations Service suggestion tests', () => {
     assert.equal(remainingSuggestions?.length, 0, 'There should be no remaining suggestions');
   });
 
+  it('Should not flag lookup value suggestions when they are found in the metadata with a valid standard lookup value mapping ', async () => {
+    const suggestionsMap = {
+      Property: {
+        StandardStatus: {
+          'Active UC': {
+            suggestions: [
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'StandardStatus',
+                suggestedLookupValue: 'Active Under Contract'
+              }
+            ]
+          }
+        }
+      }
+    };
+
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'StandardStatus',
+          type: 'StandardStatusLookups'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'StandardStatusLookups',
+          type: 'Edm.String',
+          lookupValue: 'Active UC',
+          annotations: [{ term: ANNOTATION_TERM_STANDARD_NAME, value: 'Active Under Contract' }]
+        }
+      ]
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged when there are no suggestions');
+    assert.equal(fields?.length, 0, 'No field should be flagged when there are no suggestions');
+    assert.equal(lookups?.length, 0, 'There should no lookup suggestions');
+  });
+
+  it('Should flag lookup value suggestions when they are found in the metadata with an invalid standard lookup value mapping ', async () => {
+    const suggestionsMap = {
+      Property: {
+        StandardStatus: {
+          'Active UC': {
+            suggestions: [
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'StandardStatus',
+                suggestedLookupValue: 'Active Under Contract'
+              }
+            ]
+          }
+        }
+      }
+    };
+
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'StandardStatus',
+          type: 'StandardStatusLookups'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'StandardStatusLookups',
+          type: 'Edm.String',
+          lookupValue: 'Active UC',
+          annotations: [{ term: ANNOTATION_TERM_STANDARD_NAME, value: 'Active Under Contrct' }]
+        }
+      ]
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged when there are no suggestions');
+    assert.equal(fields?.length, 0, 'No field should be flagged when there are no suggestions');
+    assert.equal(lookups?.length, 1, 'There should be exactly one lookup value suggestion');
+
+    const [{ resourceName, fieldName, legacyODataValue, lookupValue, suggestions }, ...rest] = lookups;
+
+    assert.equal(resourceName, 'Property', 'The field should be flagged in the "Property" Resource');
+    assert.equal(fieldName, 'StandardStatus', 'The flagged field name should be "StandardStatus"');
+    assert.equal(lookupValue, 'Active UC', 'The flagged field name should be "Active UC"');
+    assert.equal(!legacyODataValue, true, 'There should be no legacyODataValue');
+    assert.equal(rest?.length, 0, 'There should be no other lookup suggestions');
+
+    const [
+      { suggestedResourceName, suggestedFieldName, suggestedLookupValue, suggestedLegacyODataValue, strategy },
+      ...remainingSuggestions
+    ] = suggestions;
+
+    assert.equal(suggestedResourceName, 'Property', 'The suggested resource name should be "Property"');
+    assert.equal(suggestedFieldName, 'StandardStatus', 'The suggested field name should be "StandardStatus"');
+    assert.equal(suggestedLookupValue, 'Active Under Contract', 'The suggested lookup value should be "Active Under Contract"');
+    assert.equal(!suggestedLegacyODataValue, true, 'There should be no suggested legacy OData value');
+    assert.equal(strategy, 'Suggestion', 'Strategy should be "Suggestion"');
+    assert.equal(remainingSuggestions?.length, 0, 'There should be no remaining suggestions');
+  });
+
   it('Should not flag lookup value suggestions when they are found in the metadata and the standard lookup value exists', async () => {
     const suggestionsMap = {
       Property: {
@@ -926,11 +1034,13 @@ describe('Variations Service suggestion tests', () => {
 
   it('Should not flag ignored resources', async () => {
     const metadataReportJson = {
-      fields: [{
-        resourceName: 'Offices',
-        fieldName: 'ModificationTimestamp',
-        type: 'Edm.DateTimeOffset'
-      }],
+      fields: [
+        {
+          resourceName: 'Offices',
+          fieldName: 'ModificationTimestamp',
+          type: 'Edm.DateTimeOffset'
+        }
+      ],
       lookups: []
     };
 
@@ -951,11 +1061,13 @@ describe('Variations Service suggestion tests', () => {
 
   it('Should not flag ignored fields', async () => {
     const metadataReportJson = {
-      fields: [{
-        resourceName: 'Property',
-        fieldName: 'ListPrices',
-        type: 'Edm.Decimal'
-      }],
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ListPrices',
+          type: 'Edm.Decimal'
+        }
+      ],
       lookups: []
     };
 
@@ -978,20 +1090,25 @@ describe('Variations Service suggestion tests', () => {
 
   it('Should not flag ignored enumerations', async () => {
     const metadataReportJson = {
-      fields: [{
-        resourceName: 'Property',
-        fieldName: 'ArchitecturalStyle',
-        type: 'ArchitecturalStyles'
-      }],
-      lookups: [{
-        lookupName: 'ArchitecturalStyles',
-        lookupValue: 'Ranch/1 Story',
-        type: 'Edm.String'
-      }, {
-        lookupName: 'ArchitecturalStyles',
-        lookupValue: 'BsmtRanch',
-        type: 'Edm.String'
-      }]
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ArchitecturalStyle',
+          type: 'ArchitecturalStyles'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'ArchitecturalStyles',
+          lookupValue: 'Ranch/1 Story',
+          type: 'Edm.String'
+        },
+        {
+          lookupName: 'ArchitecturalStyles',
+          lookupValue: 'BsmtRanch',
+          type: 'Edm.String'
+        }
+      ]
     };
 
     const suggestionsMap = {
@@ -1014,20 +1131,24 @@ describe('Variations Service suggestion tests', () => {
 
   it('Should flag Fast Track resource suggestions when present', async () => {
     const metadataReportJson = {
-      fields: [{
-        resourceName: 'Offices',
-        fieldName: 'ModificationTimestamp',
-        type: 'Edm.DateTimeOffset'
-      }],
+      fields: [
+        {
+          resourceName: 'Offices',
+          fieldName: 'ModificationTimestamp',
+          type: 'Edm.DateTimeOffset'
+        }
+      ],
       lookups: []
     };
 
     const suggestionsMap = {
       Offices: {
-        suggestions: [{
-          suggestedResourceName: 'Office',
-          isFastTrack: true
-        }]
+        suggestions: [
+          {
+            suggestedResourceName: 'Office',
+            isFastTrack: true
+          }
+        ]
       }
     };
 
@@ -1043,22 +1164,26 @@ describe('Variations Service suggestion tests', () => {
 
   it('Should flag Fast Track field suggestions when present', async () => {
     const metadataReportJson = {
-      fields: [{
-        resourceName: 'Property',
-        fieldName: 'ListPrices',
-        type: 'Edm.Decimal'
-      }],
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ListPrices',
+          type: 'Edm.Decimal'
+        }
+      ],
       lookups: []
     };
 
     const suggestionsMap = {
       Property: {
         ListPrices: {
-          suggestions: [{
-            suggestedResourceName: 'Property',
-            suggestedFieldName: 'ListPrice',
-            isFastTrack: true
-          }]
+          suggestions: [
+            {
+              suggestedResourceName: 'Property',
+              suggestedFieldName: 'ListPrice',
+              isFastTrack: true
+            }
+          ]
         }
       }
     };
@@ -1075,28 +1200,34 @@ describe('Variations Service suggestion tests', () => {
 
   it('Should flag Fast Track enumerations when present', async () => {
     const metadataReportJson = {
-      fields: [{
-        resourceName: 'Property',
-        fieldName: 'ArchitecturalStyle',
-        type: 'ArchitecturalStyles'
-      }],
-      lookups: [{
-        lookupName: 'ArchitecturalStyles',
-        lookupValue: 'Ranch/1 Story',
-        type: 'Edm.String'
-      }]
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ArchitecturalStyle',
+          type: 'ArchitecturalStyles'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'ArchitecturalStyles',
+          lookupValue: 'Ranch/1 Story',
+          type: 'Edm.String'
+        }
+      ]
     };
 
     const suggestionsMap = {
       Property: {
         ArchitecturalStyle: {
           'Ranch/1 Story': {
-            suggestions: [{
-              suggestedResourceName: 'Property',
-              suggestedFieldName: 'ArchitecturalStyle',
-              suggestedLookupValue: 'Ranch',
-              isFastTrack: true
-            }]
+            suggestions: [
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'ArchitecturalStyle',
+                suggestedLookupValue: 'Ranch',
+                isFastTrack: true
+              }
+            ]
           }
         }
       }
@@ -1114,20 +1245,24 @@ describe('Variations Service suggestion tests', () => {
 
   it('Should flag Admin resource suggestions when present', async () => {
     const metadataReportJson = {
-      fields: [{
-        resourceName: 'Offices',
-        fieldName: 'ModificationTimestamp',
-        type: 'Edm.DateTimeOffset'
-      }],
+      fields: [
+        {
+          resourceName: 'Offices',
+          fieldName: 'ModificationTimestamp',
+          type: 'Edm.DateTimeOffset'
+        }
+      ],
       lookups: []
     };
 
     const suggestionsMap = {
       Offices: {
-        suggestions: [{
-          suggestedResourceName: 'Office',
-          isAdminReview: true
-        }]
+        suggestions: [
+          {
+            suggestedResourceName: 'Office',
+            isAdminReview: true
+          }
+        ]
       }
     };
 
@@ -1143,22 +1278,26 @@ describe('Variations Service suggestion tests', () => {
 
   it('Should flag Admin field suggestions when present', async () => {
     const metadataReportJson = {
-      fields: [{
-        resourceName: 'Property',
-        fieldName: 'ListPrices',
-        type: 'Edm.Decimal'
-      }],
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ListPrices',
+          type: 'Edm.Decimal'
+        }
+      ],
       lookups: []
     };
 
     const suggestionsMap = {
       Property: {
         ListPrices: {
-          suggestions: [{
-            suggestedResourceName: 'Property',
-            suggestedFieldName: 'ListPrice',
-            isAdminReview: true
-          }]
+          suggestions: [
+            {
+              suggestedResourceName: 'Property',
+              suggestedFieldName: 'ListPrice',
+              isAdminReview: true
+            }
+          ]
         }
       }
     };
@@ -1175,28 +1314,34 @@ describe('Variations Service suggestion tests', () => {
 
   it('Should flag Admin lookup suggestions when present', async () => {
     const metadataReportJson = {
-      fields: [{
-        resourceName: 'Property',
-        fieldName: 'ArchitecturalStyle',
-        type: 'ArchitecturalStyles'
-      }],
-      lookups: [{
-        lookupName: 'ArchitecturalStyles',
-        lookupValue: 'Ranch/1 Story',
-        type: 'Edm.String'
-      }]
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ArchitecturalStyle',
+          type: 'ArchitecturalStyles'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'ArchitecturalStyles',
+          lookupValue: 'Ranch/1 Story',
+          type: 'Edm.String'
+        }
+      ]
     };
 
     const suggestionsMap = {
       Property: {
         ArchitecturalStyle: {
           'Ranch/1 Story': {
-            suggestions: [{
-              suggestedResourceName: 'Property',
-              suggestedFieldName: 'ArchitecturalStyle',
-              suggestedLookupValue: 'Ranch',
-              isAdminReview: true
-            }]
+            suggestions: [
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'ArchitecturalStyle',
+                suggestedLookupValue: 'Ranch',
+                isAdminReview: true
+              }
+            ]
           }
         }
       }

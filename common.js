@@ -1,3 +1,5 @@
+'use strict';
+
 const fs = require('fs');
 const { resolve, normalize, join } = require('path');
 const fse = require('fs-extra');
@@ -197,13 +199,17 @@ const buildRecipientEndorsementPath = ({
   if (!isValidEndorsement(endorsementName)) throw new Error(`Invalid endorsementName: ${endorsementName}`);
   if (!isValidVersion(endorsementName, version)) throw new Error(`Invalid version: ${version}`);
 
-  return join(
-    outputPath || process.cwd(),
-    resultsPath,
-    `${endorsementName}-${version}`,
-    `${providerUoi}-${providerUsi}`,
-    recipientUoi,
-    currentOrArchived
+  return resolve(
+    normalize(
+      join(
+        outputPath || process.cwd(),
+        resultsPath,
+        `${endorsementName}-${version}`,
+        `${providerUoi}-${providerUsi}`,
+        recipientUoi,
+        currentOrArchived
+      )
+    )
   );
 };
 
@@ -347,10 +353,13 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
     }
 
     if (isStringEnumeration(type)) {
-      acc[lookupName].push({ lookupValue, ddWikiUrl, isStringEnumeration: true });
+      // the standard lookup value in the Lookup Resource is represented as an annotated value
+      acc[lookupName].push({ lookupValue, standardLookupValue: annotatedLookupValue, ddWikiUrl, isStringEnumeration: true });
     } else {
       acc[lookupName].push({ lookupValue: annotatedLookupValue, legacyODataValue: lookupValue, ddWikiUrl });
     }
+
+    //if (!!annotatedLookupValue && annotatedLookupValue !== lookupValue) console.log(`lookupName: ${lookupName}, lookupValue: ${lookupValue}, annotatedLookupValue: ${annotatedLookupValue}`);
 
     STATS.numLookups++;
     return acc;
@@ -361,7 +370,17 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
       ...fields.reduce(
         (
           acc,
-          { resourceName, fieldName, type, isExpansion = false, isComplexType = false, annotations, typeName = '', nullable = true, ...rest }
+          {
+            resourceName,
+            fieldName,
+            type,
+            isExpansion = false,
+            isComplexType = false,
+            annotations,
+            typeName = '',
+            nullable = true,
+            ...rest
+          }
         ) => {
           if (!acc[resourceName]) {
             acc[resourceName] = {};
@@ -400,31 +419,39 @@ const buildMetadataMap = ({ fields = [], lookups = [] } = {}) => {
               acc[resourceName][fieldName].legacyODataValues = {};
             }
 
-            Object.values(lookupMap?.[type]).forEach(({ lookupValue, legacyODataValue, ddWikiUrl, isStringEnumeration }) => {
-              const lookupName = parseLookupName(type);
+            Object.values(lookupMap?.[type]).forEach(
+              ({ lookupValue, standardLookupValue, legacyODataValue, ddWikiUrl, isStringEnumeration }) => {
+                const lookupName = parseLookupName(type);
 
-              //skip legacyOData matching if we're using string enumerations
-              if (!isStringEnumeration && legacyODataValue?.length) {
-                acc[resourceName][fieldName].legacyODataValues[legacyODataValue] = {
-                  type,
-                  lookupName,
-                  lookupValue,
-                  legacyODataValue,
-                  ddWikiUrl
-                };
-              }
+                //skip legacyOData matching if we're using string enumerations
+                if (!isStringEnumeration && legacyODataValue?.length) {
+                  acc[resourceName][fieldName].legacyODataValues[legacyODataValue] = {
+                    type,
+                    lookupName,
+                    lookupValue,
+                    legacyODataValue,
+                    ddWikiUrl
+                  };
+                }
 
-              if (lookupValue?.length) {
-                acc[resourceName][fieldName].lookupValues[lookupValue] = {
-                  type,
-                  lookupName,
-                  lookupValue,
-                  legacyODataValue,
-                  ddWikiUrl,
-                  isStringEnumeration
-                };
+                if (lookupValue?.length) {
+                  const value = {
+                    type,
+                    lookupName,
+                    lookupValue,
+                    legacyODataValue,
+                    ddWikiUrl,
+                    isStringEnumeration
+                  };
+
+                  if (!!standardLookupValue) {
+                    value.standardLookupValue = standardLookupValue;
+                  }
+
+                  acc[resourceName][fieldName].lookupValues[lookupValue] = value;
+                }
               }
-            });
+            );
           }
 
           if (isExpansion) {
@@ -511,7 +538,7 @@ const parseBooleanValue = item => {
 };
 
 const createReplicationStateServiceInstance = () => {
-  const replicationStateService = require('./lib/replication/services/replication-state');
+  const replicationStateService = require('./lib/replication/services/state');
   replicationStateService.init();
   return replicationStateService;
 };
@@ -601,16 +628,16 @@ const resolveFilePathSync = ({ outputPath, filename }) => {
 };
 
 /**
- * 
- * @param {any} value 
+ *
+ * @param {any} value
  * @returns boolean
- * 
+ *
  * Frequency for a field should only be incrmemented if the corrsponding
  * value is valid. A valid value shouldn't be `null`, `undefined`, or an
  * empty list.
  */
 const isValidValue = value => {
-  if(Array.isArray(value))  return value.filter(Boolean)?.length > 0;
+  if (Array.isArray(value)) return value.filter(Boolean)?.length > 0;
   return value !== null && value !== undefined;
 };
 
