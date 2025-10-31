@@ -6,6 +6,7 @@ const { schema, combineErrors, generateJsonSchema, validate, generateReports, VA
 const { restore } = require('./lib/restore');
 const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification/data-dictionary');
 const { runUpiTests, parseUpi } = require('./lib/certification/upi');
+const { runRcfTests } = require('./lib/certification/reso-common-format');
 const { findVariations, updateVariations, computeVariations, DEFAULT_FUZZINESS, inflateVariations } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
@@ -52,6 +53,17 @@ if (require?.main === module) {
         fromCli: FROM_CLI
       })
     );
+
+  program
+    .command('runRcfTests')
+    .description('Runs RESO Common Format tests')
+    .requiredOption('-p, --pathToRcfResults <string>', 'Path to test results')
+    .option('-a, --additionalProperties', 'Pass this flag to allow additional properties in the schema. False by default')
+    .option('-v, --version <string>', 'Data Dictionary version to use', DEFAULT_DD_VERSION)
+    .option('-m, --metadataReportJson <string>', 'Path to metadata-report.json file')
+    .option('-o, --outputPath <string>', 'Name of directory for results. Defaults to the current directory')
+    .option('-s, --strictMode <boolean>', 'Use strict mode', true)
+    .action(options => runRcfTests({ ...options, fromCli: FROM_CLI }));
 
   program
     .command('findVariations')

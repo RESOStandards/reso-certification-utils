@@ -11,9 +11,9 @@ const { createReplicationStateServiceInstance } = require('../common');
 
 const resetReplicationStateForTests = () => {
   const replicationInstance = createReplicationStateServiceInstance();
+  replicationInstance.resetRecordCountHashMaps();
   [
     replicationInstance.getMetadataMap(),
-    replicationInstance.getRecordCountHashMap(),
     replicationInstance.getResourceAvailabilityMap(),
     replicationInstance.getResponses(),
     replicationInstance.getTopLevelResourceCounts()
