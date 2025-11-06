@@ -294,7 +294,7 @@ const expectDDReportSimple = {
     {
       lookupName: 'org.reso.metadata.enums.City',
       lookupValue: 'SampleCityEnumValue',
-      type: 'Edm.String'
+      type: 'Edm.Int64'
     }
   ]
 };
