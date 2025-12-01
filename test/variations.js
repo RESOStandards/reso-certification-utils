@@ -1356,4 +1356,152 @@ describe('Variations Service suggestion tests', () => {
     assert.equal(lookups?.length, 1, 'Exactly one lookup should be flagged');
     assert.equal(lookups?.[0]?.suggestions?.[0].strategy, MATCHING_STRATEGIES.ADMIN_REVIEW, 'Matching strategy should be Fast Track');
   });
+
+  it('Should not flag Fast Track resource suggestions when many exist and one is present', async () => {
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Properties',
+          fieldName: 'ListPrice',
+          type: 'Edm.Decimal'
+        },
+        {
+          resourceName: 'Property',
+          fieldName: 'ListPrice',
+          type: 'Edm.Decimal'
+        }
+      ]
+    };
+
+    const suggestionsMap = {
+      Properties: {
+        suggestions: [
+          {
+            suggestedResourceName: 'Property',
+            isFastTrack: true
+          },
+          {
+            suggestedResourceName: 'Building',
+            isFastTrack: true
+          }
+        ]
+      }
+    };
+
+    const {
+      variations: { resources = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+  });
+
+  it('Should not flag Fast Track field suggestions when many exist and one is present', async () => {
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ListPrices',
+          type: 'Edm.Decimal'
+        },
+        {
+          resourceName: 'Property',
+          fieldName: 'ListPrice',
+          type: 'Edm.Decimal'
+        }
+      ]
+    };
+
+    const suggestionsMap = {
+      Property: {
+        ListPrices: {
+          suggestions: [
+            {
+              suggestedResourceName: 'Property',
+              suggestedFieldName: 'ListPrice',
+              isFastTrack: true
+            },
+            {
+              suggestedResourceName: 'Property',
+              suggestedFieldName: 'ListPriceLow',
+              isFastTrack: true
+            }
+          ]
+        }
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+    assert.equal(fields?.length, 0, 'No fields should be flagged');
+  });
+
+  it('Should not flag Fast Track enumeration suggestions when many exist and one is present', async () => {
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ArchitecturalStyle',
+          type: 'ArchitecturalStyle'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'ArchitecturalStyle',
+          lookupValue: 'Ranch/1 Story',
+          type: 'Edm.String'
+        },
+        {
+          lookupName: 'ArchitecturalStyle',
+          lookupValue: 'Ranch',
+          type: 'Edm.String'
+        }
+      ]
+    };
+
+    const suggestionsMap = {
+      Property: {
+        ArchitecturalStyle: {
+          'Ranch/1 Story': {
+            suggestions: [
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'ArchitecturalStyle',
+                suggestedLookupValue: 'Ranch',
+                isFastTrack: true
+              },
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'ArchitecturalStyle',
+                suggestedLookupValue: 'Raised Ranch',
+                isFastTrack: true
+              }
+            ]
+          }
+        },
+        ArchitecturalStyle: {
+          'Ranch/1 Story': {
+            suggestions: [
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'ArchitecturalStyle',
+                suggestedLookupValue: 'Ranch',
+                isFastTrack: true
+              }
+            ]
+          }
+        }
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+    assert.equal(fields?.length, 0, 'No fields should be flagged');
+    assert.equal(lookups?.length, 0, 'Exactly one lookup should be flagged');
+  });
 });
