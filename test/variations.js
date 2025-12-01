@@ -1480,7 +1480,40 @@ describe('Variations Service suggestion tests', () => {
               }
             ]
           }
-        },
+        }
+      }
+    };
+
+    const {
+      variations: { resources = [], fields = [], lookups = [] }
+    } = await computeVariations({ metadataReportJson, suggestionsMap });
+
+    assert.equal(resources?.length, 0, 'No resources should be flagged');
+    assert.equal(fields?.length, 0, 'No fields should be flagged');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged');
+  });
+
+  it('Should allow lookups to be remapped using StandardLookupValue in the Lookup Resource', async () => {
+    const metadataReportJson = {
+      fields: [
+        {
+          resourceName: 'Property',
+          fieldName: 'ArchitecturalStyle',
+          type: 'ArchitecturalStyle'
+        }
+      ],
+      lookups: [
+        {
+          lookupName: 'ArchitecturalStyle',
+          lookupValue: 'Ranch/1 Story',
+          type: 'Edm.String',
+          annotations: [{ term: ANNOTATION_TERM_STANDARD_NAME, value: 'Ranch' }]
+        }
+      ]
+    };
+
+    const suggestionsMap = {
+      Property: {
         ArchitecturalStyle: {
           'Ranch/1 Story': {
             suggestions: [
@@ -1488,6 +1521,12 @@ describe('Variations Service suggestion tests', () => {
                 suggestedResourceName: 'Property',
                 suggestedFieldName: 'ArchitecturalStyle',
                 suggestedLookupValue: 'Ranch',
+                isFastTrack: true
+              },
+              {
+                suggestedResourceName: 'Property',
+                suggestedFieldName: 'ArchitecturalStyle',
+                suggestedLookupValue: 'Raised Ranch',
                 isFastTrack: true
               }
             ]
@@ -1502,6 +1541,6 @@ describe('Variations Service suggestion tests', () => {
 
     assert.equal(resources?.length, 0, 'No resources should be flagged');
     assert.equal(fields?.length, 0, 'No fields should be flagged');
-    assert.equal(lookups?.length, 0, 'Exactly one lookup should be flagged');
+    assert.equal(lookups?.length, 0, 'No lookups should be flagged');
   });
 });
