@@ -272,7 +272,7 @@ const expectDDReportSimple = {
     {
       lookupName: 'org.reso.metadata.enums.Country',
       lookupValue: 'CA',
-      type: 'Edm.String',
+      type: 'Edm.Int64',
       annotations: [
         {
           term: 'RESO.DDWikiUrl',
@@ -283,7 +283,7 @@ const expectDDReportSimple = {
     {
       lookupName: 'org.reso.metadata.enums.StateOrProvince',
       lookupValue: 'ON',
-      type: 'Edm.String',
+      type: 'Edm.Int64',
       annotations: [
         {
           term: 'RESO.DDWikiUrl',
@@ -576,7 +576,7 @@ const expectedMultiResourceDDReport = {
     {
       lookupName: 'org.reso.metadata.enums.Country',
       lookupValue: 'CA',
-      type: 'Edm.String',
+      type: 'Edm.Int64',
       annotations: [
         {
           term: 'RESO.DDWikiUrl',
@@ -587,7 +587,7 @@ const expectedMultiResourceDDReport = {
     {
       lookupName: 'org.reso.metadata.enums.StateOrProvince',
       lookupValue: 'ON',
-      type: 'Edm.String',
+      type: 'Edm.Int64',
       annotations: [
         {
           term: 'RESO.DDWikiUrl',
