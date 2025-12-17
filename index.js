@@ -124,6 +124,7 @@ if (require?.main === module) {
         strictMode: parseBooleanValue(strictMode),
         maxPageSize: parseInt(maxPageSize) ?? undefined,
         top: parseInt(top) ?? undefined,
+        outputPath,
         shouldSaveResults: !!outputPath
       };
 
