@@ -6,7 +6,7 @@ const { schema, combineErrors, generateJsonSchema, validate, generateReports, VA
 const { restore } = require('./lib/restore');
 const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification/data-dictionary');
 const { runUpiTests, parseUpi } = require('./lib/certification/upi');
-const { runRcfTests } = require('./lib/certification/reso-common-format');
+const { runRcfTests, RCF_RESULT_TYPE } = require('./lib/certification/reso-common-format');
 const { findVariations, updateVariations, computeVariations, DEFAULT_FUZZINESS, inflateVariations } = require('./lib/variations');
 const { replicate } = require('./lib/replication');
 const { convertMetadata, convertAndSaveMetadata } = require('./lib/metadata');
@@ -193,10 +193,12 @@ if (require?.main === module) {
 module.exports = {
   VALIDATION_ERROR_MESSAGES,
   DEFAULT_DD_VERSION,
+  RCF_RESULT_TYPE,
   replicate,
   restore,
   runDDTests,
   runUpiTests,
+  runRcfTests,
   parseUpi,
   findVariations,
   computeVariations,
