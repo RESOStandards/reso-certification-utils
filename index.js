@@ -15,9 +15,7 @@ const { DEFAULT_PAGE_SIZE } = require('./lib/replication/utils');
 //Only load commander interpreter if running from the CLI
 if (require?.main === module) {
   const { program } = require('commander');
-
-  let ohai;
-
+  
   /**
    * Ensure fromCli is true for anything run from the command line
    */
