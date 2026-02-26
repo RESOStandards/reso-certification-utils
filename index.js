@@ -16,6 +16,8 @@ const { DEFAULT_PAGE_SIZE } = require('./lib/replication/utils');
 if (require?.main === module) {
   const { program } = require('commander');
 
+  let ohai;
+
   /**
    * Ensure fromCli is true for anything run from the command line
    */
