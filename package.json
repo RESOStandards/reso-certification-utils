@@ -33,16 +33,13 @@
     "ajv": "^8.12.0",
     "ajv-errors": "^3.0.0",
     "ajv-formats": "^2.1.1",
-    "aws-sdk": "^2.1354.0",
     "chalk": "^4.1.2",
-    "change-case": "^5.4.4",
     "commander": "^9.4.0",
 "fast-xml-parser": "^4.4.1",
     "fastest-levenshtein": "^1.0.16",
     "fs-extra": "^10.0.0",
     "humanize-duration": "^3.30.0",
     "mocha": "^11.5.0",
-    "yargs": "^16.2.0",
     "yauzl": "^3.1.1"
   },
   "devDependencies": {
