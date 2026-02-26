@@ -1,6 +1,6 @@
 #! /usr/bin/env node
 
-require('dotenv').config();
+process.loadEnvFile();
 
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
