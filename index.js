@@ -1,6 +1,7 @@
 #! /usr/bin/env node
 
-process.loadEnvFile();
+const { existsSync } = require('fs');
+if (existsSync('.env')) process.loadEnvFile();
 
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
