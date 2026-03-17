@@ -5,6 +5,7 @@ if (existsSync('.env')) process.loadEnvFile();
 
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
+const { backup } = require('./lib/backup');
 const { runDDTests, DEFAULT_LIMIT } = require('./lib/certification/data-dictionary');
 const { runUpiTests, parseUpi } = require('./lib/certification/upi');
 const { findVariations, updateVariations, computeVariations, DEFAULT_FUZZINESS, inflateVariations } = require('./lib/variations');
@@ -172,7 +173,18 @@ if (require?.main === module) {
     .description('(Admin) Restores local or S3 results to a RESO Certification API instance')
     .option('-p, --pathToResults <string>', 'Path to test results')
     .option('-u, --url <string>', 'URL of Certification API')
+    .option('-r, --restoreFromBackup', 'Restore from a backup of a Cert API server')
     .action(options => restore({ ...options, fromCli: FROM_CLI }));
+
+  program
+    .command('backup')
+    .description('(Admin) Backs up reports from a RESO Certification API server')
+    .option('-u, --url <string>', 'URL of Certification API')
+    .option('-p, --pathToBackup <string>', 'Path to store the backup')
+    .option('-d, --dataDictionary', 'Only backup DD and DA reports')
+    .option('-w, --webApi', 'Only backup Web API reports')
+    .option('-s, --skip <number>', 'Skip first n reports')
+    .action(options => backup({ ...options, fromCli: FROM_CLI }));
 
   program.parse();
 }
@@ -180,6 +192,7 @@ if (require?.main === module) {
 module.exports = {
   VALIDATION_ERROR_MESSAGES,
   DEFAULT_DD_VERSION,
+  backup,
   replicate,
   restore,
   runDDTests,
