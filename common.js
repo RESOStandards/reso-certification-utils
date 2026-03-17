@@ -607,6 +607,36 @@ const resolveFilePathSync = ({ outputPath, filename }) => {
   return resolve(normalize(join(outputPath && outputPath?.length ? outputPath : '', filename)));
 };
 
+/**
+ * Checks whether a file or directory exists at the given path.
+ *
+ * @param {String} path the path to check
+ * @returns true if the path exists, false otherwise
+ */
+const checkFileExists = async (path = '') => {
+  try {
+    await fs.promises.access(path);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Determines whether the given string is a valid URL.
+ *
+ * @param {String} url the URL to test
+ * @returns true if valid URL, false otherwise
+ */
+const isValidUrl = (url = '') => {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 module.exports = {
   NOT_OK,
   DEFAULT_DD_VERSION,
@@ -637,5 +667,7 @@ module.exports = {
   parseBooleanValue,
   getErrorHandler,
   readZipFileContents,
-  resolveFilePathSync
+  resolveFilePathSync,
+  checkFileExists,
+  isValidUrl
 };
