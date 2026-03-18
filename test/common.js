@@ -2,7 +2,6 @@
 
 const assert = require('assert');
 const { join } = require('path');
-const { promises: fs } = require('fs');
 const { checkFileExists, isValidUrl } = require('../common');
 
 describe('checkFileExists tests', () => {
