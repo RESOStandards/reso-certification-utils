@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Scheduled RESO Cert API backup -> S3. EventBridge (daily) -> Lambda (container image) -> S3.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: qa
+    AllowedValues: [qa, staging, prod]
+    Description: Deployment target env; drives resource naming.
+  CertApiUrl:
+    Type: String
+    Default: https://certqa.reso.org
+    Description: Root URL of the Cert API to back up.
+  EndorsementsPath:
+    Type: String
+    Default: /api/v1/certification_reports/filter
+    Description: Path to the paginated report-filter endpoint. Misleading env var name, kept for compatibility with lib/misc/data-access/cert-api-client.js.
+  ScheduleExpression:
+    Type: String
+    Default: cron(0 10 * * ? *)
+    Description: EventBridge schedule for the daily backup. Default = 10:00 UTC = 03:00 America/Los_Angeles during PDT (will be 02:00 during PST — EventBridge Rules are UTC-only, so there's a 1h DST drift. Migrate to AWS::Scheduler::Schedule if year-round precision is required). Disable via `aws events disable-rule` during first-deploy testing.
+  AlertEmail:
+    Type: String
+    Default: ''
+    Description: (Optional) email to subscribe to backup failure alerts. Leave blank to skip.
+  ImageUri:
+    Type: String
+    Description: Full ECR image URI for the backup Lambda (pushed out-of-band via `docker push`). Include the tag.
+
+Conditions:
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
+
+Globals:
+  Function:
+    Timeout: 900
+    MemorySize: 3008
+    EphemeralStorage:
+      Size: 4096
+    Architectures: [arm64]
+
+Resources:
+
+  BackupBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub reso-cert-backups-${Environment}-${AWS::AccountId}
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionThenExpire
+            Status: Enabled
+            Transitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 30
+            ExpirationInDays: 365
+            NoncurrentVersionExpirationInDays: 30
+
+  CertApiKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub reso-cert/${Environment}/api-key
+      Description: Admin-tier Cert API key used by the backup Lambda. Put the raw key as the SecretString value after stack deploy.
+
+  BackupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub reso-cert-backup-${Environment}
+      Description: Runs the cert-utils backup CLI against the configured Cert API and uploads output to S3.
+      PackageType: Image
+      ImageUri: !Ref ImageUri
+      Environment:
+        Variables:
+          CERT_API_URL: !Ref CertApiUrl
+          BACKUP_S3_BUCKET: !Ref BackupBucket
+          SECRET_ARN: !Ref CertApiKeySecret
+          ENDORSEMENTS_PATH: !Ref EndorsementsPath
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref BackupBucket
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref CertApiKeySecret
+      Events:
+        Daily:
+          Type: Schedule
+          Properties:
+            Schedule: !Ref ScheduleExpression
+            Description: Daily cert backup run
+
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub reso-cert-backup-alerts-${Environment}
+
+  AlertEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      TopicArn: !Ref AlertTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  BackupErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub reso-cert-backup-errors-${Environment}
+      AlarmDescription: Fires if the backup Lambda throws in any run.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref BackupFunction
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlertTopic]
+
+  BackupDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub reso-cert-backup-duration-${Environment}
+      AlarmDescription: Fires if a run exceeds 14 minutes (close to Lambda's 15-min cap).
+      Namespace: AWS/Lambda
+      MetricName: Duration
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref BackupFunction
+      Statistic: Maximum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 840000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlertTopic]
+
+Outputs:
+  FunctionName:
+    Value: !Ref BackupFunction
+  BucketName:
+    Value: !Ref BackupBucket
+  SecretArn:
+    Value: !Ref CertApiKeySecret
+  AlertTopicArn:
+    Value: !Ref AlertTopic
