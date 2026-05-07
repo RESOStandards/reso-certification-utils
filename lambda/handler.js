@@ -2,6 +2,7 @@
 
 const { readdir, readFile, rm } = require('fs/promises');
 const { join, relative } = require('path');
+const { gzipSync } = require('node:zlib');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
 
@@ -68,14 +69,16 @@ const uploadAll = async (rootDir, bucket, keyPrefix) => {
     while (cursor < files.length) {
       const i = cursor++;
       const local = files[i];
-      const body = await readFile(local);
-      const Key = `${keyPrefix}/${relative(rootDir, local)}`;
+      const raw = await readFile(local);
+      const body = gzipSync(raw);
+      const Key = `${keyPrefix}/${relative(rootDir, local)}.gz`;
       await s3.send(
         new PutObjectCommand({
           Bucket: bucket,
           Key,
           Body: body,
-          ContentType: 'application/json'
+          ContentType: 'application/json',
+          ContentEncoding: 'gzip'
         })
       );
       totalBytes += body.length;
