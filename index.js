@@ -174,6 +174,7 @@ if (require?.main === module) {
     .option('-p, --pathToResults <string>', 'Path to test results')
     .option('-u, --url <string>', 'URL of Certification API')
     .option('-r, --restoreFromBackup', 'Restore from a backup of a Cert API server')
+    .option('-a, --archived', 'Restore reports into the certification-archive index (use with --restoreFromBackup when pathToResults points under archived/)')
     .action(options => restore({ ...options, fromCli: FROM_CLI }));
 
   program
@@ -184,6 +185,7 @@ if (require?.main === module) {
     .option('-d, --dataDictionary', 'Only backup DD and DA reports')
     .option('-w, --webApi', 'Only backup Web API reports')
     .option('-s, --skip <number>', 'Skip first n reports')
+    .option('-a, --includeArchived', 'Also back up archived reports under the archived/ subtree')
     .action(options => backup({ ...options, fromCli: FROM_CLI }));
 
   program.parse();
