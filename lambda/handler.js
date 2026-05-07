@@ -15,7 +15,8 @@ const {
   SECRET_ARN,
   ENDORSEMENTS_PATH,
   AWS_REGION,
-  UPLOAD_CONCURRENCY = '10'
+  UPLOAD_CONCURRENCY = '10',
+  INCLUDE_ARCHIVED = 'true'
 } = process.env;
 
 const BACKUP_LOCAL_ROOT = '/tmp';
@@ -101,7 +102,8 @@ exports.handler = async (event = {}) => {
   await rm(localBackupDir, { recursive: true, force: true });
 
   const url = event.url || CERT_API_URL;
-  const stats = await backup({ url, pathToBackup: BACKUP_LOCAL_ROOT });
+  const includeArchived = event.includeArchived ?? INCLUDE_ARCHIVED !== 'false';
+  const stats = await backup({ url, pathToBackup: BACKUP_LOCAL_ROOT, includeArchived });
 
   if (!stats) throw new Error('Backup returned no stats — see logs for root cause');
 

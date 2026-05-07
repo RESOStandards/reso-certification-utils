@@ -87,6 +87,7 @@ Resources:
           BACKUP_S3_BUCKET: !Ref BackupBucket
           SECRET_ARN: !Ref CertApiKeySecret
           ENDORSEMENTS_PATH: !Ref EndorsementsPath
+          INCLUDE_ARCHIVED: 'true'
       Policies:
         - S3WritePolicy:
             BucketName: !Ref BackupBucket
