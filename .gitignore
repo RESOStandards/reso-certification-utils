@@ -121,3 +121,6 @@ results/
 upi-validation-report.json
 reso-variations.json
 .aws-sam/
+
+# Generated Lambda layer content (built by layer/build.sh)
+layer/build/
