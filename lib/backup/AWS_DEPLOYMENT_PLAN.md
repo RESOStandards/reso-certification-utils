@@ -92,11 +92,15 @@ Region `us-east-1`, `export AWS_PROFILE=reso`.
 ./layer/build.sh        # -> layer/build/nodejs/node_modules/...
 ```
 
-**2. (Batch path only) build + push the Batch image to ECR:**
+**2. (Batch path only) create the ECR repo + service-linked role, then build + push the image:**
 ```bash
 IMAGE=222014597091.dkr.ecr.us-east-1.amazonaws.com/reso-cert-backup-batch:latest
+# One-time per account (no-ops if they already exist):
+aws ecr create-repository --repository-name reso-cert-backup-batch --region us-east-1 || true
+aws iam create-service-linked-role --aws-service-name batch.amazonaws.com || true   # gotcha #7
+# Build arm64 with no attestations (gotcha #2), then push:
 docker buildx build --provenance=false --sbom=false --platform linux/arm64 --load -f batch/Dockerfile -t "$IMAGE" .
-aws ecr get-login-password | docker login --username AWS --password-stdin ${IMAGE%%/*}
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${IMAGE%%/*}
 docker push "$IMAGE"
 ```
 
@@ -109,9 +113,17 @@ sam deploy --resolve-s3 --region us-east-1 \
   --parameter-overrides \
     Environment=qa \
     BatchImageUri="$IMAGE" \
-    VpcSubnetIds="subnet-aaa,subnet-bbb" \
-    BatchSecurityGroupIds="sg-xxx"
+    VpcSubnetIds="subnet-0056d423ff50d1cb5,subnet-01cc38b885babd719,subnet-0315190f5e72c0a1f,subnet-0c3bc35673f17b958,subnet-008358d78aa355f50,subnet-05e977628e1519172" \
+    BatchSecurityGroupIds="sg-098f72131ccea377d"
 ```
+The subnet/SG values above are QA's: the default VPC's 6 public (auto-assign-IP) subnets and
+its default SG (`sg-098f72131ccea377d`, all outbound). For another env/account, find equivalents:
+```bash
+VPC=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query 'Vpcs[0].VpcId' --output text)
+aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC --query 'Subnets[?MapPublicIpOnLaunch].SubnetId' --output text
+aws ec2 describe-security-groups --filters Name=vpc-id,Values=$VPC Name=group-name,Values=default --query 'SecurityGroups[0].GroupId' --output text
+```
+
 Omit `BatchImageUri`/`VpcSubnetIds`/`BatchSecurityGroupIds` to deploy **Lambda-only** (the
 Batch resources are gated on `BatchImageUri` via the `HasBatchImage` condition; the Step
 Function still deploys and always takes the Lambda branch as long as the count stays under
