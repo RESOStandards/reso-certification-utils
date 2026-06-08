@@ -270,6 +270,11 @@ Resources:
             Value: 'true'
           - Name: WORK_DIR
             Value: /data
+          # Fargate/ECS doesn't set AWS_REGION in the container (unlike Lambda); the SDK
+          # clients in secret.js/runner.js need it. RunOnBatch may override CERT_API_URL/
+          # BACKUP_S3_BUCKET/INCLUDE_ARCHIVED via ContainerOverrides, but never this.
+          - Name: AWS_REGION
+            Value: !Ref AWS::Region
         LogConfiguration:
           LogDriver: awslogs
           Options:
