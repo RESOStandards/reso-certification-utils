@@ -1,10 +1,12 @@
 # Backup: AWS Deployment
 
-Status: **Live in dev account 222014597091 (QA) as a container-image Lambda on a daily
-cron.** This branch reworks that into a shared-engine design: a Lambda **layer** carrying the
-backup engine, thin Lambda wrappers, and an **AWS Batch** path for runs that would exceed
-Lambda's 15-min cap — all dispatched by a **Step Function** that size-checks first. Not yet
-deployed; see "Deploying the new stack" below.
+Status: **Deployed + tested in dev account 222014597091 (QA), 2026-06-08.** The shared-engine
+design is live: a Lambda **layer** carrying the backup engine, thin Lambda wrappers, and an
+**AWS Batch** path for runs that would exceed Lambda's 15-min cap — all dispatched by a
+**Step Function** that size-checks first. Both paths were validated end-to-end against certqa:
+the Lambda (normal) and Batch (forced-overload) runs each produced an identical 2,503-object /
+~134 MB gzipped backup. Daily schedule enabled (`cron(0 3 * * ? *)` = 03:00 UTC). The old
+container-image Lambda has been replaced.
 
 ## Why the rework
 
@@ -76,6 +78,11 @@ Lambda is ~7× faster thanks to proximity to QA's hosting region. 1,755 reports 
 the default `REPORT_COUNT_THRESHOLD=3000` leaves comfortable headroom under 15 min before
 routing to Batch.
 
+**2026-06-08 (post-gzip + archived, both runners):** size-check counted 2,546 weighted reports
+(630 DD ×2 + 515 WebAPI + 24 other + 747 archived). Each run wrote **2,503 objects / ~134 MB
+gzipped** (the ~1.7 GB above was pre-gzip) — Lambda 389 s, Batch (4 vCPU Fargate) 353 s.
+Note QA is now ~85% of the 3000 threshold; bump it or deploy/keep Batch as the cushion.
+
 ## Deploying the new stack
 
 Region `us-east-1`, `export AWS_PROFILE=reso`.
@@ -115,12 +122,20 @@ threshold).
 aws secretsmanager put-secret-value --secret-id reso-cert/qa/api-key --secret-string 'ADMIN_API_KEY'
 ```
 
-### Migrating the live stack
-The currently-deployed `reso-cert-backup-qa` is a container-image Lambda with the EventBridge
-schedule attached directly to the function. This template changes that function to a zip+layer
-package and moves the schedule onto the Step Function. CloudFormation will replace the function
-(brief) and remove the old function-attached rule. The S3 bucket and secret are `Retain`, so
-data and the key survive. Disable the old schedule before deploying to avoid an overlapping run.
+### Migrating the live stack (done 2026-06-08)
+The live `reso-cert-backup-qa` was a container-image Lambda with the EventBridge schedule on the
+function. Migrating to zip+layer changes the function's `PackageType`, which **requires
+replacement** — and CloudFormation refuses to replace a resource with an explicit custom name
+in place (see gotcha #8). So it took a **two-step deploy**:
+1. Deploy a template with `BackupFunction` (+ its alarms and state-machine reference) removed →
+   deletes the old function, freeing the name `reso-cert-backup-qa`.
+2. Deploy the full `template.yaml` → recreates it as zip+layer with the same name, adds the
+   state machine + schedule.
+
+The S3 bucket and secret are `Retain`, so data and the key survived untouched. The schedule
+moved off the function onto the Step Function; CloudFormation kept the previously-set
+`ScheduleExpression` (`cron(0 3 * * ? *)`), **not** the template default of `cron(0 10 …)` —
+pass `ScheduleExpression=` explicitly if you want a different time.
 
 ## Gotchas hit and what they tell you
 
@@ -137,6 +152,10 @@ data and the key survive. Disable the old schedule before deploying to avoid an 
 6. **Admin-tier API key is required.** Non-admin keys pass `/api/v1/certification_reports/filter` (public) but fail on `/full/:type/:id` (admin). Symptom is identical to #1 — diagnose via the CloudWatch stats object showing `ddReportsCount > 0` but `data_dictionary: 0`.
 
 7. **Batch (Fargate) networking.** The job pulls from ECR and reaches the Cert API + S3 over the internet. Use **public** subnets with `AssignPublicIp: ENABLED` (set in the job def), or private subnets behind a NAT. The security group needs outbound 443. First Batch use in an account may require the `AWSServiceRoleForBatch` service-linked role (created automatically, or `aws iam create-service-linked-role --aws-service-name batch.amazonaws.com`).
+
+8. **Image→zip Lambda migration needs a 2-step deploy.** Changing a function's `PackageType` (container image → zip) requires replacement, and CloudFormation won't replace a **custom-named** resource in place ("cannot update a stack when a custom-named resource requires replacing. Rename ... and update the stack again"). **Fix: delete the function in one deploy, recreate it in the next** — see "Migrating the live stack". Only matters for that one-time migration; ongoing code changes don't alter `PackageType`.
+
+9. **Fargate doesn't set `AWS_REGION` in the container** (Lambda does). `secret.js`/`runner.js` build the Secrets Manager and S3 clients with `region: process.env.AWS_REGION`, so without it the calls fail with "Region is missing". **Fix: the Batch job def sets `AWS_REGION` explicitly (`Value: !Ref AWS::Region`).** Symptom when broken: the Batch job starts, then dies before any report is fetched.
 
 ## Operational runbook
 
@@ -163,6 +182,8 @@ The key is cached in-memory per warm container; force a cold start (update an en
 
 ## Known gaps / not in scope
 
+- **No failure alerting wired up.** The Step Function publishes to the SNS topic on failure and `BackupErrorsAlarm` watches the Lambda — but the topic has **no subscribers**, and the alarm doesn't cover the Batch/Step-Function path. A failed *scheduled* run currently notifies no one. Subscribe before relying on it: redeploy with `AlertEmail=you@…`, or `aws sns subscribe --topic-arn <AlertTopicArn> --protocol email --notification-endpoint you@…`.
+- **Scheduled trigger not yet observed.** Both validation runs were started manually; the `cron(0 3 UTC)` rule is enabled but its first automatic firing hasn't been watched yet.
 - **Restore from S3** — `restore --restoreFromBackup` still reads from local disk; an S3-aware variant would need a separate change.
 - **Prod env** — deploy the stack with `Environment=prod` after QA is confirmed.
 - **Size-check accuracy** — the count weights DD reports ×2 (each drives a DD + DA fetch); it's a heuristic for routing, not an exact runtime predictor. Revisit the threshold against real prod counts.
