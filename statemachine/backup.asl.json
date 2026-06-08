@@ -1,0 +1,116 @@
+{
+  "Comment": "Daily RESO Cert backup. Size-check first, then run in Lambda (fits in 15 min) or hand off to AWS Batch (too large). Either path uploads to S3.",
+  "StartAt": "SizeCheck",
+  "States": {
+    "SizeCheck": {
+      "Type": "Task",
+      "Resource": "${SizeCheckFunctionArn}",
+      "Comment": "Cheap report count + routing decision (routeToBatch).",
+      "ResultPath": "$.sizeCheck",
+      "TimeoutSeconds": 600,
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException", "States.TaskFailed"],
+          "IntervalSeconds": 5,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "NotifyFailure"
+        }
+      ],
+      "Next": "ChooseRunner"
+    },
+    "ChooseRunner": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.sizeCheck.routeToBatch",
+          "BooleanEquals": true,
+          "Next": "RunOnBatch"
+        }
+      ],
+      "Default": "RunOnLambda"
+    },
+    "RunOnLambda": {
+      "Type": "Task",
+      "Resource": "${BackupFunctionArn}",
+      "Comment": "Fast path: full backup inside Lambda (<15 min).",
+      "Parameters": {
+        "url.$": "$.sizeCheck.url",
+        "bucket.$": "$.sizeCheck.bucket",
+        "includeArchived.$": "$.sizeCheck.includeArchived"
+      },
+      "ResultPath": "$.result",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "NotifyFailure"
+        }
+      ],
+      "End": true
+    },
+    "RunOnBatch": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::batch:submitJob.sync",
+      "Comment": "Long path: same backup engine as a Batch (Fargate) job, no 15-min cap.",
+      "Parameters": {
+        "JobName": "reso-cert-backup",
+        "JobQueue": "${BatchJobQueueArn}",
+        "JobDefinition": "${BatchJobDefinitionArn}",
+        "ContainerOverrides": {
+          "Environment": [
+            { "Name": "CERT_API_URL", "Value.$": "$.sizeCheck.url" },
+            { "Name": "BACKUP_S3_BUCKET", "Value.$": "$.sizeCheck.bucket" },
+            { "Name": "INCLUDE_ARCHIVED", "Value.$": "States.JsonToString($.sizeCheck.includeArchived)" }
+          ]
+        }
+      },
+      "ResultPath": "$.result",
+      "Retry": [
+        {
+          "ErrorEquals": ["Batch.AWSBatchException", "States.TaskFailed"],
+          "IntervalSeconds": 30,
+          "MaxAttempts": 1,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "NotifyFailure"
+        }
+      ],
+      "End": true
+    },
+    "NotifyFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${AlertTopicArn}",
+        "Subject": "RESO Cert backup FAILED",
+        "Message.$": "States.JsonToString($)"
+      },
+      "Next": "Fail"
+    },
+    "Fail": {
+      "Type": "Fail",
+      "Error": "BackupFailed",
+      "Cause": "See execution history and the published SNS message for details."
+    }
+  }
+}

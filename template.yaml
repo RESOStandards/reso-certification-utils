@@ -1,6 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Scheduled RESO Cert API backup -> S3. EventBridge (daily) -> Lambda (container image) -> S3.
+Description: >-
+  Scheduled RESO Cert API backup -> S3. EventBridge (daily) -> Step Function: size-check,
+  then run in Lambda (fits in 15 min) or hand off to AWS Batch (too large). Same backup
+  engine runs in both, shipped as a Lambda layer (Lambda) and a container image (Batch).
 
 Parameters:
   Environment:
@@ -19,27 +22,64 @@ Parameters:
   ScheduleExpression:
     Type: String
     Default: cron(0 10 * * ? *)
-    Description: EventBridge schedule for the daily backup. Default = 10:00 UTC = 03:00 America/Los_Angeles during PDT (will be 02:00 during PST — EventBridge Rules are UTC-only, so there's a 1h DST drift. Migrate to AWS::Scheduler::Schedule if year-round precision is required). Disable via `aws events disable-rule` during first-deploy testing.
+    Description: EventBridge schedule for the daily backup. Default = 10:00 UTC = 03:00 America/Los_Angeles during PDT (will be 02:00 during PST — EventBridge Rules are UTC-only, so there's a 1h DST drift). Disable via `aws events disable-rule` during first-deploy testing.
   AlertEmail:
     Type: String
     Default: ''
     Description: (Optional) email to subscribe to backup failure alerts. Leave blank to skip.
-  ImageUri:
+  ReportCountThreshold:
+    Type: Number
+    Default: 3000
+    Description: If the size-check estimates more reports than this, the run is handed to AWS Batch instead of Lambda. ~1,755 reports = 6.5 min in Lambda, so this leaves headroom under the 15-min cap.
+  BatchImageUri:
     Type: String
-    Description: Full ECR image URI for the backup Lambda (pushed out-of-band via `docker push`). Include the tag.
+    Default: ''
+    Description: Full ECR image URI (with tag) for the Batch backup container, built from batch/Dockerfile and pushed out-of-band. Required for the Batch path; the Lambda path works without it.
+  VpcSubnetIds:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: Subnet IDs for the Batch Fargate compute environment (use public subnets, since the job pulls from ECR and reaches the Cert API / S3 over the internet). Required only for the Batch path.
+  BatchSecurityGroupIds:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: Security group IDs for the Batch Fargate tasks (needs outbound 443). Required only for the Batch path.
+  BatchMaxvCpus:
+    Type: Number
+    Default: 16
+    Description: Max vCPUs for the Batch Fargate compute environment.
+  BatchJobVcpu:
+    Type: String
+    Default: '4'
+    Description: vCPU per Batch job (Fargate vCPU/memory must be a valid combination).
+  BatchJobMemory:
+    Type: String
+    Default: '30720'
+    Description: Memory (MiB) per Batch job. 30720 = 30 GB, valid with 4 vCPU on Fargate.
 
 Conditions:
   HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
+  HasBatchImage: !Not [!Equals [!Ref BatchImageUri, '']]
 
 Globals:
   Function:
-    Timeout: 900
-    MemorySize: 3008
-    EphemeralStorage:
-      Size: 4096
+    Runtime: nodejs22.x
     Architectures: [arm64]
 
 Resources:
+
+  # ---- Shared code layer: backup engine + prod deps (see layer/build.sh) ----------------
+  DepsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub reso-cert-backup-deps-${Environment}
+      Description: Backup engine (@reso/reso-certification-utils) + production deps. Shared by the size-check and backup Lambdas.
+      ContentUri: layer/build
+      CompatibleRuntimes: [nodejs22.x]
+      CompatibleArchitectures: [arm64]
+      RetentionPolicy: Retain
+      # No Metadata.BuildMethod on purpose: the content is pre-built by layer/build.sh (it
+      # needs git for the github dep). Deploy with `sam deploy --resolve-s3` (NOT `sam build`)
+      # so SAM zips layer/build as-is.
 
   BackupBucket:
     Type: AWS::S3::Bucket
@@ -72,15 +112,43 @@ Resources:
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: !Sub reso-cert/${Environment}/api-key
-      Description: Admin-tier Cert API key used by the backup Lambda. Put the raw key as the SecretString value after stack deploy.
+      Description: Admin-tier Cert API key used by the backup jobs. Put the raw key as the SecretString value after stack deploy.
+
+  # ---- Lambdas: thin wrappers over the shared engine in the layer ------------------------
+  SizeCheckFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub reso-cert-backup-sizecheck-${Environment}
+      Description: Counts reports and decides whether the backup runs in Lambda or Batch.
+      CodeUri: lambda/
+      Handler: sizecheck.handler
+      Timeout: 300
+      MemorySize: 512
+      Layers: [!Ref DepsLayer]
+      Environment:
+        Variables:
+          CERT_API_URL: !Ref CertApiUrl
+          BACKUP_S3_BUCKET: !Ref BackupBucket
+          SECRET_ARN: !Ref CertApiKeySecret
+          ENDORSEMENTS_PATH: !Ref EndorsementsPath
+          INCLUDE_ARCHIVED: 'true'
+          REPORT_COUNT_THRESHOLD: !Ref ReportCountThreshold
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref CertApiKeySecret
 
   BackupFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub reso-cert-backup-${Environment}
-      Description: Runs the cert-utils backup CLI against the configured Cert API and uploads output to S3.
-      PackageType: Image
-      ImageUri: !Ref ImageUri
+      Description: Runs the cert backup against the configured Cert API and uploads output to S3 (fast path).
+      CodeUri: lambda/
+      Handler: handler.handler
+      Timeout: 900
+      MemorySize: 3008
+      EphemeralStorage:
+        Size: 4096
+      Layers: [!Ref DepsLayer]
       Environment:
         Variables:
           CERT_API_URL: !Ref CertApiUrl
@@ -93,12 +161,157 @@ Resources:
             BucketName: !Ref BackupBucket
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: !Ref CertApiKeySecret
+
+  # ---- AWS Batch (Fargate): same engine as a container, no 15-min cap -------------------
+  BatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/batch/reso-cert-backup-${Environment}
+      RetentionInDays: 30
+
+  BatchExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub reso-cert-backup-batch-exec-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  BatchJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub reso-cert-backup-batch-job-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: backup-job-permissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [s3:PutObject]
+                Resource: !Sub arn:${AWS::Partition}:s3:::${BackupBucket}/*
+              - Effect: Allow
+                Action: [secretsmanager:GetSecretValue]
+                Resource: !Ref CertApiKeySecret
+
+  BatchComputeEnvironment:
+    Type: AWS::Batch::ComputeEnvironment
+    Condition: HasBatchImage
+    Properties:
+      ComputeEnvironmentName: !Sub reso-cert-backup-${Environment}
+      Type: MANAGED
+      State: ENABLED
+      ComputeResources:
+        Type: FARGATE
+        MaxvCpus: !Ref BatchMaxvCpus
+        Subnets: !Ref VpcSubnetIds
+        SecurityGroupIds: !Ref BatchSecurityGroupIds
+
+  BatchJobQueue:
+    Type: AWS::Batch::JobQueue
+    Condition: HasBatchImage
+    Properties:
+      JobQueueName: !Sub reso-cert-backup-${Environment}
+      State: ENABLED
+      Priority: 1
+      ComputeEnvironmentOrder:
+        - Order: 1
+          ComputeEnvironment: !Ref BatchComputeEnvironment
+
+  BatchJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Condition: HasBatchImage
+    Properties:
+      JobDefinitionName: !Sub reso-cert-backup-${Environment}
+      Type: container
+      PlatformCapabilities: [FARGATE]
+      RetryStrategy:
+        Attempts: 1
+      Timeout:
+        AttemptDurationSeconds: 10800
+      ContainerProperties:
+        Image: !Ref BatchImageUri
+        ResourceRequirements:
+          - Type: VCPU
+            Value: !Ref BatchJobVcpu
+          - Type: MEMORY
+            Value: !Ref BatchJobMemory
+        RuntimePlatform:
+          CpuArchitecture: ARM64
+          OperatingSystemFamily: LINUX
+        EphemeralStorage:
+          SizeInGiB: 50
+        ExecutionRoleArn: !GetAtt BatchExecutionRole.Arn
+        JobRoleArn: !GetAtt BatchJobRole.Arn
+        NetworkConfiguration:
+          AssignPublicIp: ENABLED
+        FargatePlatformConfiguration:
+          PlatformVersion: LATEST
+        Environment:
+          - Name: CERT_API_URL
+            Value: !Ref CertApiUrl
+          - Name: BACKUP_S3_BUCKET
+            Value: !Ref BackupBucket
+          - Name: SECRET_ARN
+            Value: !Ref CertApiKeySecret
+          - Name: ENDORSEMENTS_PATH
+            Value: !Ref EndorsementsPath
+          - Name: INCLUDE_ARCHIVED
+            Value: 'true'
+          - Name: WORK_DIR
+            Value: /data
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: !Ref BatchLogGroup
+            awslogs-stream-prefix: backup
+
+  # ---- Orchestration: EventBridge (daily) -> Step Function -> Lambda | Batch ------------
+  BackupStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub reso-cert-backup-${Environment}
+      Type: STANDARD
+      DefinitionUri: statemachine/backup.asl.json
+      DefinitionSubstitutions:
+        SizeCheckFunctionArn: !GetAtt SizeCheckFunction.Arn
+        BackupFunctionArn: !GetAtt BackupFunction.Arn
+        BatchJobQueueArn: !If [HasBatchImage, !Ref BatchJobQueue, 'arn:aws:batch:::job-queue/batch-not-configured']
+        BatchJobDefinitionArn: !If [HasBatchImage, !Ref BatchJobDefinition, 'arn:aws:batch:::job-definition/batch-not-configured']
+        AlertTopicArn: !Ref AlertTopic
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref SizeCheckFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref BackupFunction
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt AlertTopic.TopicName
+        - Statement:
+            - Effect: Allow
+              Action: [batch:SubmitJob]
+              Resource: '*'
+            - Effect: Allow
+              Action: [batch:DescribeJobs, batch:TerminateJob]
+              Resource: '*'
+            - Effect: Allow
+              Action: [events:PutTargets, events:PutRule, events:DescribeRule]
+              Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForBatchJobsRule
       Events:
         Daily:
           Type: Schedule
           Properties:
             Schedule: !Ref ScheduleExpression
-            Description: Daily cert backup run
+            Description: Daily cert backup run (size-check then Lambda or Batch)
 
   AlertTopic:
     Type: AWS::SNS::Topic
@@ -135,7 +348,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub reso-cert-backup-duration-${Environment}
-      AlarmDescription: Fires if a run exceeds 14 minutes (close to Lambda's 15-min cap).
+      AlarmDescription: Fires if a run exceeds 14 minutes (close to Lambda's 15-min cap). Persistent firing means the threshold should be lowered so these runs route to Batch.
       Namespace: AWS/Lambda
       MetricName: Duration
       Dimensions:
@@ -150,11 +363,17 @@ Resources:
       AlarmActions: [!Ref AlertTopic]
 
 Outputs:
-  FunctionName:
+  StateMachineArn:
+    Value: !Ref BackupStateMachine
+  BackupFunctionName:
     Value: !Ref BackupFunction
+  SizeCheckFunctionName:
+    Value: !Ref SizeCheckFunction
   BucketName:
     Value: !Ref BackupBucket
   SecretArn:
     Value: !Ref CertApiKeySecret
   AlertTopicArn:
     Value: !Ref AlertTopic
+  DepsLayerArn:
+    Value: !Ref DepsLayer
