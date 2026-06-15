@@ -10,7 +10,7 @@
 // (SECRET_ARN) to load it from. Exits non-zero on failure so Batch marks the job FAILED.
 
 const { runBackup } = require('../lib/backup/runner');
-const { loadApiKey } = require('../lib/backup/secret');
+const { loadApiKey, loadS3Credentials } = require('../lib/backup/secret');
 
 const main = async () => {
   const {
@@ -22,7 +22,11 @@ const main = async () => {
     AWS_REGION,
     INCLUDE_ARCHIVED = 'true',
     UPLOAD_CONCURRENCY,
-    WORK_DIR = '/data'
+    WORK_DIR = '/data',
+    // Cross-account destination (see lambda/handler.js for the full note). Unset -> own bucket.
+    DEST_S3_SECRET_ARN,
+    DEST_S3_REGION,
+    DEST_KEY_PREFIX
   } = process.env;
 
   if (!CERT_API_URL) throw new Error('CERT_API_URL is required');
@@ -30,14 +34,24 @@ const main = async () => {
 
   const apiKey = CERTIFICATION_API_KEY || (await loadApiKey({ secretArn: SECRET_ARN, region: AWS_REGION }));
 
+  // Own bucket via role (no dest secret) vs. partner bucket via static key. The dest-creds
+  // secret lives in THIS account, so it's read with AWS_REGION.
+  let credentials, region = AWS_REGION;
+  if (DEST_S3_SECRET_ARN) {
+    credentials = await loadS3Credentials({ secretArn: DEST_S3_SECRET_ARN, region: AWS_REGION });
+    region = DEST_S3_REGION || AWS_REGION;
+  }
+
   const summary = await runBackup({
     url: CERT_API_URL,
     apiKey,
     bucket: BACKUP_S3_BUCKET,
-    region: AWS_REGION,
+    region,
+    credentials,
     includeArchived: INCLUDE_ARCHIVED !== 'false',
     endorsementsPath: ENDORSEMENTS_PATH,
     workDir: WORK_DIR,
+    keyPrefixBase: DEST_KEY_PREFIX || undefined,
     uploadConcurrency: UPLOAD_CONCURRENCY ? parseInt(UPLOAD_CONCURRENCY, 10) : undefined
   });
 

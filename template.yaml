@@ -55,10 +55,28 @@ Parameters:
     Type: String
     Default: '30720'
     Description: Memory (MiB) per Batch job. 30720 = 30 GB, valid with 4 vCPU on Fargate.
+  DestinationBucket:
+    Type: String
+    Default: ''
+    Description: >-
+      (Optional) Name of a bucket in ANOTHER AWS account to write backups to (e.g. a partner's
+      bucket). When set, the stack does NOT create its own bucket and writes here instead, using
+      the static key in the auto-created dest-s3-creds secret. Leave blank to back up to our own
+      account's bucket via the execution role (the QA default).
+  DestS3Region:
+    Type: String
+    Default: ''
+    Description: Region of DestinationBucket. Only used when DestinationBucket is set; falls back to the stack region if blank.
+  DestKeyPrefix:
+    Type: String
+    Default: ''
+    Description: (Optional) key prefix inside DestinationBucket (e.g. a partner-required folder). Objects land under <prefix>/<YYYY-MM-DD>/<startMs>/.
 
 Conditions:
   HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
   HasBatchImage: !Not [!Equals [!Ref BatchImageUri, '']]
+  HasDestination: !Not [!Equals [!Ref DestinationBucket, '']]
+  CreateOwnBucket: !Equals [!Ref DestinationBucket, '']
 
 Globals:
   Function:
@@ -83,6 +101,7 @@ Resources:
 
   BackupBucket:
     Type: AWS::S3::Bucket
+    Condition: CreateOwnBucket
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
@@ -114,6 +133,15 @@ Resources:
       Name: !Sub reso-cert/${Environment}/api-key
       Description: Admin-tier Cert API key used by the backup jobs. Put the raw key as the SecretString value after stack deploy.
 
+  # Static credentials for the cross-account destination bucket (only when DestinationBucket is set).
+  # Populate post-deploy with: {"accessKeyId":"...","secretAccessKey":"..."} from the partner.
+  DestS3CredsSecret:
+    Type: AWS::SecretsManager::Secret
+    Condition: HasDestination
+    Properties:
+      Name: !Sub reso-cert/${Environment}/dest-s3-creds
+      Description: Static IAM key/secret for writing backups to the partner's cross-account bucket. Put JSON {accessKeyId, secretAccessKey} as the SecretString after deploy.
+
   # ---- Lambdas: thin wrappers over the shared engine in the layer ------------------------
   SizeCheckFunction:
     Type: AWS::Serverless::Function
@@ -128,7 +156,7 @@ Resources:
       Environment:
         Variables:
           CERT_API_URL: !Ref CertApiUrl
-          BACKUP_S3_BUCKET: !Ref BackupBucket
+          BACKUP_S3_BUCKET: !If [HasDestination, !Ref DestinationBucket, !Ref BackupBucket]
           SECRET_ARN: !Ref CertApiKeySecret
           ENDORSEMENTS_PATH: !Ref EndorsementsPath
           INCLUDE_ARCHIVED: 'true'
@@ -152,15 +180,29 @@ Resources:
       Environment:
         Variables:
           CERT_API_URL: !Ref CertApiUrl
-          BACKUP_S3_BUCKET: !Ref BackupBucket
+          BACKUP_S3_BUCKET: !If [HasDestination, !Ref DestinationBucket, !Ref BackupBucket]
           SECRET_ARN: !Ref CertApiKeySecret
           ENDORSEMENTS_PATH: !Ref EndorsementsPath
           INCLUDE_ARCHIVED: 'true'
+          DEST_S3_SECRET_ARN: !If [HasDestination, !Ref DestS3CredsSecret, !Ref 'AWS::NoValue']
+          DEST_S3_REGION: !If [HasDestination, !Ref DestS3Region, !Ref 'AWS::NoValue']
+          DEST_KEY_PREFIX: !If [HasDestination, !Ref DestKeyPrefix, !Ref 'AWS::NoValue']
+      # Own bucket -> write via the execution role. Partner bucket -> no S3 grant needed (the
+      # static key in DestS3CredsSecret authorizes the write); we just need to read that secret.
+      # Inline Statement (not SAM policy templates) so the per-mode swap survives the SAM
+      # transform — the backup only ever PutObjects, so this is also tighter than S3WritePolicy.
       Policies:
-        - S3WritePolicy:
-            BucketName: !Ref BackupBucket
-        - AWSSecretsManagerGetSecretValuePolicy:
-            SecretArn: !Ref CertApiKeySecret
+        - Statement: !If
+            - HasDestination
+            - - Effect: Allow
+                Action: [secretsmanager:GetSecretValue]
+                Resource: [!Ref CertApiKeySecret, !Ref DestS3CredsSecret]
+            - - Effect: Allow
+                Action: [s3:PutObject]
+                Resource: !Sub arn:${AWS::Partition}:s3:::${BackupBucket}/*
+              - Effect: Allow
+                Action: [secretsmanager:GetSecretValue]
+                Resource: !Ref CertApiKeySecret
 
   # ---- AWS Batch (Fargate): same engine as a container, no 15-min cap -------------------
   BatchLogGroup:
@@ -196,13 +238,19 @@ Resources:
         - PolicyName: backup-job-permissions
           PolicyDocument:
             Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: [s3:PutObject]
-                Resource: !Sub arn:${AWS::Partition}:s3:::${BackupBucket}/*
-              - Effect: Allow
-                Action: [secretsmanager:GetSecretValue]
-                Resource: !Ref CertApiKeySecret
+            # Own bucket -> grant S3 PutObject + read the API-key secret. Partner bucket -> no S3
+            # grant (the static key authorizes the write); read both the API-key and dest secrets.
+            Statement: !If
+              - HasDestination
+              - - Effect: Allow
+                  Action: [secretsmanager:GetSecretValue]
+                  Resource: [!Ref CertApiKeySecret, !Ref DestS3CredsSecret]
+              - - Effect: Allow
+                  Action: [s3:PutObject]
+                  Resource: !Sub arn:${AWS::Partition}:s3:::${BackupBucket}/*
+                - Effect: Allow
+                  Action: [secretsmanager:GetSecretValue]
+                  Resource: !Ref CertApiKeySecret
 
   BatchComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
@@ -261,13 +309,21 @@ Resources:
           - Name: CERT_API_URL
             Value: !Ref CertApiUrl
           - Name: BACKUP_S3_BUCKET
-            Value: !Ref BackupBucket
+            Value: !If [HasDestination, !Ref DestinationBucket, !Ref BackupBucket]
           - Name: SECRET_ARN
             Value: !Ref CertApiKeySecret
           - Name: ENDORSEMENTS_PATH
             Value: !Ref EndorsementsPath
           - Name: INCLUDE_ARCHIVED
             Value: 'true'
+          # Cross-account destination (only meaningful when DestinationBucket is set). Unlike
+          # Lambda we always set these — empty strings are inert (entry.js treats them as unset).
+          - Name: DEST_S3_SECRET_ARN
+            Value: !If [HasDestination, !Ref DestS3CredsSecret, '']
+          - Name: DEST_S3_REGION
+            Value: !Ref DestS3Region
+          - Name: DEST_KEY_PREFIX
+            Value: !Ref DestKeyPrefix
           - Name: WORK_DIR
             Value: /data
           # Fargate/ECS doesn't set AWS_REGION in the container (unlike Lambda); the SDK
@@ -375,9 +431,14 @@ Outputs:
   SizeCheckFunctionName:
     Value: !Ref SizeCheckFunction
   BucketName:
-    Value: !Ref BackupBucket
+    Description: Destination bucket the backup writes to (our own, or the partner's when set).
+    Value: !If [HasDestination, !Ref DestinationBucket, !Ref BackupBucket]
   SecretArn:
     Value: !Ref CertApiKeySecret
+  DestS3CredsSecretArn:
+    Condition: HasDestination
+    Description: Populate this with {"accessKeyId":"...","secretAccessKey":"..."} after deploy.
+    Value: !Ref DestS3CredsSecret
   AlertTopicArn:
     Value: !Ref AlertTopic
   DepsLayerArn:
