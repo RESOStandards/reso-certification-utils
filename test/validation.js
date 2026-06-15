@@ -397,7 +397,7 @@ describe('Schema validation tests', async () => {
     delete metadata.fields.find(f => f.type === 'Edm.Int64').maxLength;
   });
 
-  it('should find errors when Integer field exceeds its limit', async () => {
+  it('Should find errors when Integer field exceeds its limit', async () => {
     let errorMap = {};
     metadata.fields.push({
       resourceName: 'Property',
@@ -421,7 +421,7 @@ describe('Schema validation tests', async () => {
     metadata.fields.pop();
   });
 
-  it('should show the nested expansion resource and field when expansion field is invalid', async () => {
+  it('Should show the nested expansion resource and field when expansion field is invalid', async () => {
     let errorMap = {};
     const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
     const expectedErrorMessage2 = 'MUST be equal to one of the allowed values';
@@ -481,7 +481,7 @@ describe('Schema validation tests', async () => {
     );
   });
 
-  it('should not change the payload object', async () => {
+  it('Should not change the payload object', async () => {
     let errorMap = {};
     const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
     const expectedInvalidField = 'Media';
@@ -504,7 +504,7 @@ describe('Schema validation tests', async () => {
     assert.deepEqual(originalPayload, nestedCollectionPayloadError, 'Payload was modified during validation');
   });
 
-  it('should show the nested expansion resource and field when collection expansion field is invalid', async () => {
+  it('Should show the nested expansion resource and field when collection expansion field is invalid', async () => {
     let errorMap = {};
     const expectedErrorMessage = 'Fields MUST be advertised in the metadata';
     const expectedInvalidField = 'Media';
@@ -537,7 +537,7 @@ describe('Schema validation tests', async () => {
     );
   });
 
-  it('should not find error when nested non-collection expansion is null', async () => {
+  it('Should not find error when nested non-collection expansion is null', async () => {
     let errorMap = {};
     errorMap = validate({
       jsonSchema: schema,
@@ -550,7 +550,7 @@ describe('Schema validation tests', async () => {
     assert.equal(report.totalErrors, 0, 'Found non-zero errors');
   });
 
-  it('should find error when nested collection expansion is null', async () => {
+  it('Should find error when nested collection expansion is null', async () => {
     let errorMap = {};
     const expectedInvalidField = 'Media';
     const expectedInvalidResource = 'Property';
@@ -571,7 +571,7 @@ describe('Schema validation tests', async () => {
     );
   });
 
-  it('should find error when nested collection expansion has type error', async () => {
+  it('Should find error when nested collection expansion has type error', async () => {
     let errorMap = {};
     const expectedInvalidField = 'ListAgent';
     const expectedInvalidResource = 'Property';
@@ -604,7 +604,7 @@ describe('Schema validation tests', async () => {
     );
   });
 
-  it('should ignore errors for payload fields with @ in the middle of the string', async () => {
+  it('Should ignore errors for payload fields with @ in the middle of the string', async () => {
     let errorMap = {};
     errorMap = validate({
       jsonSchema: schema,
@@ -749,7 +749,7 @@ describe('Schema validation tests', async () => {
     );
   });
 
-  it('should not find errors if there are extra properties on top-level alongside "value"', async () => {
+  it('Should not find errors if there are extra properties on top-level alongside "value"', async () => {
     let errorMap = {};
     errorMap = validate({
       jsonSchema: await generateJsonSchema({ metadataReportJson: metadata, additionalProperties: true }),
@@ -762,7 +762,7 @@ describe('Schema validation tests', async () => {
     assert.equal(report.totalErrors, 0, 'Error counts did not match');
   });
 
-  it('should accumulate key fields if they exist on the failed record', async () => {
+  it('Should accumulate key fields if they exist on the failed record', async () => {
     let errorMap = {};
     const resourceName = 'Property';
 

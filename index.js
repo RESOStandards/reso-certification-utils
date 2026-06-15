@@ -1,6 +1,7 @@
 #! /usr/bin/env node
 
-require('dotenv').config();
+const { existsSync } = require('fs');
+if (existsSync('.env')) process.loadEnvFile();
 
 const { schema, combineErrors, generateJsonSchema, validate, VALIDATION_ERROR_MESSAGES } = require('./lib/schema');
 const { restore } = require('./lib/restore');
@@ -15,7 +16,7 @@ const { DEFAULT_PAGE_SIZE } = require('./lib/replication/utils');
 //Only load commander interpreter if running from the CLI
 if (require?.main === module) {
   const { program } = require('commander');
-
+  
   /**
    * Ensure fromCli is true for anything run from the command line
    */
@@ -98,6 +99,7 @@ if (require?.main === module) {
         jsonSchemaValidation = false,
         maxPageSize,
         top,
+        outputPath,
         ...remainingOptions
       } = options;
 
@@ -109,7 +111,9 @@ if (require?.main === module) {
         jsonSchemaValidation: parseBooleanValue(jsonSchemaValidation),
         strictMode: parseBooleanValue(strictMode),
         maxPageSize: parseInt(maxPageSize) ?? undefined,
-        top: parseInt(top) ?? undefined
+        top: parseInt(top) ?? undefined,
+        outputPath,
+        shouldSaveResults: !!outputPath
       };
 
       if (bearerToken) {
