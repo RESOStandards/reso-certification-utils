@@ -17,7 +17,16 @@ Options:
   -h, --help                               display help for command
 ```
 
-Note that if `useSuggestions` is true, the `.env` file must contain auth information. See [sample.env](../../sample.env) for more information.
+Note that if `useSuggestions` is true, the `.env` file must contain auth information for the
+Variations Service. Two schemes are accepted: the current **OAuth2 client credentials**
+(`TOKEN_URI`, `CLIENT_ID`, `CLIENT_SECRET`, plus `RESO_SERVICES_URL`) — the format the
+Certification site prefills into the downloadable `.env` — or the legacy **ApiKey** scheme
+(`CERT_AUTH_API_BASE_URL`, `CERT_AUTH_API_USERNAME`, `CURRENT_PROVIDER_UOI`,
+`CERTIFICATION_API_KEY`) as a fallback. See [sample.env](../../sample.env) for more information.
+
+When running `findVariations` on its own, point `-p` at the **merged** metadata report — the
+`metadata-report.processed.json` produced by `runDDTests`, which includes the Lookup Resource
+values. Using the base `metadata-report.json` will return no Lookup suggestions.
 
 For information on how to obtain auth info, please contact [dev@reso.org](mailto:dev@reso.org).
 

@@ -1,4 +1,0 @@
-pre-commit:
-  commands:
-    lint-and-test:
-      run: eslint . --fix && npm t

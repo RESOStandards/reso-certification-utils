@@ -3,7 +3,7 @@
 const assert = require('assert');
 const { computeVariations } = require('../index.js');
 const { getReferenceMetadata } = require('../lib/misc/index.js');
-const { MATCHING_STRATEGIES } = require('../lib/variations/index.js');
+const { MATCHING_STRATEGIES, hasValidSearchInput } = require('../lib/variations/index.js');
 const { ANNOTATION_TERM_STANDARD_NAME } = require('@reso/reso-certification-etl/lib/process-metadata.js');
 
 const getRandomNonAlphaNumericCharacter = () => {
@@ -32,6 +32,37 @@ const TEST_FUZZINESS = 0.25,
   DD_1_7 = '1.7',
   DD_2_0 = '2.0',
   DEFAULT_VERSION = DD_1_7;
+
+describe('hasValidSearchInput', () => {
+  it('rejects when both fields and lookups are empty', () => {
+    assert.strictEqual(hasValidSearchInput({ fields: [], lookups: [] }), false);
+  });
+
+  it('rejects when fields is missing', () => {
+    assert.strictEqual(hasValidSearchInput({ lookups: [{}] }), true); // lookups carries the call
+    assert.strictEqual(hasValidSearchInput({}), false);
+  });
+
+  it('rejects when either argument is not an array', () => {
+    assert.strictEqual(hasValidSearchInput({ fields: 'oops', lookups: [] }), false);
+    assert.strictEqual(hasValidSearchInput({ fields: [], lookups: null }), false);
+    assert.strictEqual(hasValidSearchInput({ fields: {}, lookups: [{}] }), false);
+  });
+
+  it('accepts when only fields are present (Lookup Resource pattern)', () => {
+    // Lookup Resource servers expose enums at runtime, not in $metadata,
+    // so the metadata report's static `lookups[]` is legitimately empty.
+    assert.strictEqual(hasValidSearchInput({ fields: [{ resourceName: 'Property', fieldName: 'Fee2' }], lookups: [] }), true);
+  });
+
+  it('accepts when only lookups are present', () => {
+    assert.strictEqual(hasValidSearchInput({ fields: [], lookups: [{ lookupName: 'X', lookupValue: 'Y' }] }), true);
+  });
+
+  it('accepts when both are present', () => {
+    assert.strictEqual(hasValidSearchInput({ fields: [{}], lookups: [{}] }), true);
+  });
+});
 
 describe('Variations Service reference metadata tests', () => {
   it('Should have required properties when the metadata report is empty', async () => {
@@ -1542,5 +1573,171 @@ describe('Variations Service suggestion tests', () => {
     assert.equal(resources?.length, 0, 'No resources should be flagged');
     assert.equal(fields?.length, 0, 'No fields should be flagged');
     assert.equal(lookups?.length, 0, 'No lookups should be flagged');
+  });
+});
+
+describe('Variations Service auth — dual scheme (OAuth2 + legacy ApiKey)', () => {
+  const VARIATIONS_MODULE = require.resolve('../lib/variations/index.js');
+  const AUTH_ENV_KEYS = [
+    'TOKEN_URI', 'CLIENT_ID', 'CLIENT_SECRET', 'CLIENT_SCOPE',
+    'CERT_AUTH_API_BASE_URL', 'CERT_AUTH_API_USERNAME', 'CURRENT_PROVIDER_UOI', 'CERTIFICATION_API_KEY',
+    'RESO_SERVICES_URL'
+  ];
+  const OAUTH2_ENV = {
+    RESO_SERVICES_URL: 'https://services.example.org',
+    TOKEN_URI: 'https://token.example.org/oauth2/token',
+    CLIENT_ID: 'test-client-id',
+    CLIENT_SECRET: 'test-client-secret'
+  };
+  const APIKEY_ENV = {
+    RESO_SERVICES_URL: 'https://services.example.org',
+    CERT_AUTH_API_BASE_URL: 'https://cert.example.org/auth',
+    CERT_AUTH_API_USERNAME: 'test-user',
+    CURRENT_PROVIDER_UOI: 'PROVIDER_UOI',
+    CERTIFICATION_API_KEY: 'test-api-key'
+  };
+
+  const savedEnv = {};
+  let savedFetch;
+
+  // The module reads credentials from process.env at load time, so reload it against a fresh
+  // env to exercise each scenario.
+  const loadWithEnv = env => {
+    AUTH_ENV_KEYS.forEach(k => delete process.env[k]);
+    Object.assign(process.env, env);
+    delete require.cache[VARIATIONS_MODULE];
+    return require(VARIATIONS_MODULE);
+  };
+
+  beforeEach(() => {
+    AUTH_ENV_KEYS.forEach(k => {
+      savedEnv[k] = process.env[k];
+    });
+    savedFetch = global.fetch;
+  });
+
+  afterEach(() => {
+    AUTH_ENV_KEYS.forEach(k => {
+      if (savedEnv[k] === undefined) delete process.env[k];
+      else process.env[k] = savedEnv[k];
+    });
+    global.fetch = savedFetch;
+    delete require.cache[VARIATIONS_MODULE];
+  });
+
+  describe('checkRequiredCredentials', () => {
+    it('passes with a complete OAuth2 credential set', () => {
+      const { checkRequiredCredentials } = loadWithEnv(OAUTH2_ENV);
+      assert.strictEqual(checkRequiredCredentials().hasMissingItems, false);
+    });
+
+    it('passes with a complete legacy ApiKey credential set', () => {
+      const { checkRequiredCredentials } = loadWithEnv(APIKEY_ENV);
+      assert.strictEqual(checkRequiredCredentials().hasMissingItems, false);
+    });
+
+    it('reports the OAuth2 vars when neither scheme is complete', () => {
+      const { checkRequiredCredentials } = loadWithEnv({ RESO_SERVICES_URL: 'https://services.example.org' });
+      const { hasMissingItems, missingItems } = checkRequiredCredentials();
+      assert.strictEqual(hasMissingItems, true);
+      assert.deepStrictEqual([...missingItems].sort(), ['CLIENT_ID', 'CLIENT_SECRET', 'TOKEN_URI']);
+    });
+
+    it('reports RESO_SERVICES_URL when it is missing', () => {
+      const { checkRequiredCredentials } = loadWithEnv({ TOKEN_URI: 'https://t', CLIENT_ID: 'id', CLIENT_SECRET: 'secret' });
+      assert.ok(checkRequiredCredentials().missingItems.includes('RESO_SERVICES_URL'));
+    });
+
+    it('does not demand the OAuth2 vars when the legacy scheme is complete', () => {
+      const { checkRequiredCredentials } = loadWithEnv(APIKEY_ENV);
+      assert.ok(!checkRequiredCredentials().missingItems.includes('TOKEN_URI'));
+    });
+  });
+
+  describe('credential detection', () => {
+    it('detects a complete OAuth2 set (and not the ApiKey set)', () => {
+      const { hasOAuth2Credentials, hasApiKeyCredentials } = loadWithEnv(OAUTH2_ENV);
+      assert.strictEqual(hasOAuth2Credentials(), true);
+      assert.strictEqual(hasApiKeyCredentials(), false);
+    });
+
+    it('detects a complete ApiKey set (and not the OAuth2 set)', () => {
+      const { hasOAuth2Credentials, hasApiKeyCredentials } = loadWithEnv(APIKEY_ENV);
+      assert.strictEqual(hasApiKeyCredentials(), true);
+      assert.strictEqual(hasOAuth2Credentials(), false);
+    });
+
+    it('requires ALL OAuth2 vars — a partial set is not detected', () => {
+      const { hasOAuth2Credentials } = loadWithEnv({ TOKEN_URI: 'https://t', CLIENT_ID: 'id' });
+      assert.strictEqual(hasOAuth2Credentials(), false);
+    });
+
+    it('requires CURRENT_PROVIDER_UOI for the ApiKey scheme (previously unchecked)', () => {
+      const { hasApiKeyCredentials } = loadWithEnv({
+        CERT_AUTH_API_BASE_URL: 'https://a', CERT_AUTH_API_USERNAME: 'u', CERTIFICATION_API_KEY: 'k'
+      });
+      assert.strictEqual(hasApiKeyCredentials(), false);
+    });
+  });
+
+  describe('fetchProviderToken — scheme selection + request shape', () => {
+    it('uses the OAuth2 client-credentials grant when OAuth2 creds are present', async () => {
+      const calls = [];
+      global.fetch = async (url, opts) => {
+        calls.push({ url, opts });
+        return { ok: true, json: async () => ({ access_token: 'oauth2-provider-token', token_type: 'Bearer', expires_in: 3600 }) };
+      };
+      const { fetchProviderToken } = loadWithEnv(OAUTH2_ENV);
+      const { token } = await fetchProviderToken();
+
+      assert.strictEqual(token, 'oauth2-provider-token', 'returns the access_token as the provider token');
+      assert.strictEqual(calls.length, 1);
+      assert.strictEqual(calls[0].url, OAUTH2_ENV.TOKEN_URI);
+      assert.strictEqual(calls[0].opts.method, 'POST');
+      assert.ok(calls[0].opts.headers.Authorization.startsWith('Basic '), 'uses HTTP Basic auth');
+      const decoded = Buffer.from(calls[0].opts.headers.Authorization.replace('Basic ', ''), 'base64').toString();
+      assert.strictEqual(decoded, `${OAUTH2_ENV.CLIENT_ID}:${OAUTH2_ENV.CLIENT_SECRET}`);
+      assert.ok(String(calls[0].opts.body).includes('grant_type=client_credentials'));
+      assert.ok(!String(calls[0].opts.body).includes('scope'), 'omits scope entirely when CLIENT_SCOPE is unset (no scope=undefined)');
+    });
+
+    it('sends scope only when CLIENT_SCOPE is set', async () => {
+      const withScope = [];
+      global.fetch = async (url, opts) => {
+        withScope.push(String(opts.body));
+        return { ok: true, json: async () => ({ access_token: 't' }) };
+      };
+      const { fetchProviderToken } = loadWithEnv({ ...OAUTH2_ENV, CLIENT_SCOPE: 'variations/read' });
+      await fetchProviderToken();
+      assert.ok(withScope[0].includes('scope=variations'), 'scope is included when set');
+    });
+
+    it('falls back to the legacy ApiKey call when no OAuth2 creds are present', async () => {
+      const calls = [];
+      global.fetch = async (url, opts) => {
+        calls.push({ url, opts });
+        return { ok: true, json: async () => ({ token: 'legacy-provider-token' }) };
+      };
+      const { fetchProviderToken } = loadWithEnv(APIKEY_ENV);
+      const { token } = await fetchProviderToken();
+
+      assert.strictEqual(token, 'legacy-provider-token');
+      assert.ok(calls[0].opts.headers.Authorization.startsWith('ApiKey '), 'uses the legacy ApiKey header');
+      assert.ok(calls[0].url.includes(APIKEY_ENV.CURRENT_PROVIDER_UOI), 'targets the provider auth URL');
+    });
+
+    it('returns {} (no token) when the OAuth2 token endpoint responds non-ok', async () => {
+      global.fetch = async () => ({ ok: false, status: 401, statusText: 'Unauthorized' });
+      const { fetchProviderToken } = loadWithEnv(OAUTH2_ENV);
+      assert.deepStrictEqual(await fetchProviderToken(), {});
+    });
+
+    it('returns {} (no token) when the OAuth2 token fetch throws', async () => {
+      global.fetch = async () => {
+        throw new Error('network down');
+      };
+      const { fetchProviderToken } = loadWithEnv(OAUTH2_ENV);
+      assert.deepStrictEqual(await fetchProviderToken(), {});
+    });
   });
 });
