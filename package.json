@@ -6,8 +6,7 @@
   "scripts": {
     "test": "mocha --timeout 30000",
     "lint": "eslint . --fix",
-    "precommit": "npm run lint && npm test",
-    "prepare": "lefthook install"
+    "precommit": "npm run lint && npm test"
   },
   "bin": {
     "reso-certification-utils": "index.js"
@@ -45,7 +44,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
     "@eslint/js": "^9.7.0",
-    "globals": "^15.8.0",
-    "lefthook": "^2.1.1"
+    "globals": "^15.8.0"
   }
 }

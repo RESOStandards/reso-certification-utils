@@ -1,139 +1,115 @@
 # Docker
-RESO Certification Utils can be used in a Docker container. 
 
-**Note**: There's currently an issue with ARM 64 platforms and Gradle/Docker. As such, Docker won't work on Apple Silicon. Please install locally instead. [See: README](/README.md).
+RESO Certification Utils can run in a Docker container. The image builds and runs on both Apple Silicon (ARM64) and x86_64, so Docker is the simplest way to run the tools without installing a local Node or Java toolchain.
 
-## Docker Installation
+## Installing Docker
 
-To build a Docker container, first [install Docker](https://docs.docker.com/get-docker/). 
-
-Make sure it's running: 
+First, **[install Docker](https://docs.docker.com/get-docker/)**. Confirm it is running:
 
 ```
 $ docker ps -a
 ```
 
-If Docker is running, you should see information about any containers on your system. 
-
-If you receive a message similar to the following, then Docker is not running: 
+If Docker is running, you will see the containers on your system. If it is not running, you will see a message similar to:
 
 ```
 Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?
 ```
 
-## Cloning Repository
-Make sure [Git is installed](https://github.com/git-guides/install-git) using the following command in the terminal:
+## Cloning the Repository
+
+Confirm **[Git is installed](https://github.com/git-guides/install-git)**:
 
 ```
 $ git --version
 ```
 
-If it's not installed, you'll see some kind of error. 
-
-Otherwise, clone the repository: 
+Then clone the repository and change into it:
 
 ```
 $ git clone https://github.com/RESOStandards/reso-certification-utils
-Cloning into 'reso-certification-utils'...
-remote: Enumerating objects: 691, done.
-remote: Counting objects: 100% (192/192), done.
-remote: Compressing objects: 100% (127/127), done.
-remote: Total 691 (delta 101), reused 97 (delta 65), pack-reused 499
-Receiving objects: 100% (691/691), 436.98 KiB | 3.24 MiB/s, done.
-Resolving deltas: 100% (320/320), done.
-```
-
-
-Then change to the source directory:
-```
 $ cd reso-certification-utils
 ```
 
-## Building Docker Container
-To build the Docker container, use the following command:
+## Building the Image
+
+Build the image. The build clones the RESO Commander and the RESO Certification Utils source inside the container, so no local toolchain is required:
 
 ```
 $ docker build -t reso-certification-utils --no-cache .
 ```
 
-Once the container has been built, it should show up in the list of available containers: 
+`--no-cache` makes the build pull the latest source rather than reuse a cached clone. Once built, the image appears in the image list:
 
 ```
 $ docker images
-REPOSITORY                                          TAG                      IMAGE ID       CREATED             SIZE
-reso-certification-utils                            latest                   262038261764   About an hour ago   1.06GB
-...
+REPOSITORY                 TAG      IMAGE ID       CREATED         SIZE
+reso-certification-utils   latest   262038261764   2 minutes ago   1.3GB
 ```
 
-If there are any errors building the container, try repeating the process.
+If the build fails, run it again.
 
+## Running `reso-certification-utils`
 
-# Running `reso-certification-utils`
-The entrypoint of the Docker container is the `reso-certification-utils` application, so you can use it for any of the commands in the [README](/README.md).
-
-```
-$ docker run -it reso-certification-utils --help
-Usage: RESO Certification Utils [options] [command]
-
-Command line batch-testing and restore utils
-
-Options:
-  -V, --version             output the version number
-  -h, --help                display help for command
-
-Commands:
-  schema [options]          Generate a schema or validate a payload against a schema
-  restore [options]         Restores local or S3 results to a RESO Certification API instance
-  runDDTests [options]      Runs Data Dictionary tests
-  findVariations [options]  Finds possible variations in metadata using a number of methods.
-  replicate [options]       Replicates data from a given resource with expansions.
-  metadata [options]        Converts metadata from OData XML to RESO Format.
-  help [command]            display help for command
+The container entrypoint is the `reso-certification-utils` application, so any command from the **[README](/README.md)** works:
 
 ```
+$ docker run --rm reso-certification-utils --help
+```
 
-Depending on the task, you will also need to mount the appropriate volumes in the Docker container. 
-
-## RESO Certification
+Depending on the task, mount the volumes the command needs (a config file, an output directory) and pass credentials with `--env-file`.
 
 ## Data Dictionary Testing
-To run the Data Dictionary tests, use the following command once the container has been built: 
+
+Run the Data Dictionary tests with `runDDTests`:
 
 ```
-$ docker run -v ./results:/results -v ./config.json:/config.json -it reso-certification-utils runDDTests -v 1.7 -p /config.json -l 200 -a 
+$ docker run --rm \
+  -v ./config.json:/config.json:ro \
+  -v ./results:/reso-certification-utils/results \
+  --env-file ./.env \
+  reso-certification-utils \
+  runDDTests -v 2.0 -p /config.json -a
 ```
 
-Where: 
+Where:
 
-* `-v ./results:/results` mounts the local results directory to the container, and will create the local directory if it doesn't exist
-* `-v ./config.json:/config.json` mounts a config file in the current directory to the Docker container. See: [sample config](../lib/certification/sample-dd-config.json)
-* `-it` tells Docker to use an interactive terminal
-* `reso-certification-utils` is the name of the container to run
-* `-v 1.7` uses Data Dictionary 1.7 tests and references
-* `-p /config.json` is the path to the config file within the container
-* `-l 200` sets the limit to 200 records per resource / expansion / strategy (default: 100,000)
-* `-a` is the option to run all tests - without it, only metadata tests are run
+* `-v ./config.json:/config.json:ro` mounts the config file read-only. See the **[sample config](../lib/certification/sample-dd-config.json)**.
+* `-v ./results:/reso-certification-utils/results` mounts a local `results` directory to the path the tool writes to. The container working directory is `/reso-certification-utils`, so results land in `/reso-certification-utils/results`, not `/results`. The local directory is created if it does not exist.
+* `--env-file ./.env` passes the credentials the run needs (see **Credentials** below).
+* `runDDTests` runs the tests, `-v 2.0` selects the Data Dictionary version (`1.7` is also available), `-p /config.json` is the in-container config path and `-a` runs all tests. Without `-a`, only the metadata tests run.
+* `-l <n>` sets the sample limit per resource, expansion and strategy (default 100,000). Add it (e.g., `-l 200`) for a lighter pretest run.
 
-Results will be outputted in a directory called `results`.
+Results are written to the mounted `results` directory.
 
-### Variations Service
+## Credentials
 
-In order to use the Variations Service, the Data Dictionary 2.0 tests will need an environment variable with a token. 
+Pass credentials with an environment file (`--env-file`) rather than on the command line, so they stay out of your shell history. The Data Dictionary 2.0 Variations Service step needs Cert API credentials in that file. Two schemes are accepted:
 
-The required parameters can be passed into the container using an environment variable file as follows:
+* **OAuth2 client credentials** – the format the Certification site prefills into the `.env` you download: `TOKEN_URI`, `CLIENT_ID`, `CLIENT_SECRET`, plus `RESO_SERVICES_URL`.
+* **Legacy ApiKey** – `CERT_AUTH_API_BASE_URL`, `CERT_AUTH_API_USERNAME`, `CURRENT_PROVIDER_UOI`, `CERTIFICATION_API_KEY`, plus `RESO_SERVICES_URL`.
+
+See **[`sample.env`](../sample.env)** for the full list, and contact **[dev@reso.org](mailto:dev@reso.org)** for the values. Without them, only machine matching runs, which is still enough to start Data Dictionary 2.0 testing.
+
+Do not set `WEB_API_COMMANDER_PATH` in the environment file. The image ships its own Commander and sets that path; overriding it points the container at a path that does not exist.
+
+## Finding Variations Directly
+
+`findVariations` runs the variations check against a metadata report on its own:
 
 ```
-$ docker run -v ./results:/results -v ./config.json:/config.json -it --env-file .env reso-certification-utils runDDTests -p /config.json -l 200 -a 
+$ docker run --rm \
+  -v ./metadata-report.processed.json:/metadata-report.json:ro \
+  --env-file ./.env \
+  reso-certification-utils \
+  findVariations -p /metadata-report.json -v 2.0
 ```
 
-See [`sample.env`](../sample.env) for a sample `.env` file. 
+Two things to know:
 
-In this case, you will need additional information to use the Variations Service. Please contact [dev@reso.org](mailto:dev@reso.org) for more information. 
-
-If the auth info isn't present, only machine-matching will be used. This is still enough to get started with DD 2.0 testing.
-
-You can also pass the environment variables in the file directly to the container with the `-e` flag, but using a file is preferred since it avoids sensitive information being exposed in the command history.
-
+* Feed the **merged** report, `metadata-report.processed.json` (produced by `runDDTests`), not the base `metadata-report.json`. The merged report carries the Lookup Resource values the service matches against. The base report returns no Lookup suggestions.
+* `findVariations` writes `data-dictionary-variations.json` to its working directory (`/reso-certification-utils` in the container). To keep the file, run without `--rm` and copy it out with `docker cp`, or run the variations step through `runDDTests`, which writes to the mounted `results` directory.
 
 ## Other Tasks
-See the [RESO Certification](#reso-certification) example for how to mount files and directories. 
+
+The other commands (`schema`, `replicate`, `metadata` and `restore`) follow the same pattern: mount the files the command reads and writes, and pass any credentials with `--env-file`. Run `docker run --rm reso-certification-utils <command> --help` for each command's options.
