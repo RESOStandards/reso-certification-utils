@@ -1,5 +1,7 @@
 [![Run Code Checks](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codecheck.yml) &nbsp; [![CodeQL](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql.yml/badge.svg)](https://github.com/RESOStandards/reso-certification-utils/actions/workflows/codeql.yml)
 
+# THIS REPO IS NO LONGER BEING MAINTAINED. SEE https://tools.reso.org FOR CERTIFICATION
+
 # RESO Certification Utils
 Node package with reference artifacts and ETL processes for Certification.
 
